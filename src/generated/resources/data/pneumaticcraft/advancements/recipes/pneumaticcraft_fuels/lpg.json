@@ -1,26 +1,23 @@
 {
   "parent": "minecraft:recipes/root",
-  "rewards": {
-    "recipes": [
-      "pneumaticcraft:pneumaticcraft_fuels/lpg"
-    ]
-  },
   "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "pneumaticcraft:pneumaticcraft_fuels/lpg"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
     "liquid_compressor": {
-      "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "item": "pneumaticcraft:liquid_compressor"
+            "items": [
+              "pneumaticcraft:liquid_compressor"
+            ]
           }
         ]
-      }
-    },
-    "has_the_recipe": {
-      "trigger": "minecraft:recipe_unlocked",
-      "conditions": {
-        "recipe": "pneumaticcraft:pneumaticcraft_fuels/lpg"
-      }
+      },
+      "trigger": "minecraft:inventory_changed"
     }
   },
   "requirements": [
@@ -28,5 +25,11 @@
       "liquid_compressor",
       "has_the_recipe"
     ]
-  ]
+  ],
+  "rewards": {
+    "recipes": [
+      "pneumaticcraft:pneumaticcraft_fuels/lpg"
+    ]
+  },
+  "sends_telemetry_event": true
 }

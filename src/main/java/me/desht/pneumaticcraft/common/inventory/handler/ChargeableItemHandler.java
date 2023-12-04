@@ -17,15 +17,15 @@
 
 package me.desht.pneumaticcraft.common.inventory.handler;
 
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityChargingStation;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import me.desht.pneumaticcraft.common.block.entity.ChargingStationBlockEntity;
+import me.desht.pneumaticcraft.common.upgrades.ApplicableUpgradesDB;
 import me.desht.pneumaticcraft.common.util.NBTUtils;
 import me.desht.pneumaticcraft.common.util.UpgradableItemUtils;
-import me.desht.pneumaticcraft.common.util.upgrade.ApplicableUpgradesDB;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 public class ChargeableItemHandler extends BaseItemStackHandler {
-    public ChargeableItemHandler(TileEntityChargingStation te) {
+    public ChargeableItemHandler(ChargingStationBlockEntity te) {
         super(te, UpgradableItemUtils.UPGRADE_INV_SIZE);
 
         if (!NBTUtils.hasTag(getChargingStack(), UpgradableItemUtils.NBT_UPGRADE_TAG)) {
@@ -41,7 +41,7 @@ public class ChargeableItemHandler extends BaseItemStackHandler {
     }
 
     private ItemStack getChargingStack() {
-        return ((TileEntityChargingStation) te).getChargingStack();
+        return ((ChargingStationBlockEntity) te).getChargingStack();
     }
 
     public void writeToNBT() {
@@ -59,12 +59,12 @@ public class ChargeableItemHandler extends BaseItemStackHandler {
 
     private boolean isUnique(int slot, ItemStack stack) {
         for (int i = 0; i < getSlots(); i++) {
-            if (i != slot && EnumUpgrade.from(stack) == EnumUpgrade.from(getStackInSlot(i))) return false;
+            if (i != slot && PNCUpgrade.from(stack) == PNCUpgrade.from(getStackInSlot(i))) return false;
         }
         return true;
     }
 
     private boolean isApplicable(ItemStack stack) {
-        return ApplicableUpgradesDB.getInstance().getMaxUpgrades(getChargingStack().getItem(), EnumUpgrade.from(stack)) > 0;
+        return ApplicableUpgradesDB.getInstance().getMaxUpgrades(getChargingStack().getItem(), PNCUpgrade.from(stack)) > 0;
     }
 }

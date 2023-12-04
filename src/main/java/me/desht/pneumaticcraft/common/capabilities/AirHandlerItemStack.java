@@ -20,14 +20,15 @@ package me.desht.pneumaticcraft.common.capabilities;
 import me.desht.pneumaticcraft.api.PNCCapabilities;
 import me.desht.pneumaticcraft.api.pressure.IPressurizableItem;
 import me.desht.pneumaticcraft.api.tileentity.IAirHandlerItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Direction;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
 import org.apache.commons.lang3.Validate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class AirHandlerItemStack extends IAirHandlerItem.Provider {
     public static final String AIR_NBT_KEY = "pneumaticcraft:air";
@@ -39,12 +40,12 @@ public class AirHandlerItemStack extends IAirHandlerItem.Provider {
     private int baseVolume;
     private final float maxPressure;
 
-    public AirHandlerItemStack(ItemStack container, float maxPressure) {
+    public AirHandlerItemStack(ItemStack container) {
         Validate.isTrue(container.getItem() instanceof IPressurizableItem, "itemstack " + container + " must be an IPressurizableItem!");
         this.container = container;
         this.pressurizable = (IPressurizableItem) container.getItem();
         this.baseVolume = pressurizable.getBaseVolume();
-        this.maxPressure = maxPressure;
+        this.maxPressure = pressurizable.getMaxPressure();
     }
 
     @Nonnull
@@ -81,7 +82,7 @@ public class AirHandlerItemStack extends IAirHandlerItem.Provider {
         } else {
             // no air in item: clean up NBT for item stackability purposes
             if (container.hasTag()) {
-                container.getTag().remove(AIR_NBT_KEY);
+                Objects.requireNonNull(container.getTag()).remove(AIR_NBT_KEY);
                 if (container.getTag().isEmpty()) {
                     container.setTag(null);
                 }

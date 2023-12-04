@@ -19,10 +19,11 @@ package me.desht.pneumaticcraft.datagen.recipe;
 
 import com.google.gson.JsonObject;
 import me.desht.pneumaticcraft.api.crafting.PneumaticCraftRecipeTypes;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.FlowingFluidBlock;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Map;
 
@@ -30,7 +31,7 @@ import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
 /**
  * Currently unused.  Would require a lot of extra mods in the dev workspace to use properly.  Maybe this should
- * just take string block & blockstate names?  For now though the heat properties files remain as non-generated
+ * just take string block and blockstate names?  For now though the heat properties files remain as non-generated
  * JSONs while I decide how best to handle it.
  */
 @SuppressWarnings("unused")
@@ -75,7 +76,7 @@ public class HeatPropertiesRecipeBuilder extends PneumaticCraftRecipeBuilder<Hea
 
         @Override
         public void serializeRecipeData(JsonObject json) {
-            json.addProperty("block", block.getRegistryName().toString());
+            json.addProperty("block", PneumaticCraftUtils.getRegistryName(block).orElseThrow().toString());
             json.addProperty("temperature", temperature);
             json.addProperty("thermalResistance", thermalResistance);
             if (!predicates.isEmpty()) {
@@ -93,8 +94,8 @@ public class HeatPropertiesRecipeBuilder extends PneumaticCraftRecipeBuilder<Hea
         private void maybeAddBlockstateProp(JsonObject json, String key, BlockState state) {
             if (state != null) {
                 JsonObject obj = new JsonObject();
-                if (state.getBlock() instanceof FlowingFluidBlock) {
-                    obj.addProperty("fluid", ((FlowingFluidBlock) state.getBlock()).getFluid().getRegistryName().toString());
+                if (state.getBlock() instanceof LiquidBlock liq) {
+                    obj.addProperty("fluid", PneumaticCraftUtils.getRegistryName(liq.getFluid()).orElseThrow().toString());
                 } else {
                     obj.addProperty("block", state.toString());
                 }

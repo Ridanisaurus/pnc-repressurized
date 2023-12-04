@@ -22,46 +22,36 @@ import me.desht.pneumaticcraft.common.core.ModBlocks;
 import me.desht.pneumaticcraft.common.core.ModFluids;
 import me.desht.pneumaticcraft.common.core.ModItems;
 import me.desht.pneumaticcraft.common.item.ICustomTooltipName;
-import me.desht.pneumaticcraft.common.item.ItemBucketPneumaticCraft;
-import me.desht.pneumaticcraft.lib.PneumaticValues;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorldReader;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fluids.FluidAttributes;
+import me.desht.pneumaticcraft.common.item.PneumaticCraftBucketItem;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraftforge.fluids.ForgeFlowingFluid;
 
-import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
-
 public abstract class FluidPlastic {
-    private static final FluidAttributes.Builder ATTRS = FluidAttributes.builder(
-            RL("block/fluid/plastic_still"), RL("block/fluid/plastic_flow")
-    ).temperature(PneumaticValues.PLASTIC_MIXER_MELTING_TEMP);
+    public static final PNCFluidRenderProps RENDER_PROPS = new PNCFluidRenderProps("plastic_still", "plastic_flow");
 
-    private static final ForgeFlowingFluid.Properties PROPS =
-            new ForgeFlowingFluid.Properties(ModFluids.PLASTIC, ModFluids.PLASTIC_FLOWING, ATTRS)
-                    .block(ModBlocks.PLASTIC).bucket(ModItems.PLASTIC_BUCKET);
+    private static ForgeFlowingFluid.Properties props() {
+        return new ForgeFlowingFluid.Properties(
+                ModFluids.PLASTIC_FLUID_TYPE, ModFluids.PLASTIC, ModFluids.PLASTIC_FLOWING
+        ).block(ModBlocks.PLASTIC).bucket(ModItems.PLASTIC_BUCKET).tickRate(10);
+    }
 
     public static class Source extends ForgeFlowingFluid.Source {
         public Source() {
-            super(PROPS);
+            super(props());
         }
 
         @Override
-        public int getTickDelay(IWorldReader world) {
-            return 10;
-        }
-
-        @Override
-        public void tick(World worldIn, BlockPos pos, FluidState state) {
+        public void tick(Level worldIn, BlockPos pos, FluidState state) {
             if (ConfigHelper.common().recipes.inWorldPlasticSolidification.get()) {
                 ItemEntity item = new ItemEntity(worldIn, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, new ItemStack(ModItems.PLASTIC.get()));
                 worldIn.addFreshEntity(item);
-                worldIn.setBlock(pos, Blocks.AIR.defaultBlockState(), Constants.BlockFlags.DEFAULT);
+                worldIn.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
             }
             super.tick(worldIn, pos, state);
         }
@@ -69,11 +59,11 @@ public abstract class FluidPlastic {
 
     public static class Flowing extends ForgeFlowingFluid.Flowing {
         public Flowing() {
-            super(PROPS);
+            super(props());
         }
     }
 
-    public static class Bucket extends ItemBucketPneumaticCraft implements ICustomTooltipName {
+    public static class Bucket extends PneumaticCraftBucketItem implements ICustomTooltipName {
         public Bucket() {
             super(ModFluids.PLASTIC);
         }

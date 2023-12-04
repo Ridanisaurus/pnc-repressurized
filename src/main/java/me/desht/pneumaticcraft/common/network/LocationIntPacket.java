@@ -17,8 +17,8 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
 
 /**
  * MineChess
@@ -28,9 +28,9 @@ import net.minecraft.util.math.BlockPos;
  */
 
 public abstract class LocationIntPacket {
-    protected BlockPos pos;
+    protected final BlockPos pos;
 
-    public LocationIntPacket(PacketBuffer buffer) {
+    public LocationIntPacket(FriendlyByteBuf buffer) {
         pos = buffer.readBlockPos();
     }
 
@@ -38,7 +38,7 @@ public abstract class LocationIntPacket {
         this.pos = pos;
     }
 
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         buf.writeBlockPos(pos);
     }
 }

@@ -17,17 +17,18 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.client.pneumatic_armor.ArmorUpgradeClientRegistry;
+import me.desht.pneumaticcraft.client.pneumatic_armor.ClientArmorRegistry;
+import me.desht.pneumaticcraft.client.pneumatic_armor.upgrade_handler.EntityTrackerClientHandler;
 import me.desht.pneumaticcraft.client.render.pneumatic_armor.RenderEntityTarget;
-import me.desht.pneumaticcraft.client.render.pneumatic_armor.upgrade_handler.EntityTrackerClientHandler;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.common.pneumatic_armor.ArmorUpgradeRegistry;
 import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorHandler;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonUpgradeHandlers;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
@@ -42,28 +43,28 @@ public class PacketHackingEntityStart {
         entityId = entity.getId();
     }
 
-    public PacketHackingEntityStart(PacketBuffer buffer) {
+    public PacketHackingEntityStart(FriendlyByteBuf buffer) {
         entityId = buffer.readInt();
     }
 
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         buf.writeInt(entityId);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayerEntity player = ctx.get().getSender();
+            ServerPlayer player = ctx.get().getSender();
             ArmorUpgradeRegistry r = ArmorUpgradeRegistry.getInstance();
             if (player == null) {
                 // client
-                PlayerEntity cPlayer = ClientUtils.getClientPlayer();
-                Entity entity = cPlayer.level.getEntity(entityId);
+                Player cPlayer = ClientUtils.getClientPlayer();
+                Entity entity = cPlayer.level().getEntity(entityId);
                 if (entity != null) {
                     CommonArmorHandler.getHandlerForPlayer(cPlayer)
-                            .getExtensionData(r.hackHandler)
+                            .getExtensionData(CommonUpgradeHandlers.hackHandler)
                             .setHackedEntity(entity);
-                    ArmorUpgradeClientRegistry.getInstance()
-                            .getClientHandler(r.entityTrackerHandler, EntityTrackerClientHandler.class)
+                    ClientArmorRegistry.getInstance()
+                            .getClientHandler(CommonUpgradeHandlers.entityTrackerHandler, EntityTrackerClientHandler.class)
                             .getTargetsStream()
                             .filter(target -> target.entity == entity)
                             .findFirst()
@@ -72,11 +73,11 @@ public class PacketHackingEntityStart {
             } else {
                 // server
                 CommonArmorHandler handler = CommonArmorHandler.getHandlerForPlayer(player);
-                if (handler.upgradeUsable(r.entityTrackerHandler, true)) {
-                    Entity entity = player.level.getEntity(entityId);
+                if (handler.upgradeUsable(CommonUpgradeHandlers.entityTrackerHandler, true)) {
+                    Entity entity = player.level().getEntity(entityId);
                     if (entity != null) {
-                        handler.getExtensionData(r.hackHandler).setHackedEntity(entity);
-                        NetworkHandler.sendToAllTracking(this, entity);
+                        handler.getExtensionData(CommonUpgradeHandlers.hackHandler).setHackedEntity(entity);
+                        NetworkHandler.sendToPlayer(this, player);
                     }
                 }
             }

@@ -19,10 +19,9 @@ package me.desht.pneumaticcraft.api.crafting.recipe;
 
 import me.desht.pneumaticcraft.api.crafting.AmadronTradeResource;
 import me.desht.pneumaticcraft.api.misc.IPlayerMatcher;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -58,28 +57,13 @@ public abstract class AmadronRecipe extends PneumaticCraftRecipe {
     public abstract AmadronTradeResource getOutput();
 
     /**
-     * Get the offer's vendor name, for display purposes.  The default is "Amadron" for static & periodic offers loaded
+     * Get the offer's vendor name, for display purposes.  The default is "Amadron" for static and periodic offers loaded
      * from datapack, "Villagers" for villager-discovered offers, and the player's display name (at the time of offer
      * creation) for player-added offers.
      *
      * @return the vendor name
      */
-    public ITextComponent getVendorName() {
-        // default implementation is just here for backwards compat and will likely go away in MC 1.17+
-        // recipe implementations should override this
-        return new StringTextComponent("Amadron");
-    }
-
-    /**
-     * Get the offer's vendor name.
-     *
-     * @return the vendor name
-     * @deprecated don't use this; use {@link #getVendorName()}
-     */
-    @Deprecated
-    public String getVendor() {
-        return "Amadron";
-    }
+    public abstract Component getVendorName();
 
     /**
      * Is this a static offer, always displayed on the Amadron tablet?  Or periodic, shuffled in at random once per
@@ -107,7 +91,7 @@ public abstract class AmadronRecipe extends PneumaticCraftRecipe {
     /**
      * Update the number of trades Amadron currently has in stock for this offer. It is the responsbility of the
      * implementation to ensure the stock level does not go below 0, or above the max stock level as returned by
-     * {@link #getMaxStock()} (provided that the max stock level is > 0).
+     * {@link #getMaxStock()} (provided that the max stock level is &gt; 0).
      *
      * @param stock the new stock level
      */
@@ -116,7 +100,7 @@ public abstract class AmadronRecipe extends PneumaticCraftRecipe {
     /**
      * Get the maximum (initial) stock level for this offer.
      *
-     * @return the max stock level; any quantity <= 0 indicates no maximum in force
+     * @return the max stock level; any quantity &le; 0 indicates no maximum in force
      */
     public abstract int getMaxStock();
 
@@ -126,7 +110,7 @@ public abstract class AmadronRecipe extends PneumaticCraftRecipe {
      * @param player the player
      * @return true if this player can remove this offer from the system, false otherwise
      */
-    public boolean isRemovableBy(PlayerEntity player) {
+    public boolean isRemovableBy(Player player) {
         return false;
     }
 
@@ -135,12 +119,12 @@ public abstract class AmadronRecipe extends PneumaticCraftRecipe {
      * whitelisted/blacklisted in data packs with the "whitelist" and "blacklist" fields in the Amadron recipe JSON.
      * This could be used, for example, to only allow selling snow in a desert biome, or only purchasing ender pearls
      * in the End.  Default filters are "dimensions" and "biome_categories", but others can be added via
-     * {@link me.desht.pneumaticcraft.api.PneumaticRegistry.IPneumaticCraftInterface#registerPlayerMatcher(ResourceLocation, IPlayerMatcher.MatcherFactory)}
+     * {@link me.desht.pneumaticcraft.api.misc.IMiscHelpers#registerPlayerMatcher(ResourceLocation, IPlayerMatcher.MatcherFactory)}.
      *
      * @param player the player to check
      * @return true if the offer is available to the player at the time of use, false otherwise
      */
-    public abstract boolean isUsableByPlayer(PlayerEntity player);
+    public abstract boolean isUsableByPlayer(Player player);
 
     /**
      * Does this offer match the given query string? The input resource, output resource and vendor names are all
@@ -166,7 +150,7 @@ public abstract class AmadronRecipe extends PneumaticCraftRecipe {
      * Add some information about where this offer is available, in the case of offers with limited availablity.
      * @param curTip tooltip to add information to
      */
-    public void addAvailabilityData(PlayerEntity player, List<ITextComponent> curTip) {
+    public void addAvailabilityData(Player player, List<Component> curTip) {
     }
 
     public boolean isLocationLimited() {

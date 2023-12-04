@@ -18,15 +18,12 @@
 package me.desht.pneumaticcraft.client.gui.remote.actionwidget;
 
 import me.desht.pneumaticcraft.client.gui.widget.WidgetCheckBox;
+import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.common.network.NetworkHandler;
 import me.desht.pneumaticcraft.common.network.PacketSetGlobalVariable;
-import me.desht.pneumaticcraft.common.util.NBTUtils;
-import me.desht.pneumaticcraft.common.variables.GlobalVariableManager;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraftforge.common.util.Constants;
-
-import java.util.List;
+import me.desht.pneumaticcraft.common.variables.GlobalVariableHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 
 public class ActionWidgetCheckBox extends ActionWidgetVariable<WidgetCheckBox> implements IActionWidgetLabeled {
     public ActionWidgetCheckBox() {
@@ -37,20 +34,19 @@ public class ActionWidgetCheckBox extends ActionWidgetVariable<WidgetCheckBox> i
     }
 
     @Override
-    public void readFromNBT(CompoundNBT tag, int guiLeft, int guiTop) {
+    public void readFromNBT(CompoundTag tag, int guiLeft, int guiTop) {
         super.readFromNBT(tag, guiLeft, guiTop);
         widget = new WidgetCheckBox(tag.getInt("x") + guiLeft, tag.getInt("y") + guiTop, 0xFF404040, deserializeTextComponent(tag.getString("text")), b -> onActionPerformed());
-//        setTooltip(tag.getString("tooltip"));
-        widget.setTooltip(NBTUtils.deserializeTextComponents(tag.getList("tooltip", Constants.NBT.TAG_STRING)));
+        deserializeTooltip(tag.getString("tooltip"));
     }
 
     @Override
-    public CompoundNBT toNBT(int guiLeft, int guiTop) {
-        CompoundNBT tag = super.toNBT(guiLeft, guiTop);
-        tag.putInt("x", widget.x - guiLeft);
-        tag.putInt("y", widget.y - guiTop);
-        tag.putString("text", ITextComponent.Serializer.toJson(widget.getMessage()));
-        tag.put("tooltip", NBTUtils.serializeTextComponents(widget.getTooltip()));
+    public CompoundTag toNBT(int guiLeft, int guiTop) {
+        CompoundTag tag = super.toNBT(guiLeft, guiTop);
+        tag.putInt("x", widget.getX() - guiLeft);
+        tag.putInt("y", widget.getY() - guiTop);
+        tag.putString("text", Component.Serializer.toJson(widget.getMessage()));
+        tag.putString("tooltip", Component.Serializer.toJson(getTooltipMessage()));
         return tag;
     }
 
@@ -60,38 +56,27 @@ public class ActionWidgetCheckBox extends ActionWidgetVariable<WidgetCheckBox> i
     }
 
     @Override
-    public void setText(ITextComponent text) {
+    public void setText(Component text) {
         widget.setMessage(text);
     }
 
     @Override
-    public ITextComponent getText() {
+    public Component getText() {
         return widget.getMessage();
     }
 
     @Override
     public void onActionPerformed() {
-        NetworkHandler.sendToServer(new PacketSetGlobalVariable(getVariableName(), widget.checked));
+        if (!getVariableName().isEmpty()) NetworkHandler.sendToServer(new PacketSetGlobalVariable(getVariableName(), widget.checked));
     }
 
     @Override
     public void onVariableChange() {
-        widget.checked = GlobalVariableManager.getInstance().getBoolean(getVariableName());
+        widget.checked = GlobalVariableHelper.getBool(ClientUtils.getClientPlayer().getUUID(), getVariableName());
     }
 
     @Override
     public void setWidgetPos(int x, int y) {
-        widget.x = x;
-        widget.y = y;
-    }
-
-    @Override
-    public void setTooltip(List<ITextComponent> text) {
-        widget.setTooltip(text);
-    }
-
-    @Override
-    public List<ITextComponent> getTooltip() {
-        return widget.getTooltip();
+        widget.setPosition(x, y);
     }
 }

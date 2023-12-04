@@ -17,25 +17,22 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
 import me.desht.pneumaticcraft.api.crafting.recipe.AssemblyRecipe;
 import me.desht.pneumaticcraft.common.core.ModBlocks;
-import me.desht.pneumaticcraft.common.item.ItemAssemblyProgram;
+import me.desht.pneumaticcraft.common.item.AssemblyProgramItem;
 import me.desht.pneumaticcraft.common.recipes.assembly.AssemblyProgram;
 import me.desht.pneumaticcraft.lib.Textures;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawableAnimated;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.api.ingredients.IIngredients;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.Ingredient;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.item.ItemStack;
 
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
@@ -43,57 +40,36 @@ public class JEIAssemblyControllerCategory extends AbstractPNCCategory<AssemblyR
     private final IDrawableAnimated progressBar;
 
     JEIAssemblyControllerCategory() {
-        super(ModCategoryUid.ASSEMBLY_CONTROLLER, AssemblyRecipe.class,
+        super(RecipeTypes.ASSEMBLY,
                 xlate(ModBlocks.ASSEMBLY_CONTROLLER.get().getDescriptionId()),
                 guiHelper().createDrawable(Textures.GUI_JEI_ASSEMBLY_CONTROLLER, 5, 11, 158, 98),
-                guiHelper().createDrawableIngredient(new ItemStack(ModBlocks.ASSEMBLY_CONTROLLER.get()))
+                guiHelper().createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(ModBlocks.ASSEMBLY_CONTROLLER.get()))
         );
         IDrawableStatic d = guiHelper().createDrawable(Textures.GUI_JEI_ASSEMBLY_CONTROLLER, 173, 0, 24, 17);
         progressBar = guiHelper().createAnimatedDrawable(d, 60, IDrawableAnimated.StartDirection.LEFT, false);
     }
 
     @Override
-    public void setIngredients(AssemblyRecipe recipe, IIngredients ingredients) {
-        List<Ingredient> input = new ArrayList<>();
-        input.add(recipe.getInput());
-        input.add(Ingredient.of(ItemAssemblyProgram.fromProgramType(recipe.getProgramType())));
-        Arrays.stream(getMachinesFromEnum(AssemblyProgram.fromRecipe(recipe).getRequiredMachines()))
-                .map(Ingredient::of)
-                .forEach(input::add);
-        ingredients.setInputIngredients(input);
-        ingredients.setOutput(VanillaTypes.ITEM, recipe.getOutput());
+    public void setRecipe(IRecipeLayoutBuilder builder, AssemblyRecipe recipe, IFocusGroup focuses) {
+        builder.addSlot(RecipeIngredientRole.INPUT, 29, 56)
+                .addIngredients(recipe.getInput());
+        builder.addSlot(RecipeIngredientRole.CATALYST, 133, 22)
+                .addItemStack(new ItemStack(AssemblyProgramItem.fromProgramType(recipe.getProgramType())));
+        builder.addSlot(RecipeIngredientRole.OUTPUT, 96, 56)
+                .addItemStack(recipe.getOutput());
+
+        int xPos = 5;
+        for (AssemblyProgram.EnumMachine machine : AssemblyProgram.fromRecipe(recipe).getRequiredMachines()) {
+            builder.addSlot(RecipeIngredientRole.CATALYST, xPos, 25).addItemStack(new ItemStack(machine.getMachineBlock()));
+            xPos += 18;
+        }
     }
 
     @Override
-    public void setRecipe(IRecipeLayout recipeLayout, AssemblyRecipe recipe, IIngredients ingredients) {
-        recipeLayout.getItemStacks().init(0, true, 28, 55);
-        recipeLayout.getItemStacks().set(0, ingredients.getInputs(VanillaTypes.ITEM).get(0));
-        recipeLayout.getItemStacks().init(2, true, 132, 21);
-        recipeLayout.getItemStacks().set(2, ingredients.getInputs(VanillaTypes.ITEM).get(1));
-
-        int l = ingredients.getInputs(VanillaTypes.ITEM).size() - 2;  // -2 for the input item & program
-        for (int i = 0; i < l; i++) {
-            recipeLayout.getItemStacks().init(i + 3, true, 5 + i * 18, 25);
-            recipeLayout.getItemStacks().set(i + 3, ingredients.getInputs(VanillaTypes.ITEM).get(i + 2));
-        }
-
-        recipeLayout.getItemStacks().init(1, false, 95, 55);
-        recipeLayout.getItemStacks().set(1, ingredients.getOutputs(VanillaTypes.ITEM).get(0));
-    }
-
-    @Override
-    public void draw(AssemblyRecipe recipe, MatrixStack matrixStack, double mouseX, double mouseY) {
-        progressBar.draw(matrixStack, 68, 65);
-        FontRenderer fontRenderer = Minecraft.getInstance().font;
-        fontRenderer.draw(matrixStack, "Required Machines", 5, 15, 0xFF404040);
-        fontRenderer.draw(matrixStack, "Prog.", 129, 9, 0xFF404040);
-    }
-
-    private ItemStack[] getMachinesFromEnum(AssemblyProgram.EnumMachine[] requiredMachines) {
-        ItemStack[] machineStacks = new ItemStack[requiredMachines.length];
-        for (int i = 0; i < requiredMachines.length; i++) {
-            machineStacks[i] = new ItemStack(requiredMachines[i].getMachineBlock());
-        }
-        return machineStacks;
+    public void draw(AssemblyRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
+        progressBar.draw(graphics, 68, 65);
+        Font fontRenderer = Minecraft.getInstance().font;
+        graphics.drawString(fontRenderer, "Required Machines", 5, 15, 0xFF404040, false);
+        graphics.drawString(fontRenderer, "Prog.", 129, 9, 0xFF404040, false);
     }
 }

@@ -1,26 +1,23 @@
 {
   "parent": "minecraft:recipes/root",
-  "rewards": {
-    "recipes": [
-      "pneumaticcraft:explosion_crafting/compressed_iron_ingot"
-    ]
-  },
   "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "pneumaticcraft:explosion_crafting/compressed_iron_ingot"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
     "tnt": {
-      "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "item": "minecraft:tnt"
+            "items": [
+              "minecraft:tnt"
+            ]
           }
         ]
-      }
-    },
-    "has_the_recipe": {
-      "trigger": "minecraft:recipe_unlocked",
-      "conditions": {
-        "recipe": "pneumaticcraft:explosion_crafting/compressed_iron_ingot"
-      }
+      },
+      "trigger": "minecraft:inventory_changed"
     }
   },
   "requirements": [
@@ -28,5 +25,11 @@
       "tnt",
       "has_the_recipe"
     ]
-  ]
+  ],
+  "rewards": {
+    "recipes": [
+      "pneumaticcraft:explosion_crafting/compressed_iron_ingot"
+    ]
+  },
+  "sends_telemetry_event": true
 }

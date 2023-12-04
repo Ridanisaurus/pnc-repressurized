@@ -22,18 +22,21 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.desht.pneumaticcraft.common.core.ModParticleTypes;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.particles.IParticleData;
-import net.minecraft.particles.ParticleType;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.Calendar;
 import java.util.Locale;
 
-public class AirParticleData implements IParticleData {
+public class AirParticleData implements ParticleOptions {
     public static final AirParticleData NORMAL = new AirParticleData(0.1f);
     public static final AirParticleData DENSE = new AirParticleData(0.3f);
 
-    public static final IDeserializer<AirParticleData> DESERIALIZER = new IDeserializer<AirParticleData>() {
+    public static final Deserializer<AirParticleData> DESERIALIZER = new Deserializer<AirParticleData>() {
         @Override
         public AirParticleData fromCommand(ParticleType<AirParticleData> particleType, StringReader stringReader) throws CommandSyntaxException {
             stringReader.expect(' ');
@@ -42,7 +45,7 @@ public class AirParticleData implements IParticleData {
         }
 
         @Override
-        public AirParticleData fromNetwork(ParticleType<AirParticleData> particleType, PacketBuffer packetBuffer) {
+        public AirParticleData fromNetwork(ParticleType<AirParticleData> particleType, FriendlyByteBuf packetBuffer) {
             return new AirParticleData(packetBuffer.readFloat());
         }
     };
@@ -51,7 +54,7 @@ public class AirParticleData implements IParticleData {
                     .forGetter((d) -> d.alpha))
                     .apply(instance, AirParticleData::new));
 
-    private static boolean checkDate;
+    private static boolean checkedDate;
     private static boolean useAlt;
 
     private final float alpha;
@@ -66,13 +69,14 @@ public class AirParticleData implements IParticleData {
     }
 
     @Override
-    public void writeToNetwork(PacketBuffer packetBuffer) {
+    public void writeToNetwork(FriendlyByteBuf packetBuffer) {
         packetBuffer.writeFloat(alpha);
     }
 
     @Override
     public String writeToString() {
-        return String.format(Locale.ROOT, "%s %f", getType().getRegistryName(), alpha);
+        ResourceLocation regName = PneumaticCraftUtils.getRegistryName(ForgeRegistries.PARTICLE_TYPES, getType()).orElseThrow();
+        return String.format(Locale.ROOT, "%s %f", regName, alpha);
     }
 
     public float getAlpha() {
@@ -80,11 +84,10 @@ public class AirParticleData implements IParticleData {
     }
 
     private boolean useAltParticles() {
-        if (!checkDate) {
+        if (!checkedDate) {
             Calendar calendar = Calendar.getInstance();
-            useAlt = calendar.get(Calendar.MONTH) == Calendar.MARCH && calendar.get(Calendar.DAY_OF_MONTH) >= 31
-                    || calendar.get(Calendar.MONTH) == Calendar.APRIL && calendar.get(Calendar.DAY_OF_MONTH) <= 2;
-            checkDate = true;
+            useAlt = calendar.get(Calendar.MONTH) == Calendar.APRIL && calendar.get(Calendar.DAY_OF_MONTH) == 1;
+            checkedDate = true;
         }
         return useAlt;
     }

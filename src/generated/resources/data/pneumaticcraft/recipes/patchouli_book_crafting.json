@@ -4,12 +4,13 @@
     {
       "conditions": [
         {
-          "modid": "patchouli",
-          "type": "forge:mod_loaded"
+          "type": "forge:mod_loaded",
+          "modid": "patchouli"
         }
       ],
       "recipe": {
-        "type": "pneumaticcraft:patchouli_book_crafting"
+        "type": "pneumaticcraft:patchouli_book_crafting",
+        "category": "misc"
       }
     }
   ]

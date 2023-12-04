@@ -18,13 +18,14 @@
 package me.desht.pneumaticcraft.common.heat.behaviour;
 
 import me.desht.pneumaticcraft.api.heat.HeatBehaviour;
-import net.minecraft.block.AbstractFurnaceBlock;
-import net.minecraft.tileentity.AbstractFurnaceTileEntity;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.mixin.accessors.AbstractFurnaceBlockEntityAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
-public class HeatBehaviourFurnace extends HeatBehaviour<AbstractFurnaceTileEntity> {
+public class HeatBehaviourFurnace extends HeatBehaviour {
     static final ResourceLocation ID = RL("furnace");
 
     @Override
@@ -39,23 +40,28 @@ public class HeatBehaviourFurnace extends HeatBehaviour<AbstractFurnaceTileEntit
 
     @Override
     public void tick() {
-        AbstractFurnaceTileEntity furnace = getTileEntity();
+        if (!(getCachedTileEntity() instanceof AbstractFurnaceBlockEntity furnace) || furnace.isRemoved()) {
+            // shouldn't happen, but let's be defensive
+            // https://github.com/TeamPneumatic/pnc-repressurized/issues/969
+            return;
+        }
         if (getHeatExchanger().getTemperature() > 373) {
-            if (furnace.litTime < 190 && !furnace.getItem(0).isEmpty()) {
-                if (furnace.litTime == 0) {
+            AbstractFurnaceBlockEntityAccess furnaceAccess = (AbstractFurnaceBlockEntityAccess) furnace;
+            if (furnaceAccess.getLitTime() < 190 && !furnace.getItem(0).isEmpty()) {
+                if (furnaceAccess.getLitTime() == 0) {
                     getWorld().setBlockAndUpdate(getPos(), getBlockState().setValue(AbstractFurnaceBlock.LIT, true));
                 }
-                furnace.litDuration = 200; // oddly named? this is itemBurnTime
-                furnace.litTime += 10;
+                furnaceAccess.setLitDuration(200);
+                furnaceAccess.setLitTime(furnaceAccess.getLitTime() + 10);
                 getHeatExchanger().addHeat(-1);
             }
-            if (furnace.cookingProgress > 0) {
+            if (furnaceAccess.getCookingProgress() > 0) {
                 // Easy performance saver, the Furnace won't be ticked unnecessarily when there's nothing to
                 // cook (or when just started cooking).
                 int progress = Math.max(0, ((int) getHeatExchanger().getTemperature() - 343) / 30);
                 progress = Math.min(5, progress);
                 for (int i = 0; i < progress; i++) {
-                    furnace.tick();
+                    AbstractFurnaceBlockEntity.serverTick(getWorld(), furnace.getBlockPos(), furnace.getBlockState(), furnace);
                 }
             }
         }

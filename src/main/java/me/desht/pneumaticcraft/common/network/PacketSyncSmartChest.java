@@ -17,10 +17,10 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.common.tileentity.TileEntitySmartChest;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import me.desht.pneumaticcraft.common.block.entity.SmartChestBlockEntity;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.network.NetworkEvent;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -37,14 +37,14 @@ public class PacketSyncSmartChest extends LocationIntPacket {
     private final int lastSlot;
     private final List<Pair<Integer, ItemStack>> filter;
 
-    public PacketSyncSmartChest(TileEntitySmartChest te) {
+    public PacketSyncSmartChest(SmartChestBlockEntity te) {
         super(te.getBlockPos());
 
         lastSlot = te.getLastSlot();
         filter = te.getFilter();
     }
 
-    PacketSyncSmartChest(PacketBuffer buffer) {
+    PacketSyncSmartChest(FriendlyByteBuf buffer) {
         super(buffer);
 
         lastSlot = buffer.readVarInt();
@@ -58,7 +58,7 @@ public class PacketSyncSmartChest extends LocationIntPacket {
     }
 
     @Override
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         super.toBytes(buf);
 
         buf.writeVarInt(lastSlot);
@@ -71,7 +71,7 @@ public class PacketSyncSmartChest extends LocationIntPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            PacketUtil.getTE(ctx.get().getSender(), pos, TileEntitySmartChest.class).ifPresent(te -> {
+            PacketUtil.getBlockEntity(ctx.get().getSender(), pos, SmartChestBlockEntity.class).ifPresent(te -> {
                 te.setLastSlot(lastSlot);
                 te.setFilter(filter);
             });

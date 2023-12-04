@@ -17,24 +17,25 @@
 
 package me.desht.pneumaticcraft.client.gui.widget;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.systems.RenderSystem;
 import me.desht.pneumaticcraft.client.util.GuiUtils;
 import me.desht.pneumaticcraft.common.thirdparty.ModNameCache;
-import net.minecraft.client.gui.AbstractGui;
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.client.renderer.Rectangle2d;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidTank;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.templates.FluidTank;
 
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -44,11 +45,11 @@ import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
  * This class is derived from BluePower and edited by MineMaarten:
  * https://github.com/Qmunity/BluePower/blob/FluidCrafting/src/main/java/com/bluepowermod/client/gui/widget/WidgetTank.java
  */
-public class WidgetTank extends Widget implements ITooltipProvider {
+public class WidgetTank extends AbstractWidget {
     private final IFluidTank tank;
 
     public WidgetTank(int x, int y, IFluidTank tank) {
-        super(x, y, 16, 64, StringTextComponent.EMPTY);
+        super(x, y, 16, 64, Component.empty());
         this.tank = tank;
     }
 
@@ -57,12 +58,12 @@ public class WidgetTank extends Widget implements ITooltipProvider {
     }
 
     public WidgetTank(int x, int y, int width, int height, FluidStack stack) {
-        super(x, y, width, height, StringTextComponent.EMPTY);
+        super(x, y, width, height, Component.empty());
         this.tank = makeTank(stack, stack.getAmount());
     }
 
     public WidgetTank(int x, int y, int width, int height, FluidStack stack, int capacity) {
-        super(x, y, width, height, StringTextComponent.EMPTY);
+        super(x, y, width, height, Component.empty());
         this.tank = makeTank(stack, capacity);
     }
 
@@ -73,38 +74,34 @@ public class WidgetTank extends Widget implements ITooltipProvider {
     }
 
     @Override
-    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTick) {
-        RenderSystem.disableLighting();
-        GuiUtils.drawFluid(matrixStack, new Rectangle2d(x, y, width, height), getFluid(), getTank());
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        int x = getX(), y = getY();
+        GuiUtils.drawFluid(graphics, new Rect2i(x, y, width, height), getFluid(), getTank());
 
-        // drawing a gauge rather than using the widget_tank texture since for some reason it doesn't work
-        // https://github.com/desht/pnc-repressurized/issues/25
-        matrixStack.pushPose();
-        matrixStack.translate(0, 0, 300);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 300);
         for (int i = 3; i < height - 1; i += 4) {
             int width = (i - 3) % 20 == 0 ? 16 : 2;
-            AbstractGui.fill(matrixStack, x, y + i, x + width, y + i + 1, 0xFF2F2F2F);
+            graphics.fill(x, y + i, x + width, y + i + 1, 0xFF2F2F2F);
         }
-        matrixStack.popPose();
+        graphics.pose().popPose();
 
-//        GlStateManager.color(1, 1, 1, 1);
-//        Minecraft.getMinecraft().getTextureManager().bindTexture(Textures.WIDGET_TANK);
-//        Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, 16, 64, 16, 64);
+        setTooltip(Tooltip.create(PneumaticCraftUtils.combineComponents(makeTooltip())));
     }
 
-    @Override
-    public void addTooltip(double mouseX, double mouseY, List<ITextComponent> curTip, boolean shift) {
+    public List<Component> makeTooltip() {
         Fluid fluid = tank.getFluid().getFluid();
         String amt = NumberFormat.getNumberInstance(Locale.getDefault()).format(tank.getFluidAmount());
         String capacity = NumberFormat.getNumberInstance(Locale.getDefault()).format(tank.getCapacity());
-
-        curTip.add(new StringTextComponent(amt + " / " + capacity + " mB"));
+        List<Component> l = new ArrayList<>();
+        l.add(Component.literal(amt + " / " + capacity + " mB"));
         if (fluid == Fluids.EMPTY || tank.getCapacity() == 0 || tank.getFluidAmount() == 0) {
-            curTip.add(xlate("pneumaticcraft.gui.misc.empty").withStyle(TextFormatting.GRAY));
+            l.add(xlate("pneumaticcraft.gui.misc.empty").withStyle(ChatFormatting.GRAY));
         } else {
-            curTip.add(new FluidStack(fluid, tank.getFluidAmount()).getDisplayName().copy().withStyle(TextFormatting.GRAY));
-            curTip.add(new StringTextComponent(ModNameCache.getModName(fluid)).withStyle(TextFormatting.BLUE, TextFormatting.ITALIC));
+            l.add(new FluidStack(fluid, tank.getFluidAmount()).getDisplayName().copy().withStyle(ChatFormatting.GRAY));
+            l.add(Component.literal(ModNameCache.getModName(fluid)).withStyle(ChatFormatting.BLUE, ChatFormatting.ITALIC));
         }
+        return l;
     }
 
     public FluidStack getFluid() {
@@ -124,5 +121,9 @@ public class WidgetTank extends Widget implements ITooltipProvider {
         } else if (fluidStack.getAmount() < tank.getFluidAmount()) {
             tank.drain(tank.getFluidAmount() - fluidStack.getAmount(), IFluidHandler.FluidAction.EXECUTE);
         }
+    }
+
+    @Override
+    public void updateWidgetNarration(NarrationElementOutput pNarrationElementOutput) {
     }
 }

@@ -17,15 +17,15 @@
 
 package me.desht.pneumaticcraft.common.item;
 
-import me.desht.pneumaticcraft.common.PneumaticCraftTags;
+import me.desht.pneumaticcraft.api.data.PneumaticCraftTags;
 import me.desht.pneumaticcraft.lib.PneumaticValues;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.IArmorMaterial;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.crafting.Ingredient;
 
-class CompressedIronArmorMaterial implements IArmorMaterial {
+class CompressedIronArmorMaterial implements ArmorMaterial {
     static final int[] DMG_REDUCTION = new int[]{2, 5, 6, 2};
     private static final int[] MAX_DAMAGE_ARRAY = new int[]{13, 15, 16, 11};
     private final float knockbackResistance;
@@ -35,13 +35,13 @@ class CompressedIronArmorMaterial implements IArmorMaterial {
     }
 
     @Override
-    public int getDurabilityForSlot(EquipmentSlotType equipmentSlotType) {
-        return PneumaticValues.PNEUMATIC_ARMOR_DURABILITY_BASE * MAX_DAMAGE_ARRAY[equipmentSlotType.getIndex()];
+    public int getDurabilityForType(ArmorItem.Type type) {
+        return PneumaticValues.PNEUMATIC_ARMOR_DURABILITY_BASE * MAX_DAMAGE_ARRAY[type.getSlot().getIndex()];
     }
 
     @Override
-    public int getDefenseForSlot(EquipmentSlotType equipmentSlotType) {
-        return DMG_REDUCTION[equipmentSlotType.getIndex()];
+    public int getDefenseForType(ArmorItem.Type type) {
+        return DMG_REDUCTION[type.getSlot().getIndex()];
     }
 
     @Override

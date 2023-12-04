@@ -17,13 +17,12 @@
 
 package me.desht.pneumaticcraft.api.client.pneumatic_helmet;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.platform.InputConstants;
 import me.desht.pneumaticcraft.api.pneumatic_armor.IArmorUpgradeHandler;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.settings.KeyBinding;
-import net.minecraft.client.util.InputMappings;
-import net.minecraft.util.text.IFormattableTextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.Optional;
 
@@ -46,38 +45,38 @@ public interface IOptionPage {
      *
      * @return the page name
      */
-    IFormattableTextComponent getPageName();
+    MutableComponent getPageName();
 
     /**
-     * Here you can initialize your buttons and stuff like with a {@link Screen}.
+     * Here you can initialize your buttons and stuff like with a {@link net.minecraft.client.gui.screens.Screen}.
      *
      * @param gui the holding GUI
      */
     void populateGui(IGuiScreen gui);
 
     /**
-     * Called immediately before {@link Screen#render(MatrixStack, int, int, float)}
+     * Called immediately before {@link net.minecraft.client.gui.screens.Screen#render(GuiGraphics, int, int, float)}
      *
-     * @param matrixStack the matrix stack
-     * @param x mouse X
-     * @param y mouse Y
+     * @param graphics     the GUI draw context
+     * @param x            mouse X
+     * @param y            mouse Y
      * @param partialTicks partial ticks since last world ticks
      */
-    void renderPre(MatrixStack matrixStack, int x, int y, float partialTicks);
+    void renderPre(GuiGraphics graphics, int x, int y, float partialTicks);
 
     /**
-     * Called immediately after {@link Screen#render(MatrixStack, int, int, float)}
+     * Called immediately after {@link net.minecraft.client.gui.screens.Screen#render(GuiGraphics, int, int, float)}
      * Here you can render additional things like text.
      *
-     * @param matrixStack the matrix stack
-     * @param x mouse X
-     * @param y mouse Y
+     * @param graphics     the GUI draw context
+     * @param x            mouse X
+     * @param y            mouse Y
      * @param partialTicks partial ticks since last world ticks
      */
-    void renderPost(MatrixStack matrixStack, int x, int y, float partialTicks);
+    void renderPost(GuiGraphics graphics, int x, int y, float partialTicks);
 
     /**
-     * Called by {@link Screen#keyPressed(int, int, int)} when a key is pressed.
+     * Called by {@link net.minecraft.client.gui.screens.Screen#keyPressed(int, int, int)} when a key is pressed.
      *
      * @param keyCode typed keycode
      * @param scanCode the scan code (rarely useful)
@@ -87,7 +86,7 @@ public interface IOptionPage {
     boolean keyPressed(int keyCode, int scanCode, int modifiers);
 
     /**
-     * Called by {@link Screen#keyReleased(int, int, int)} when a key is released.
+     * Called by {@link net.minecraft.client.gui.screens.Screen#keyReleased(int, int, int)} when a key is released.
      *
      * @param keyCode typed keycode
      * @param scanCode the scan code (rarely useful)
@@ -97,7 +96,7 @@ public interface IOptionPage {
     boolean keyReleased(int keyCode, int scanCode, int modifiers);
 
     /**
-     * Called when mouse is clicked via {@link Screen#mouseClicked(double, double, int)}
+     * Called when mouse is clicked via {@link net.minecraft.client.gui.screens.Screen#mouseClicked(double, double, int)}
      * @param x mouse X
      * @param y mouse Y
      * @param button mouse button
@@ -127,7 +126,7 @@ public interface IOptionPage {
     boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY);
 
     /**
-     * Can this upgrade be toggled off & on?  If true, a checkbox (with the ability to bind a key) will be
+     * Can this upgrade be toggled on &amp; off?  If true, a checkbox (with the ability to bind a key) will be
      * automatically displayed in this upgrade's GUI.
      *
      * @return true if the upgrade is toggleable, false otherwise
@@ -150,33 +149,41 @@ public interface IOptionPage {
     default int settingsYposition() { return 115; }
 
     /**
-     * Called immediately after {@link Screen#tick()}
+     * Called immediately after {@link net.minecraft.client.gui.screens.Screen#tick()}
      */
     default void tick() { }
 
     /**
      * Get the keybinding button for this page, if any.  You can create a keybinding button with
-     * {@link IPneumaticHelmetRegistry#makeKeybindingButton(int, KeyBinding)}.
+     * {@link IClientArmorRegistry#makeKeybindingButton(int, KeyMapping)}.
      *
      * @return the keybinding button, or {@code Optional.empty()} if there isn't one
      */
     default Optional<IKeybindingButton> getKeybindingButton() { return Optional.empty(); }
 
     /**
+     * Get the client upgrade handler that this screen is for.
+     *
+     * @return the client upgrade handler
+     */
+    IArmorUpgradeClientHandler<?> getClientUpgradeHandler();
+
+    /**
      * Convenience class for simple armor features with no additional settings.
      */
     class SimpleOptionPage<T extends IArmorUpgradeClientHandler<?>> implements IOptionPage {
         private final IGuiScreen screen;
-        private final IFormattableTextComponent name;
+        private final MutableComponent name;
         private final T clientUpgradeHandler;
 
         public SimpleOptionPage(IGuiScreen screen, T clientUpgradeHandler) {
             this.screen = screen;
-            this.name = new TranslationTextComponent(IArmorUpgradeHandler.getStringKey(clientUpgradeHandler.getCommonHandler().getID()));
+            this.name = Component.translatable(IArmorUpgradeHandler.getStringKey(clientUpgradeHandler.getID()));
             this.clientUpgradeHandler = clientUpgradeHandler;
         }
 
-        protected T getClientUpgradeHandler() {
+        @Override
+        public T getClientUpgradeHandler() {
             return clientUpgradeHandler;
         }
 
@@ -186,7 +193,7 @@ public interface IOptionPage {
         }
 
         @Override
-        public IFormattableTextComponent getPageName() {
+        public MutableComponent getPageName() {
             return name;
         }
 
@@ -195,16 +202,16 @@ public interface IOptionPage {
         }
 
         @Override
-        public void renderPre(MatrixStack matrixStack, int x, int y, float partialTicks) {
+        public void renderPre(GuiGraphics graphics, int x, int y, float partialTicks) {
         }
 
         @Override
-        public void renderPost(MatrixStack matrixStack, int x, int y, float partialTicks) {
+        public void renderPost(GuiGraphics graphics, int x, int y, float partialTicks) {
         }
 
         @Override
         public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-            return getKeybindingButton().map(b -> b.receiveKey(InputMappings.Type.KEYSYM, keyCode)).orElse(false);
+            return getKeybindingButton().map(b -> b.receiveKey(InputConstants.Type.KEYSYM, keyCode)).orElse(false);
         }
 
         @Override
@@ -214,7 +221,7 @@ public interface IOptionPage {
 
         @Override
         public boolean mouseClicked(double x, double y, int button) {
-            return getKeybindingButton().map(b -> b.receiveKey(InputMappings.Type.MOUSE, button)).orElse(false);
+            return getKeybindingButton().map(b -> b.receiveKey(InputConstants.Type.MOUSE, button)).orElse(false);
         }
 
         @Override

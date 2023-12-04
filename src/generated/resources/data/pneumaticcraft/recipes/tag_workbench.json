@@ -1,9 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "B",
-    "D"
-  ],
+  "category": "misc",
   "key": {
     "B": {
       "item": "minecraft:writable_book"
@@ -12,7 +9,12 @@
       "item": "pneumaticcraft:display_table"
     }
   },
+  "pattern": [
+    "B",
+    "D"
+  ],
   "result": {
     "item": "pneumaticcraft:tag_workbench"
-  }
+  },
+  "show_notification": true
 }

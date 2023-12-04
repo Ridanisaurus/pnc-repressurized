@@ -17,17 +17,17 @@
 
 package me.desht.pneumaticcraft.api.client.pneumatic_helmet;
 
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.function.Consumer;
 
 /**
  * Represents a checkbox widget which can have a key bound to toggle it; use this to create a checkbox to toggle
- * a toggleable upgrade on & off.
+ * a toggleable upgrade on &amp; off.
  * <p>
- * Do not implement this class yourself; you can create & retrieve instances of it via
- * {@link IPneumaticHelmetRegistry#makeKeybindingCheckBox(ResourceLocation, int, int, int, Consumer)}. This would
+ * Do not implement this class yourself; you can create and retrieve instances of it via
+ * {@link IClientArmorRegistry#makeKeybindingCheckBox(ResourceLocation, int, int, int, Consumer)}. This would
  * typically be done in {@link IOptionPage#populateGui(IGuiScreen)}.
  */
 public interface ICheckboxWidget {
@@ -39,13 +39,13 @@ public interface ICheckboxWidget {
     boolean isChecked();
 
     /**
-     * Convenience method to cast this to a Widget, suitable for passing to {@link IGuiScreen#addWidget(Widget)}, or
-     * calling other Widget methods on it.
+     * Convenience method to cast this to a Widget, suitable for passing to {@link IGuiScreen#addWidget(AbstractWidget)},
+     * or calling other Widget methods on it.
      *
      * @return this checkbox as a Widget
      */
-    default Widget asWidget() {
-        return (Widget) this;
+    default AbstractWidget asWidget() {
+        return (AbstractWidget) this;
     }
 
     /**

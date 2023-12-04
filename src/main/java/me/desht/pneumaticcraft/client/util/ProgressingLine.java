@@ -17,11 +17,10 @@
 
 package me.desht.pneumaticcraft.client.util;
 
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 public class ProgressingLine {
-
     public float startX;
     public float startY;
     public float startZ;
@@ -42,8 +41,8 @@ public class ProgressingLine {
         this.endZ = end.z();
     }
 
-    public ProgressingLine(Vector3d start, Vector3d end) {
-        this(new Vector3f(start), new Vector3f(end));
+    public ProgressingLine(Vec3 start, Vec3 end) {
+        this(start.toVector3f(), end.toVector3f());
     }
 
     public ProgressingLine(float startX, float startY, float startZ, float endX, float endY, float endZ) {
@@ -57,15 +56,6 @@ public class ProgressingLine {
 
     public ProgressingLine(float startX, float startY, float endX, float endY) {
         this(new Vector3f(startX, startY, 0f), new Vector3f(endX, endY, 0f));
-    }
-
-    public ProgressingLine(ProgressingLine copy) {
-        this(copy.startX, copy.startY, copy.startZ, copy.endX, copy.endY, copy.endZ);
-        progress = copy.progress;
-    }
-
-    public boolean hasLineSameProperties(double startX, double startY, double startZ, double endX, double endY, double endZ) {
-        return Math.abs(startX - this.startX) < 0.01D && Math.abs(startY - this.startY) < 0.01D && Math.abs(startZ - this.startZ) < 0.01D && Math.abs(endX - this.endX) < 0.01D && Math.abs(endY - this.endY) < 0.01D && Math.abs(endZ - this.endZ) < 0.01D;
     }
 
     public float getProgress() {

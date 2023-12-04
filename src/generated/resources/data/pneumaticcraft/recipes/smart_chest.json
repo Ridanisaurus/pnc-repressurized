@@ -1,24 +1,26 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "DPD",
-    "CHC"
-  ],
+  "category": "misc",
   "key": {
+    "C": {
+      "item": "pneumaticcraft:reinforced_chest"
+    },
     "D": {
       "tag": "forge:gems/diamond"
     },
     "H": {
       "item": "pneumaticcraft:omnidirectional_hopper"
     },
-    "C": {
-      "item": "pneumaticcraft:reinforced_chest"
-    },
     "P": {
       "item": "pneumaticcraft:printed_circuit_board"
     }
   },
+  "pattern": [
+    "DPD",
+    "CHC"
+  ],
   "result": {
     "item": "pneumaticcraft:smart_chest"
-  }
+  },
+  "show_notification": true
 }

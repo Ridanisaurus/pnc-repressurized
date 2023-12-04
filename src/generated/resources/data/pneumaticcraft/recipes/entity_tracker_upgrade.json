@@ -1,22 +1,24 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "LXL",
-    "XCX",
-    "LXL"
-  ],
+  "category": "misc",
   "key": {
+    "C": {
+      "item": "minecraft:fermented_spider_eye"
+    },
     "L": {
       "tag": "pneumaticcraft:upgrade_components"
     },
     "X": {
       "tag": "forge:bones"
-    },
-    "C": {
-      "item": "minecraft:fermented_spider_eye"
     }
   },
+  "pattern": [
+    "LXL",
+    "XCX",
+    "LXL"
+  ],
   "result": {
     "item": "pneumaticcraft:entity_tracker_upgrade"
-  }
+  },
+  "show_notification": true
 }

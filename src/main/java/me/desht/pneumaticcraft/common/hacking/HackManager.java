@@ -18,49 +18,55 @@
 package me.desht.pneumaticcraft.common.hacking;
 
 import me.desht.pneumaticcraft.api.PneumaticRegistry;
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableBlock;
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableEntity;
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IPneumaticHelmetRegistry;
-import me.desht.pneumaticcraft.client.pneumatic_armor.ArmorUpgradeClientRegistry;
-import me.desht.pneumaticcraft.client.render.pneumatic_armor.PneumaticHelmetRegistry;
+import me.desht.pneumaticcraft.api.pneumatic_armor.ICommonArmorRegistry;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableBlock;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableEntity;
+import me.desht.pneumaticcraft.client.pneumatic_armor.ClientArmorRegistry;
+import me.desht.pneumaticcraft.client.pneumatic_armor.upgrade_handler.BlockTrackerClientHandler;
+import me.desht.pneumaticcraft.client.pneumatic_armor.upgrade_handler.EntityTrackerClientHandler;
 import me.desht.pneumaticcraft.client.render.pneumatic_armor.RenderBlockTarget;
 import me.desht.pneumaticcraft.client.render.pneumatic_armor.RenderEntityTarget;
-import me.desht.pneumaticcraft.client.render.pneumatic_armor.upgrade_handler.BlockTrackerClientHandler;
-import me.desht.pneumaticcraft.client.render.pneumatic_armor.upgrade_handler.EntityTrackerClientHandler;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.common.core.ModBlocks;
 import me.desht.pneumaticcraft.common.hacking.block.*;
 import me.desht.pneumaticcraft.common.hacking.entity.*;
-import me.desht.pneumaticcraft.common.pneumatic_armor.ArmorUpgradeRegistry;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.item.ItemFrameEntity;
-import net.minecraft.entity.item.PaintingEntity;
-import net.minecraft.entity.merchant.villager.VillagerEntity;
-import net.minecraft.entity.monster.*;
-import net.minecraft.entity.passive.BatEntity;
-import net.minecraft.entity.passive.CowEntity;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.entity.passive.TameableEntity;
-import net.minecraft.entity.passive.horse.HorseEntity;
-import net.minecraft.entity.player.PlayerEntity;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorRegistry;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonUpgradeHandlers;
+import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.ambient.Bat;
+import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.animal.Pufferfish;
+import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.entity.animal.Squid;
+import net.minecraft.world.entity.animal.horse.Horse;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.decoration.Painting;
+import net.minecraft.world.entity.monster.*;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class HackManager {
-    private final Map<Entity, IHackableEntity> trackedHackableEntities = new HashMap<>();
-    private final Map<WorldAndCoord, Pair<Block,IHackableBlock>> trackedHackableBlocks = new HashMap<>();
     private static HackManager clientInstance, serverInstance;
 
-    private static HackManager getInstance(World world) {
+    private final Map<Entity, IHackableEntity<?>> hackableEntities = new HashMap<>();
+    private final Map<WorldAndCoord, Pair<Block,IHackableBlock>> hackableBlocks = new HashMap<>();
+    private long lastEntityPrune = 0L;
+    private long lastBlockPrune = 0L;
+
+    private static HackManager getInstance(Level world) {
         if (world.isClientSide) {
             if (clientInstance == null) clientInstance = new HackManager();
             return clientInstance;
@@ -71,7 +77,7 @@ public class HackManager {
     }
 
     public static void addDefaultEntries() {
-        IPneumaticHelmetRegistry registry = PneumaticRegistry.getInstance().getHelmetRegistry();
+        ICommonArmorRegistry registry = PneumaticRegistry.getInstance().getCommonArmorRegistry();
 
         // blocks
         registry.addHackable(Blocks.TNT, HackableTNT::new);
@@ -94,69 +100,83 @@ public class HackManager {
         registry.addHackable(BlockTags.DOORS, HackableDoor::new);
         registry.addHackable(BlockTags.TRAPDOORS, HackableTrapDoor::new);
         // entities
-        registry.addHackable(LivingEntity.class, HackableMobDisarm::new);
-        registry.addHackable(CreeperEntity.class, HackableCreeper::new);
-        registry.addHackable(TameableEntity.class, HackableTameable::new);
-        registry.addHackable(CowEntity.class, HackableCow::new);
-        registry.addHackable(SheepEntity.class, HackableSheep::new);
-        registry.addHackable(CaveSpiderEntity.class, HackableCaveSpider::new);
-        registry.addHackable(BlazeEntity.class, HackableBlaze::new);
-        registry.addHackable(GhastEntity.class, HackableGhast::new);
-        registry.addHackable(WitchEntity.class, HackableWitch::new);
-        registry.addHackable(EndermanEntity.class, HackableEnderman::new);
-        registry.addHackable(BatEntity.class, HackableBat::new);
-        registry.addHackable(HorseEntity.class, HackableHorse::new);
-        registry.addHackable(ShulkerEntity.class, HackableShulker::new);
-        registry.addHackable(GuardianEntity.class, HackableGuardian::new);
-        registry.addHackable(VillagerEntity.class, HackableVillager::new);
-        registry.addHackable(PaintingEntity.class, HackablePainting::new);
-        registry.addHackable(ItemFrameEntity.class, HackableItemFrame::new);
+        registry.addHackable(Mob.class, HackableMobDisarm::new);
+        registry.addHackable(Creeper.class, HackableCreeper::new);
+        registry.addHackable(TamableAnimal.class, HackableTameable::new);
+        registry.addHackable(Cow.class, HackableCow::new);
+        registry.addHackable(Sheep.class, HackableSheep::new);
+        registry.addHackable(CaveSpider.class, HackableCaveSpider::new);
+        registry.addHackable(Blaze.class, HackableBlaze::new);
+        registry.addHackable(Ghast.class, HackableGhast::new);
+        registry.addHackable(Witch.class, HackableWitch::new);
+        registry.addHackable(EnderMan.class, HackableEnderman::new);
+        registry.addHackable(Bat.class, HackableBat::new);
+        registry.addHackable(Horse.class, HackableHorse::new);
+        registry.addHackable(Shulker.class, HackableShulker::new);
+        registry.addHackable(Guardian.class, HackableGuardian::new);
+        registry.addHackable(Pufferfish.class, HackablePufferfish::new);
+        registry.addHackable(Squid.class, HackableSquid::new);
+        registry.addHackable(Villager.class, HackableVillager::new);
+        registry.addHackable(Painting.class, HackablePainting::new);
+        registry.addHackable(ItemFrame.class, HackableItemFrame::new);
     }
 
-    public static IHackableEntity getHackableForEntity(Entity entity, PlayerEntity player) {
-        // clean up the tracked entities map
-        getInstance(player.getCommandSenderWorld()).trackedHackableEntities.entrySet().removeIf(
-                entry -> !entry.getKey().isAlive()
-                        || !entry.getValue().canHack(entry.getKey(), player) && !isInDisplayCooldown(entry.getValue(), entry.getKey())
-        );
+    public static IHackableEntity<?> getHackableForEntity(Entity entity, Player player) {
+        HackManager manager = getInstance(player.level());
 
-        if (entity instanceof IHackableEntity && ((IHackableEntity) entity).canHack(entity, player))
-            return (IHackableEntity) entity;
+        // prune the tracked entities map every 60 ticks, removing dead or no-longer-hackable entities
+        if (player.level().getGameTime() - 60 > manager.lastEntityPrune) {
+            manager.hackableEntities.entrySet().removeIf(
+                    entry -> !entry.getKey().isAlive()
+                            || !entry.getValue().canHack(entry.getKey(), player) && !isInDisplayCooldown(entry.getValue(), entry.getKey())
+            );
+            manager.lastEntityPrune = player.level().getGameTime();
+        }
 
-        IHackableEntity hackable = getInstance(player.getCommandSenderWorld()).trackedHackableEntities.get(entity);
+        // entities which implement IHackableEntity directly
+        if (entity instanceof IHackableEntity h && h.canHack(entity, player))
+            return h;
+
+        // entities which have been registered with the hack manager
+        IHackableEntity<?> hackable = manager.hackableEntities.get(entity);
         if (hackable == null) {
-            hackable = PneumaticHelmetRegistry.getInstance().getHackable(entity, player);
+            hackable = CommonArmorRegistry.getInstance().getHackable(entity, player);
             if (hackable != null) {
-                getInstance(player.getCommandSenderWorld()).trackedHackableEntities.put(entity, hackable);
+                manager.hackableEntities.put(entity, hackable);
             }
         }
         return hackable;
     }
 
-    public static IHackableBlock getHackableForBlock(IBlockReader world, BlockPos pos, PlayerEntity player) {
-        Block block = world.getBlockState(pos).getBlock();
+    public static IHackableBlock getHackableForBlock(BlockGetter blockGetter, BlockPos pos, Player player) {
+        BlockState state = blockGetter.getBlockState(pos);
+        Block block = state.getBlock();
+        HackManager manager = getInstance(player.level());
 
-        // clean up the tracked blocks map
-        getInstance(player.getCommandSenderWorld()).trackedHackableBlocks.entrySet().removeIf(
-                entry -> {
-                    Block trackedBlock = entry.getValue().getLeft();
-                    IHackableBlock hackableBlock = entry.getValue().getRight();
-                    return block != trackedBlock ||
-                            !hackableBlock.canHack(entry.getKey().world, entry.getKey().pos, player)
-                                    && !isInDisplayCooldown(hackableBlock, entry.getKey().world, entry.getKey().pos, player);
-                }
-        );
+        if (player.level().getGameTime() - 60 > manager.lastBlockPrune) {
+            // clean up the tracked blocks map
+            manager.hackableBlocks.entrySet().removeIf(
+                    entry -> {
+                        Block trackedBlock = entry.getValue().getLeft();
+                        IHackableBlock hackableBlock = entry.getValue().getRight();
+                        return block != trackedBlock ||
+                                !hackableBlock.canHack(entry.getKey().world, entry.getKey().pos, state, player)
+                                        && !isInDisplayCooldown(hackableBlock, entry.getKey().world, entry.getKey().pos, player);
+                    }
+            );
+            manager.lastBlockPrune = player.level().getGameTime();
+        }
 
-        if (block instanceof IHackableBlock && ((IHackableBlock) block).canHack(world, pos, player))
-            return (IHackableBlock) block;
+        if (block instanceof IHackableBlock h && h.canHack(blockGetter, pos, state, player))
+            return h;
 
-        WorldAndCoord loc = new WorldAndCoord(world, pos);
-        Pair<Block,IHackableBlock> pair = getInstance(player.getCommandSenderWorld()).trackedHackableBlocks.get(loc);
+        WorldAndCoord loc = new WorldAndCoord(blockGetter, pos);
+        Pair<Block,IHackableBlock> pair = manager.hackableBlocks.get(loc);
         if (pair == null) {
-            IHackableBlock hackable = PneumaticHelmetRegistry.getInstance().getHackable(block);
-            if (hackable != null && hackable.canHack(world, pos, player)) {
+            IHackableBlock hackable = CommonArmorRegistry.getInstance().getHackable(block);
+            if (hackable != null && hackable.canHack(blockGetter, pos, state, player)) {
                 pair = Pair.of(block, hackable);
-                getInstance(player.getCommandSenderWorld()).trackedHackableBlocks.put(loc, pair);
+                manager.hackableBlocks.put(loc, pair);
             } else {
                 return null;
             }
@@ -164,10 +184,10 @@ public class HackManager {
         return pair.getRight();
     }
 
-    private static boolean isInDisplayCooldown(IHackableBlock hackableBlock, IBlockReader world, BlockPos pos, PlayerEntity player) {
-        if (player.level.isClientSide) {
-            RenderBlockTarget target = ArmorUpgradeClientRegistry.getInstance()
-                    .getClientHandler(ArmorUpgradeRegistry.getInstance().blockTrackerHandler, BlockTrackerClientHandler.class)
+    private static boolean isInDisplayCooldown(IHackableBlock hackableBlock, BlockGetter world, BlockPos pos, Player player) {
+        if (player.level().isClientSide) {
+            RenderBlockTarget target = ClientArmorRegistry.getInstance()
+                    .getClientHandler(CommonUpgradeHandlers.blockTrackerHandler, BlockTrackerClientHandler.class)
                     .getTargetForCoord(pos);
             int requiredHackTime = hackableBlock.getHackTime(world, pos, player);
             return target != null && target.getHackTime() >= requiredHackTime && target.getHackTime() <= requiredHackTime + 20;
@@ -176,12 +196,12 @@ public class HackManager {
         }
     }
 
-    private static boolean isInDisplayCooldown(IHackableEntity hackableEntity, Entity entity) {
-        if (entity.level.isClientSide) {
-            RenderEntityTarget target = ArmorUpgradeClientRegistry.getInstance()
-                    .getClientHandler(ArmorUpgradeRegistry.getInstance().entityTrackerHandler, EntityTrackerClientHandler.class)
+    private static boolean isInDisplayCooldown(IHackableEntity<?> hackableEntity, Entity entity) {
+        if (entity.level().isClientSide) {
+            RenderEntityTarget target = ClientArmorRegistry.getInstance()
+                    .getClientHandler(CommonUpgradeHandlers.entityTrackerHandler, EntityTrackerClientHandler.class)
                     .getTargetForEntity(entity);
-            int requiredHackTime = hackableEntity.getHackTime(entity, ClientUtils.getClientPlayer());
+            int requiredHackTime = hackableEntity._getHackTime(entity, ClientUtils.getClientPlayer());
             return target != null && target.getHackTime() >= requiredHackTime && target.getHackTime() <= requiredHackTime + 20;
         } else {
             return false;

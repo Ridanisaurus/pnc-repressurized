@@ -2,8 +2,12 @@
   "type": "minecraft:block",
   "pools": [
     {
-      "name": "kerosene_lamp",
-      "rolls": 1,
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
       "entries": [
         {
           "type": "minecraft:item",
@@ -19,11 +23,9 @@
           "name": "pneumaticcraft:kerosene_lamp"
         }
       ],
-      "conditions": [
-        {
-          "condition": "minecraft:survives_explosion"
-        }
-      ]
+      "name": "kerosene_lamp",
+      "rolls": 1.0
     }
-  ]
+  ],
+  "random_sequence": "pneumaticcraft:blocks/kerosene_lamp"
 }

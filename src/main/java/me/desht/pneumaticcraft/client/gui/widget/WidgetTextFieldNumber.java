@@ -19,9 +19,12 @@ package me.desht.pneumaticcraft.client.gui.widget;
 
 import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.Font;
+import net.minecraft.util.Mth;
 import org.apache.commons.lang3.math.NumberUtils;
+
+import java.text.NumberFormat;
+import java.text.ParseException;
 
 public class WidgetTextFieldNumber extends WidgetTextField {
     public int minValue = Integer.MIN_VALUE;
@@ -30,7 +33,7 @@ public class WidgetTextFieldNumber extends WidgetTextField {
     private double fineAdjust = 1;
     private double coarseAdjust = 1000;
 
-    public WidgetTextFieldNumber(FontRenderer fontRenderer, int x, int y, int width, int height) {
+    public WidgetTextFieldNumber(Font fontRenderer, int x, int y, int width, int height) {
         super(fontRenderer, x, y, width, height);
         setValue(0);
 
@@ -52,21 +55,28 @@ public class WidgetTextFieldNumber extends WidgetTextField {
     }
 
     public WidgetTextFieldNumber setValue(int value) {
-        setValue(Integer.toString(MathHelper.clamp(value, minValue, maxValue)));
+        setValue(Integer.toString(Mth.clamp(value, minValue, maxValue)));
         return this;
     }
 
     public WidgetTextFieldNumber setValue(double value) {
-        setValue(PneumaticCraftUtils.roundNumberTo(MathHelper.clamp(value, minValue, maxValue), decimals));
+        setValue(PneumaticCraftUtils.roundNumberTo(Mth.clamp(value, minValue, maxValue), decimals));
         return this;
     }
 
     public int getIntValue() {
-        return MathHelper.clamp(NumberUtils.toInt(getValue()), minValue, maxValue);
+        return Mth.clamp(NumberUtils.toInt(getValue()), minValue, maxValue);
     }
 
     public double getDoubleValue() {
-        return PneumaticCraftUtils.roundNumberToDouble(MathHelper.clamp(NumberUtils.toDouble(getValue()), minValue, maxValue), decimals);
+        try {
+            // using NumberFormat here rather than NumberUtils; NumberFormat honours locale settings, which is
+            // important, since locale settings are also honoured when putting a value into the widget
+            Number n = NumberFormat.getNumberInstance().parse(getValue());
+            return PneumaticCraftUtils.roundNumberToDouble(Mth.clamp(n.doubleValue(), minValue, maxValue), decimals);
+        } catch (ParseException e) {
+            return 0d;
+        }
     }
 
     public WidgetTextFieldNumber setAdjustments(double fineAdjust, double coarseAdjust) {

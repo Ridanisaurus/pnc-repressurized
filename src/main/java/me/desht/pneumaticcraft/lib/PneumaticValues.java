@@ -23,6 +23,7 @@ public class PneumaticValues {
     public static final float DANGER_PRESSURE_TIER_ONE = 5;
     public static final float DANGER_PRESSURE_PRESSURE_TUBE = DANGER_PRESSURE_TIER_ONE;
     public static final float DANGER_PRESSURE_AIR_COMPRESSOR = DANGER_PRESSURE_TIER_ONE;
+    public static final float DANGER_PRESSURE_MANUAL_COMPRESSOR = DANGER_PRESSURE_TIER_ONE;
     public static final float DANGER_PRESSURE_AIR_CANNON = DANGER_PRESSURE_TIER_ONE;
     public static final float DANGER_PRESSURE_PRESSURE_CHAMBER = DANGER_PRESSURE_TIER_ONE;
     public static final float DANGER_PRESSURE_ELEVATOR = DANGER_PRESSURE_TIER_ONE;
@@ -42,6 +43,7 @@ public class PneumaticValues {
 //    public static final float DANGER_PRESSURE_KINETIC_COMPRESSOR = DANGER_PRESSURE_TIER_TWO;
     public static final float DANGER_PRESSURE_PNEUMATIC_DYNAMO = DANGER_PRESSURE_TIER_TWO;
     public static final float DANGER_PRESSURE_FLUX_COMPRESSOR = DANGER_PRESSURE_TIER_TWO;
+    public static final float DANGER_PRESSURE_SOLAR_COMPRESSOR = DANGER_PRESSURE_TIER_TWO;
     public static final float DANGER_PRESSURE_AERIAL_INTERFACE = DANGER_PRESSURE_TIER_TWO;
     public static final float DANGER_PRESSURE_ELECTROSTATIC_COMPRESSOR = DANGER_PRESSURE_TIER_TWO;
 //    public static final float DANGER_PRESSURE_PNEUMATIC_PUMP = DANGER_PRESSURE_TIER_TWO;
@@ -50,6 +52,7 @@ public class PneumaticValues {
     public static final float MAX_PRESSURE_TIER_ONE = 7F;
     public static final float MAX_PRESSURE_PRESSURE_TUBE = MAX_PRESSURE_TIER_ONE;
     public static final float MAX_PRESSURE_AIR_COMPRESSOR = MAX_PRESSURE_TIER_ONE;
+    public static final float MAX_PRESSURE_MANUAL_COMPRESSOR = MAX_PRESSURE_TIER_ONE;
     public static final float MAX_PRESSURE_AIR_CANNON = MAX_PRESSURE_TIER_ONE;
     public static final float MAX_PRESSURE_PRESSURE_CHAMBER = MAX_PRESSURE_TIER_ONE;
     public static final float MAX_PRESSURE_ELEVATOR = MAX_PRESSURE_TIER_ONE;
@@ -69,6 +72,7 @@ public class PneumaticValues {
 //    public static final float MAX_PRESSURE_KINETIC_COMPRESSOR = MAX_PRESSURE_TIER_TWO;
     public static final float MAX_PRESSURE_PNEUMATIC_DYNAMO = MAX_PRESSURE_TIER_TWO;
     public static final float MAX_PRESSURE_FLUX_COMPRESSOR = MAX_PRESSURE_TIER_TWO;
+    public static final float MAX_PRESSURE_SOLAR_COMPRESSOR = MAX_PRESSURE_TIER_TWO;
     public static final float MAX_PRESSURE_AERIAL_INTERFACE = MAX_PRESSURE_TIER_TWO;
     public static final float MAX_PRESSURE_ELECTROSTATIC_COMPRESSOR = MAX_PRESSURE_TIER_TWO;
 //    public static final float MAX_PRESSURE_PNEUMATIC_PUMP = MAX_PRESSURE_TIER_TWO;
@@ -108,6 +112,7 @@ public class PneumaticValues {
 
     public static final int PRODUCTION_COMPRESSOR = 10; // mL per tick
     public static final int PRODUCTION_ADVANCED_COMPRESSOR = 50; // mL per tick
+    public static final int PRODUCTION_SOLAR_COMPRESSOR = 2; // mL per tick at ambient temperature
     public static final int PRODUCTION_VACUUM_PUMP = 4;// mL vacuum per tick
 //    public static final int PRODUCTION_PNEUMATIC_ENGINE = 100; //MJ/pump move.
     public static final int PRODUCTION_ELECTROSTATIC_COMPRESSOR = 200000; //per lightning strike
@@ -115,6 +120,7 @@ public class PneumaticValues {
     // volumes (mL)
     public static final int VOLUME_AIR_COMPRESSOR = 5000;
     public static final int VOLUME_ADVANCED_AIR_COMPRESSOR = 10000;
+    public static final int VOLUME_MANUAL_COMPRESSOR = 5000;
     public static final int VOLUME_AIR_CANNON = 2000;
     public static final int VOLUME_PRESSURE_TUBE = 1000;
     public static final int VOLUME_CHARGING_STATION = 1000;
@@ -131,6 +137,7 @@ public class PneumaticValues {
 //    public static final int VOLUME_KINETIC_COMPRESSOR = 10000;
     public static final int VOLUME_PNEUMATIC_DYNAMO = 10000;
     public static final int VOLUME_FLUX_COMPRESSOR = 10000;
+    public static final int VOLUME_SOLAR_COMPRESSOR = 10000;
     public static final int VOLUME_AERIAL_INTERFACE = 4000;
     public static final int VOLUME_ELECTROSTATIC_COMPRESSOR = 50000;
 //    public static final int VOLUME_PNEUMATIC_PUMP = 10000;
@@ -189,7 +196,7 @@ public class PneumaticValues {
 
     public static final int RANGE_UPGRADE_HELMET_RANGE_INCREASE = 5;
     public static final int NORMAL_TANK_CAPACITY = 16000;
-    public static final int PLASTIC_MIXER_MELTING_TEMP = 150 + 273;//150 C
+    public static final int MOLTEN_PLASTIC_TEMPERATURE = 150 + 273;//150 C
     public static final int DRONE_TANK_SIZE = 16000;
 
     public static final int MAGNET_AIR_USAGE = 20; // mL per stack pulled

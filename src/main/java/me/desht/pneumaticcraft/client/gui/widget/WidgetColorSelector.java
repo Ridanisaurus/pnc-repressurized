@@ -17,18 +17,19 @@
 
 package me.desht.pneumaticcraft.client.gui.widget;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.client.renderer.Rectangle2d;
-import net.minecraft.item.DyeColor;
-import net.minecraft.util.text.StringTextComponent;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.DyeColor;
 
 import java.util.function.Consumer;
 
 public class WidgetColorSelector extends WidgetButtonExtended implements IDrawAfterRender {
     private boolean expanded = false;
     private DyeColor color = DyeColor.WHITE;
-    private final Rectangle2d mainArea;
-    private final Rectangle2d expandedArea;
+    private final Rect2i mainArea;
+    private final Rect2i expandedArea;
     private final Consumer<WidgetColorSelector> callback;
 
     public WidgetColorSelector(int xIn, int yIn) {
@@ -36,10 +37,10 @@ public class WidgetColorSelector extends WidgetButtonExtended implements IDrawAf
     }
 
     public WidgetColorSelector(int xIn, int yIn, Consumer<WidgetColorSelector> callback) {
-        super(xIn, yIn, 16, 16, StringTextComponent.EMPTY);
+        super(xIn, yIn, 16, 16, Component.empty());
 
-        mainArea = new Rectangle2d(xIn, yIn, width, height);
-        expandedArea = new Rectangle2d(xIn, yIn + height, width * 4, height * 4);
+        mainArea = new Rect2i(xIn, yIn, width, height);
+        expandedArea = new Rect2i(xIn, yIn + height, width * 4, height * 4);
 
         this.callback = callback;
     }
@@ -49,30 +50,36 @@ public class WidgetColorSelector extends WidgetButtonExtended implements IDrawAf
         return this;
     }
 
+    public boolean isExpanded() {
+        return expanded;
+    }
+
     public DyeColor getColor() {
         return color;
     }
 
     @Override
-    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTick) {
-        super.renderButton(matrixStack, mouseX, mouseY, partialTick);
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderWidget(graphics, mouseX, mouseY, partialTick);
 
-        fill(matrixStack,x + 3, y + 3, x + width - 4, y + height - 4, 0xFF000000 | color.getColorValue());
-        hLine(matrixStack,x + 3, x + width - 3, y + height - 4, 0xFF606060);
-        vLine(matrixStack,x + width - 4, y + 3, y + height - 3, 0xFF606060);
+        int x = getX(), y = getY();
+        graphics.fill(x + 3, y + 3, x + width - 4, y + height - 4, 0xFF000000 | PneumaticCraftUtils.getDyeColorAsRGB(color));
+        graphics.hLine(x + 3, x + width - 3, y + height - 4, 0xFF606060);
+        graphics.vLine(x + width - 4, y + 3, y + height - 3, 0xFF606060);
     }
 
     @Override
-    public void renderAfterEverythingElse(MatrixStack matrixStack, int mouseX, int mouseY, float partialTick) {
+    public void renderAfterEverythingElse(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (expanded) {
-            fill(matrixStack, x, y - 1 + height, x + width * 4, y -1 + height * 5, 0xFF000000);
-            fill(matrixStack, x + 1, y + height, x + width * 4 - 1, y - 2 + height * 5, 0xFF808080);
+            int x = getX(), y = getY();
+            graphics.fill(x, y - 1 + height, x + width * 4, y -1 + height * 5, 0xFF000000);
+            graphics.fill(x + 1, y + height, x + width * 4 - 1, y - 2 + height * 5, 0xFF808080);
             for (DyeColor color : DyeColor.values()) {
                 int dx = x + (color.getId() % 4) * 16;
                 int dy = y - 1 + height + (color.getId() / 4) * 16;
-                fill(matrixStack, dx + 3, dy + 3, dx + 13, dy + 13, 0xFF000000 | color.getColorValue());
-                hLine(matrixStack, dx + 3, dx + 13, dy + 13, 0xFF606060);
-                vLine(matrixStack, dx + 13, dy + 3, dy + 13, 0xFF606060);
+                graphics.fill(dx + 3, dy + 3, dx + 13, dy + 13, 0xFF000000 | PneumaticCraftUtils.getDyeColorAsRGB(color));
+                graphics.hLine(dx + 3, dx + 13, dy + 13, 0xFF606060);
+                graphics.vLine(dx + 13, dy + 3, dy + 13, 0xFF606060);
             }
         }
     }

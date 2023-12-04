@@ -18,70 +18,72 @@
 package me.desht.pneumaticcraft.client.model.custom;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.datafixers.util.Pair;
-import me.desht.pneumaticcraft.client.render.fluid.IFluidItemRenderInfoProvider;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.desht.pneumaticcraft.client.render.fluid.TankRenderInfo;
 import me.desht.pneumaticcraft.common.item.IFluidRendered;
-import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.model.*;
-import net.minecraft.client.renderer.texture.AtlasTexture;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.BlockModel;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.renderer.vertex.VertexFormatElement;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.item.ItemStack;
-import net.minecraft.resources.IResourceManager;
-import net.minecraft.util.Direction;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.vector.TransformationMatrix;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraftforge.client.model.IModelConfiguration;
-import net.minecraftforge.client.model.IModelLoader;
-import net.minecraftforge.client.model.PerspectiveMapWrapper;
-import net.minecraftforge.client.model.data.IDynamicBakedModel;
-import net.minecraftforge.client.model.data.IModelData;
-import net.minecraftforge.client.model.geometry.IModelGeometry;
-import net.minecraftforge.client.model.pipeline.BakedQuadBuilder;
+import net.minecraft.client.resources.model.*;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraftforge.client.model.IDynamicBakedModel;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
+import net.minecraftforge.client.model.geometry.IGeometryLoader;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
+import net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer;
 import net.minecraftforge.fluids.IFluidTank;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class FluidItemModel implements IDynamicBakedModel {
-    private final IBakedModel bakedBaseModel;
-    private final ImmutableMap<ItemCameraTransforms.TransformType, TransformationMatrix> transformMap;
-    private final ItemOverrideList overrideList = new FluidOverridesList(this);
+    private final BakedModel bakedBaseModel;
+    private final ItemOverrides overrideList = new FluidOverridesList(this);
     private List<TankRenderInfo> tanksToRender = Collections.emptyList();
 
-    private FluidItemModel(IBakedModel bakedBaseModel, ImmutableMap<ItemCameraTransforms.TransformType, TransformationMatrix> transformMap) {
+    private FluidItemModel(BakedModel bakedBaseModel) {
         this.bakedBaseModel = bakedBaseModel;
-        this.transformMap = transformMap;
     }
 
     @Nonnull
     @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull Random rand, @Nonnull IModelData extraData) {
-        List<BakedQuad> res = new ArrayList<>(bakedBaseModel.getQuads(state, side, rand, extraData));
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand, @Nonnull ModelData extraData, RenderType renderType) {
+        List<BakedQuad> res = new ArrayList<>(bakedBaseModel.getQuads(state, side, rand, extraData, renderType));
 
         for (TankRenderInfo info : tanksToRender) {
             IFluidTank tank = info.getTank();
             if (tank.getFluid().isEmpty()) continue;
             Fluid fluid = tank.getFluid().getFluid();
-            ResourceLocation texture = fluid.getAttributes().getStillTexture(tank.getFluid());
-            TextureAtlasSprite still = Minecraft.getInstance().getTextureAtlas(AtlasTexture.LOCATION_BLOCKS).apply(texture);
-            int color = fluid.getAttributes().getColor(tank.getFluid());
+            IClientFluidTypeExtensions renderProps = IClientFluidTypeExtensions.of(fluid);
+            ResourceLocation texture = renderProps.getStillTexture(tank.getFluid());
+            TextureAtlasSprite still = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(texture);
+            int color = renderProps.getTintColor(tank.getFluid());
             float[] cols = new float[]{(color >> 24 & 0xFF) / 255F, (color >> 16 & 0xFF) / 255F, (color >> 8 & 0xFF) / 255F, (color & 0xFF) / 255F};
-            AxisAlignedBB bounds = getRenderBounds(tank, info.getBounds());
+            AABB bounds = getRenderBounds(tank, info.getBounds());
             float bx1 = (float) (bounds.minX * 16);
             float bx2 = (float) (bounds.maxX * 16);
             float by1 = (float) (bounds.minY * 16);
@@ -90,84 +92,66 @@ public class FluidItemModel implements IDynamicBakedModel {
             float bz2 = (float) (bounds.maxZ * 16);
 
             if (info.shouldRender(Direction.DOWN)) {
-                List<Vector3d> vecs = ImmutableList.of(new Vector3d(bounds.maxX, bounds.minY, bounds.minZ), new Vector3d(bounds.maxX, bounds.minY, bounds.maxZ), new Vector3d(bounds.minX, bounds.minY, bounds.maxZ), new Vector3d(bounds.minX, bounds.minY, bounds.minZ));
+                List<Vec3> vecs = ImmutableList.of(new Vec3(bounds.maxX, bounds.minY, bounds.minZ), new Vec3(bounds.maxX, bounds.minY, bounds.maxZ), new Vec3(bounds.minX, bounds.minY, bounds.maxZ), new Vec3(bounds.minX, bounds.minY, bounds.minZ));
                 res.add(createQuad(vecs, cols, still, Direction.DOWN, bx1, bx2, bz1, bz2));
             }
             if (info.shouldRender(Direction.UP)) {
-                List<Vector3d> vecs = ImmutableList.of(new Vector3d(bounds.minX, bounds.maxY, bounds.minZ), new Vector3d(bounds.minX, bounds.maxY, bounds.maxZ), new Vector3d(bounds.maxX, bounds.maxY, bounds.maxZ), new Vector3d(bounds.maxX, bounds.maxY, bounds.minZ));
+                List<Vec3> vecs = ImmutableList.of(new Vec3(bounds.minX, bounds.maxY, bounds.minZ), new Vec3(bounds.minX, bounds.maxY, bounds.maxZ), new Vec3(bounds.maxX, bounds.maxY, bounds.maxZ), new Vec3(bounds.maxX, bounds.maxY, bounds.minZ));
                 res.add(createQuad(vecs, cols, still, Direction.UP, bx1, bx2, bz1, bz2));
             }
             if (info.shouldRender(Direction.NORTH)) {
-                List<Vector3d> vecs = ImmutableList.of(new Vector3d(bounds.maxX, bounds.maxY, bounds.minZ), new Vector3d(bounds.maxX, bounds.minY, bounds.minZ), new Vector3d(bounds.minX, bounds.minY, bounds.minZ), new Vector3d(bounds.minX, bounds.maxY, bounds.minZ));
+                List<Vec3> vecs = ImmutableList.of(new Vec3(bounds.maxX, bounds.maxY, bounds.minZ), new Vec3(bounds.maxX, bounds.minY, bounds.minZ), new Vec3(bounds.minX, bounds.minY, bounds.minZ), new Vec3(bounds.minX, bounds.maxY, bounds.minZ));
                 res.add(createQuad(vecs, cols, still, Direction.NORTH, bx1, bx2, by1, by2));
             }
             if (info.shouldRender(Direction.SOUTH)) {
-                List<Vector3d> vecs = ImmutableList.of(new Vector3d(bounds.minX, bounds.maxY, bounds.maxZ), new Vector3d(bounds.minX, bounds.minY, bounds.maxZ), new Vector3d(bounds.maxX, bounds.minY, bounds.maxZ), new Vector3d(bounds.maxX, bounds.maxY, bounds.maxZ));
+                List<Vec3> vecs = ImmutableList.of(new Vec3(bounds.minX, bounds.maxY, bounds.maxZ), new Vec3(bounds.minX, bounds.minY, bounds.maxZ), new Vec3(bounds.maxX, bounds.minY, bounds.maxZ), new Vec3(bounds.maxX, bounds.maxY, bounds.maxZ));
                 res.add(createQuad(vecs, cols, still, Direction.SOUTH, bx1, bx2, by1, by2));
             }
             if (info.shouldRender(Direction.WEST)) {
-                List<Vector3d> vecs = ImmutableList.of(new Vector3d(bounds.minX, bounds.maxY, bounds.minZ), new Vector3d(bounds.minX, bounds.minY, bounds.minZ), new Vector3d(bounds.minX, bounds.minY, bounds.maxZ), new Vector3d(bounds.minX, bounds.maxY, bounds.maxZ));
+                List<Vec3> vecs = ImmutableList.of(new Vec3(bounds.minX, bounds.maxY, bounds.minZ), new Vec3(bounds.minX, bounds.minY, bounds.minZ), new Vec3(bounds.minX, bounds.minY, bounds.maxZ), new Vec3(bounds.minX, bounds.maxY, bounds.maxZ));
                 res.add(createQuad(vecs, cols, still, Direction.WEST, bz1, bz2, by1, by2));
             }
             if (info.shouldRender(Direction.EAST)) {
-                List<Vector3d> vecs = ImmutableList.of(new Vector3d(bounds.maxX, bounds.maxY, bounds.maxZ), new Vector3d(bounds.maxX, bounds.minY, bounds.maxZ), new Vector3d(bounds.maxX, bounds.minY, bounds.minZ), new Vector3d(bounds.maxX, bounds.maxY, bounds.minZ));
+                List<Vec3> vecs = ImmutableList.of(new Vec3(bounds.maxX, bounds.maxY, bounds.maxZ), new Vec3(bounds.maxX, bounds.minY, bounds.maxZ), new Vec3(bounds.maxX, bounds.minY, bounds.minZ), new Vec3(bounds.maxX, bounds.maxY, bounds.minZ));
                 res.add(createQuad(vecs, cols, still, Direction.EAST, bz1, bz2, by1, by2));
             }
         }
         return res;
     }
 
-    private AxisAlignedBB getRenderBounds(IFluidTank tank, AxisAlignedBB tankBounds) {
+    private AABB getRenderBounds(IFluidTank tank, AABB tankBounds) {
         float percent = (float) tank.getFluidAmount() / (float) tank.getCapacity();
 
         double tankHeight = tankBounds.maxY - tankBounds.minY;
         double y1 = tankBounds.minY, y2 = (tankBounds.minY + (tankHeight * percent));
-        if (tank.getFluid().getFluid().getAttributes().getDensity() < 0) {
+        if (tank.getFluid().getFluid().getFluidType().isLighterThanAir()) {
             double yOff = tankBounds.maxY - y2;  // lighter than air fluids move to the top of the tank
             y1 += yOff; y2 += yOff;
         }
-        return new AxisAlignedBB(tankBounds.minX, y1, tankBounds.minZ, tankBounds.maxX, y2, tankBounds.maxZ);
+        return new AABB(tankBounds.minX, y1, tankBounds.minZ, tankBounds.maxX, y2, tankBounds.maxZ);
     }
 
-    private BakedQuad createQuad(List<Vector3d> vecs, float[] cols, TextureAtlasSprite sprite, Direction face, float u1, float u2, float v1, float v2) {
-        BakedQuadBuilder builder = new BakedQuadBuilder(sprite);
-        Vector3d normal = Vector3d.atLowerCornerOf(face.getNormal());
-        putVertex(builder, normal, vecs.get(0).x, vecs.get(0).y, vecs.get(0).z, u1, v1, sprite, cols);
-        putVertex(builder, normal, vecs.get(1).x, vecs.get(1).y, vecs.get(1).z, u1, v2, sprite, cols);
-        putVertex(builder, normal, vecs.get(2).x, vecs.get(2).y, vecs.get(2).z, u2, v2, sprite, cols);
-        putVertex(builder, normal, vecs.get(3).x, vecs.get(3).y, vecs.get(3).z, u2, v1, sprite, cols);
-        builder.setQuadOrientation(face);
-        return builder.build();
+    private BakedQuad createQuad(List<Vec3> vecs, float[] cols, TextureAtlasSprite sprite, Direction face, float u1, float u2, float v1, float v2) {
+        QuadBakingVertexConsumer.Buffered quadBaker = new QuadBakingVertexConsumer.Buffered();
+        Vec3 normal = Vec3.atLowerCornerOf(face.getNormal());
+
+        putVertex(quadBaker, normal, vecs.get(0).x, vecs.get(0).y, vecs.get(0).z, u1, v1, sprite, cols, face);
+        putVertex(quadBaker, normal, vecs.get(1).x, vecs.get(1).y, vecs.get(1).z, u1, v2, sprite, cols, face);
+        putVertex(quadBaker, normal, vecs.get(2).x, vecs.get(2).y, vecs.get(2).z, u2, v2, sprite, cols, face);
+        putVertex(quadBaker, normal, vecs.get(3).x, vecs.get(3).y, vecs.get(3).z, u2, v1, sprite, cols, face);
+
+        return quadBaker.getQuad();
     }
 
-    private void putVertex(BakedQuadBuilder builder, Vector3d normal,
-                           double x, double y, double z, float u, float v, TextureAtlasSprite sprite, float[] col) {
-        ImmutableList<VertexFormatElement> elements = builder.getVertexFormat().getElements().asList();
-        for (int e = 0; e < elements.size(); e++) {
-            switch (elements.get(e).getUsage()) {
-                case POSITION:
-                    builder.put(e, (float)x, (float)y, (float)z);
-                    break;
-                case COLOR:
-                    builder.put(e, col[1], col[2], col[3], col[0]);
-                    break;
-                case UV:
-                    if (elements.get(e).getIndex() == 0) {
-                        float iu = sprite.getU(u);
-                        float iv = sprite.getV(v);
-                        builder.put(e, iu, iv);
-                    } else {
-                        builder.put(e);
-                    }
-                    break;
-                case NORMAL:
-                    builder.put(e, (float) normal.x, (float) normal.y, (float) normal.z);
-                    break;
-                default:
-                    builder.put(e);
-                    break;
-            }
-        }
+    private void putVertex(QuadBakingVertexConsumer quadBaker, Vec3 normal,
+                           double x, double y, double z, float u, float v, TextureAtlasSprite sprite, float[] cols, Direction face) {
+        quadBaker.vertex(x, y, z);
+        quadBaker.normal((float) normal.x, (float) normal.y, (float) normal.z);
+        quadBaker.color(cols[1], cols[2], cols[3], cols[0]);
+        quadBaker.uv(sprite.getU(u), sprite.getV(v));
+        quadBaker.setSprite(sprite);
+        quadBaker.setDirection(face);
+        quadBaker.endVertex();
     }
 
     @Override
@@ -191,8 +175,8 @@ public class FluidItemModel implements IDynamicBakedModel {
     }
 
     @Override
-    public TextureAtlasSprite getParticleTexture(@Nonnull IModelData data) {
-        return bakedBaseModel.getParticleTexture(data);
+    public TextureAtlasSprite getParticleIcon(@Nonnull ModelData data) {
+        return bakedBaseModel.getParticleIcon(data);
     }
 
     @Override
@@ -201,53 +185,44 @@ public class FluidItemModel implements IDynamicBakedModel {
     }
 
     @Override
-    public ItemOverrideList getOverrides() {
+    public ItemOverrides getOverrides() {
         return overrideList;
     }
 
     @Override
-    public boolean doesHandlePerspectives() {
-        return true;
+    public List<BakedModel> getRenderPasses(ItemStack itemStack, boolean fabulous) {
+        return IDynamicBakedModel.super.getRenderPasses(itemStack, fabulous);
     }
 
     @Override
-    public IBakedModel handlePerspective(ItemCameraTransforms.TransformType cameraTransformType, MatrixStack mat) {
-        return PerspectiveMapWrapper.handlePerspective(this, transformMap, cameraTransformType, mat);
+    public BakedModel applyTransform(ItemDisplayContext displayContext, PoseStack poseStack, boolean applyLeftHandTransform) {
+        bakedBaseModel.getTransforms().getTransform(displayContext).apply(applyLeftHandTransform, poseStack);
+        return this;
     }
 
-    public static class Geometry implements IModelGeometry<Geometry> {
-        private final BlockModel baseModel;
-
-        Geometry(BlockModel baseModel) {
-            this.baseModel = baseModel;
+    private record Geometry(BlockModel baseModel) implements IUnbakedGeometry<Geometry> {
+        @Override
+        public BakedModel bake(IGeometryBakingContext owner, ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides, ResourceLocation modelLocation) {
+            return new FluidItemModel(baseModel.bake(baker, Objects.requireNonNull(baseModel.parent), spriteGetter, modelTransform, modelLocation, true));
         }
 
         @Override
-        public IBakedModel bake(IModelConfiguration owner, ModelBakery bakery, Function<RenderMaterial, TextureAtlasSprite> spriteGetter, IModelTransform modelTransform, ItemOverrideList overrides, ResourceLocation modelLocation) {
-            return new FluidItemModel(baseModel.bake(bakery, baseModel.parent, spriteGetter, modelTransform, modelLocation, true), PerspectiveMapWrapper.getTransforms(baseModel.getTransforms()));
-        }
-
-        @Override
-        public Collection<RenderMaterial> getTextures(IModelConfiguration owner, Function<ResourceLocation, IUnbakedModel> modelGetter, Set<Pair<String, String>> missingTextureErrors) {
-            return baseModel.getMaterials(modelGetter, missingTextureErrors);
+        public void resolveParents(Function<ResourceLocation, UnbakedModel> modelGetter, IGeometryBakingContext context) {
+            baseModel.resolveParents(modelGetter);
         }
     }
 
-    public enum Loader implements IModelLoader<Geometry> {
+    public enum Loader implements IGeometryLoader<Geometry> {
         INSTANCE;
 
         @Override
-        public void onResourceManagerReload(IResourceManager resourceManager) {
-        }
-
-        @Override
-        public Geometry read(JsonDeserializationContext deserializationContext, JsonObject modelContents) {
-            BlockModel baseModel = deserializationContext.deserialize(JSONUtils.getAsJsonObject(modelContents, "base_model"), BlockModel.class);
+        public Geometry read(JsonObject modelContents, JsonDeserializationContext deserializationContext) {
+            BlockModel baseModel = deserializationContext.deserialize(GsonHelper.getAsJsonObject(modelContents, "base_model"), BlockModel.class);
             return new FluidItemModel.Geometry(baseModel);
         }
     }
 
-    private static class FluidOverridesList extends ItemOverrideList {
+    private static class FluidOverridesList extends ItemOverrides {
         private final FluidItemModel modelIn;
 
         FluidOverridesList(FluidItemModel modelIn) {
@@ -256,10 +231,9 @@ public class FluidItemModel implements IDynamicBakedModel {
 
         @Nullable
         @Override
-        public IBakedModel resolve(IBakedModel original, ItemStack stack, @Nullable ClientWorld world, @Nullable LivingEntity entity) {
-            if (stack.getItem() instanceof IFluidRendered) {
-                IFluidItemRenderInfoProvider infoProvider = ((IFluidRendered) stack.getItem()).getFluidItemRenderer();
-                modelIn.tanksToRender = infoProvider.getTanksToRender(stack);
+        public BakedModel resolve(BakedModel original, ItemStack stack, @Nullable ClientLevel world, @Nullable LivingEntity entity, int seed) {
+            if (stack.getItem() instanceof IFluidRendered r) {
+                modelIn.tanksToRender = r.getFluidItemRenderer().getTanksToRender(stack);
             }
             return modelIn;
         }

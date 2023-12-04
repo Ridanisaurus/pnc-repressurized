@@ -17,36 +17,41 @@
 
 package me.desht.pneumaticcraft.client;
 
-import me.desht.pneumaticcraft.client.gui.tubemodule.GuiTubeModule;
-import me.desht.pneumaticcraft.client.render.tube_module.TubeModuleRendererBase;
-import me.desht.pneumaticcraft.common.block.tubes.TubeModule;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.client.gui.tubemodule.AbstractTubeModuleScreen;
+import me.desht.pneumaticcraft.client.render.tube_module.AbstractTubeModuleRenderer;
+import me.desht.pneumaticcraft.common.tubemodules.AbstractTubeModule;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.resources.ResourceLocation;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class TubeModuleClientRegistry {
-    private static final Map<ResourceLocation, Supplier<? extends TubeModuleRendererBase<?>>> MODEL_FACTORY = new HashMap<>();
-    private static final Map<ResourceLocation, Function<? extends TubeModule, ? extends GuiTubeModule<?>>> GUI_FACTORY = new HashMap<>();
+    private static final Map<ResourceLocation, ModuleRendererFactory<?>> MODEL_FACTORY
+            = new ConcurrentHashMap<>();
+    private static final Map<ResourceLocation, Function<? extends AbstractTubeModule, ? extends AbstractTubeModuleScreen<?>>> GUI_FACTORY
+            = new ConcurrentHashMap<>();
 
-    static void registerTubeModuleRenderer(ResourceLocation moduleType, Supplier<? extends TubeModuleRendererBase<?>> factory) {
+    static void registerTubeModuleRenderer(ResourceLocation moduleType, ModuleRendererFactory<?> factory) {
         MODEL_FACTORY.put(moduleType, factory);
     }
 
-    static <T extends TubeModule> void registerTubeModuleGUI(ResourceLocation moduleType, Function<T, ? extends GuiTubeModule<T>> factory) {
+    static <T extends AbstractTubeModule> void registerTubeModuleGUI(ResourceLocation moduleType, Function<T, ? extends AbstractTubeModuleScreen<T>> factory) {
         GUI_FACTORY.put(moduleType, factory);
     }
 
-    public static <T extends TubeModule> GuiTubeModule<T> createGUI(T module) {
+    public static <T extends AbstractTubeModule> AbstractTubeModuleScreen<T> createGUI(T module) {
         //noinspection unchecked
-        Function<T, ? extends GuiTubeModule<T>> factory = (Function<T, ? extends GuiTubeModule<T>>)GUI_FACTORY.get(module.getType());
+        Function<T, ? extends AbstractTubeModuleScreen<T>> factory = (Function<T, ? extends AbstractTubeModuleScreen<T>>)GUI_FACTORY.get(module.getType());
         return (factory == null) ? null : factory.apply(module);
     }
 
-    public static <T extends TubeModule> TubeModuleRendererBase<T> createModel(T module) {
+    public static <T extends AbstractTubeModule> AbstractTubeModuleRenderer<T> createModel(T module, BlockEntityRendererProvider.Context ctx) {
         //noinspection unchecked
-        return ((Supplier<TubeModuleRendererBase<T>>)MODEL_FACTORY.get(module.getType())).get();
+        return (AbstractTubeModuleRenderer<T>) MODEL_FACTORY.get(module.getType()).apply(ctx);
+    }
+
+    public interface ModuleRendererFactory<T extends AbstractTubeModuleRenderer<?>> extends Function<BlockEntityRendererProvider.Context, T> {
     }
 }

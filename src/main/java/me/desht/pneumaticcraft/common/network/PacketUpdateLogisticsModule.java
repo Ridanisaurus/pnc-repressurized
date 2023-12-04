@@ -17,12 +17,12 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.common.block.tubes.ModuleLogistics;
-import me.desht.pneumaticcraft.common.block.tubes.TubeModule;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityPressureTube;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.Direction;
-import net.minecraftforge.fml.network.NetworkEvent;
+import me.desht.pneumaticcraft.common.block.entity.PressureTubeBlockEntity;
+import me.desht.pneumaticcraft.common.tubemodules.AbstractTubeModule;
+import me.desht.pneumaticcraft.common.tubemodules.LogisticsModule;
+import net.minecraft.core.Direction;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
@@ -35,7 +35,7 @@ public class PacketUpdateLogisticsModule extends LocationIntPacket {
     private final int colorIndex;
     private final int status;
 
-    public PacketUpdateLogisticsModule(ModuleLogistics logisticsModule, int action) {
+    public PacketUpdateLogisticsModule(LogisticsModule logisticsModule, int action) {
         super(logisticsModule.getTube().getBlockPos());
         side = logisticsModule.getDirection().ordinal();
         colorIndex = logisticsModule.getColorChannel();
@@ -46,7 +46,7 @@ public class PacketUpdateLogisticsModule extends LocationIntPacket {
         }
     }
 
-    public PacketUpdateLogisticsModule(PacketBuffer buffer) {
+    public PacketUpdateLogisticsModule(FriendlyByteBuf buffer) {
         super(buffer);
         side = buffer.readByte();
         colorIndex = buffer.readByte();
@@ -54,7 +54,7 @@ public class PacketUpdateLogisticsModule extends LocationIntPacket {
     }
 
     @Override
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         super.toBytes(buf);
         buf.writeByte(side);
         buf.writeByte(colorIndex);
@@ -62,10 +62,10 @@ public class PacketUpdateLogisticsModule extends LocationIntPacket {
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> PacketUtil.getTE(ctx.get().getSender(), pos, TileEntityPressureTube.class).ifPresent(te -> {
-            TubeModule module = te.getModule(Direction.from3DDataValue(side));
-            if (module instanceof ModuleLogistics) {
-                ((ModuleLogistics) module).onUpdatePacket(status, colorIndex);
+        ctx.get().enqueueWork(() -> PacketUtil.getBlockEntity(ctx.get().getSender(), pos, PressureTubeBlockEntity.class).ifPresent(te -> {
+            AbstractTubeModule module = te.getModule(Direction.from3DDataValue(side));
+            if (module instanceof LogisticsModule) {
+                ((LogisticsModule) module).onUpdatePacket(status, colorIndex);
             }
         }));
         ctx.get().setPacketHandled(true);

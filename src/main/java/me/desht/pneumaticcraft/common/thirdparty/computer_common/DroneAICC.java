@@ -17,30 +17,29 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.computer_common;
 
-import me.desht.pneumaticcraft.common.entity.living.EntityDrone;
-import me.desht.pneumaticcraft.common.progwidgets.IProgWidget;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IProgWidget;
+import me.desht.pneumaticcraft.common.entity.drone.DroneEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.Set;
 
 class DroneAICC extends Goal {
-    private final EntityDrone drone;
+    private final DroneEntity drone;
     private final ProgWidgetCC widget;
     private Goal curAction;
     private boolean curActionActive;
-    private final TileEntityDroneInterface droneInterface;
+    private final DroneInterfaceBlockEntity droneInterface;
     private boolean newAction;
 
-    DroneAICC(EntityDrone drone, ProgWidgetCC widget, boolean targetAI) {
+    DroneAICC(DroneEntity drone, ProgWidgetCC widget, boolean targetAI) {
         this.drone = drone;
         this.widget = widget;
         Set<BlockPos> area = widget.getInterfaceArea();
         for (BlockPos pos : area) {
-            TileEntity te = drone.level.getBlockEntity(pos);
-            if (te instanceof TileEntityDroneInterface) {
-                TileEntityDroneInterface interfaceTE = (TileEntityDroneInterface) te;
+            BlockEntity te = drone.level().getBlockEntity(pos);
+            if (te instanceof DroneInterfaceBlockEntity interfaceTE) {
                 if (targetAI) {
                     if (interfaceTE.getDrone() == drone) {
                         droneInterface = interfaceTE;

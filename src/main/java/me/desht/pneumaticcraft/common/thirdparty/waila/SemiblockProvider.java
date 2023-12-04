@@ -17,63 +17,73 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.waila;
 
-import mcp.mobius.waila.api.IComponentProvider;
-import mcp.mobius.waila.api.IDataAccessor;
-import mcp.mobius.waila.api.IPluginConfig;
-import mcp.mobius.waila.api.IServerDataProvider;
 import me.desht.pneumaticcraft.api.semiblock.IDirectionalSemiblock;
 import me.desht.pneumaticcraft.api.semiblock.ISemiBlock;
-import me.desht.pneumaticcraft.common.entity.semiblock.EntitySemiblockBase;
+import me.desht.pneumaticcraft.common.entity.semiblock.AbstractSemiblockEntity;
 import me.desht.pneumaticcraft.common.semiblock.SemiblockTracker;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.world.World;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import snownee.jade.api.BlockAccessor;
+import snownee.jade.api.IBlockComponentProvider;
+import snownee.jade.api.IServerDataProvider;
+import snownee.jade.api.ITooltip;
+import snownee.jade.api.config.IPluginConfig;
 
-import java.util.List;
+import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
 public class SemiblockProvider {
+    public static final ResourceLocation ID = RL("semiblock");
 
-    public static class Data implements IServerDataProvider<TileEntity> {
+    public static class DataProvider implements IServerDataProvider<BlockAccessor> {
         @Override
-        public void appendServerData(CompoundNBT compoundNBT, ServerPlayerEntity serverPlayerEntity, World world, TileEntity tileEntity) {
-            CompoundNBT tag = new CompoundNBT();
-            SemiblockTracker.getInstance().getAllSemiblocks(world, tileEntity.getBlockPos())
+        public void appendServerData(CompoundTag compoundTag, BlockAccessor blockAccessor) {
+            CompoundTag tag = new CompoundTag();
+            SemiblockTracker.getInstance().getAllSemiblocks(blockAccessor.getLevel(), blockAccessor.getBlockEntity().getBlockPos())
                     .forEach((semiBlock) -> {
                         NonNullList<ItemStack> drops = semiBlock.getDrops();
                         if (!drops.isEmpty()) {
-                            tag.put(Integer.toString(semiBlock.getTrackingId()), semiBlock.serializeNBT(new CompoundNBT()));
+                            tag.put(Integer.toString(semiBlock.getTrackingId()), semiBlock.serializeNBT(new CompoundTag()));
                         }
                     });
-            compoundNBT.put("semiBlocks", tag);
+            compoundTag.put("semiBlocks", tag);
+        }
+
+        @Override
+        public ResourceLocation getUid() {
+            return ID;
         }
     }
 
-    public static class Component implements IComponentProvider {
+    public static class ComponentProvider implements IBlockComponentProvider {
         @Override
-        public void appendBody(List<ITextComponent> tooltip, IDataAccessor accessor, IPluginConfig config) {
-            CompoundNBT tag = accessor.getServerData().getCompound("semiBlocks");
+        public void appendTooltip(ITooltip iTooltip, BlockAccessor blockAccessor, IPluginConfig iPluginConfig) {
+            CompoundTag tag = blockAccessor.getServerData().getCompound("semiBlocks");
 
             for (String name : tag.getAllKeys()) {
                 try {
                     int entityId = Integer.parseInt(name);
-                    ISemiBlock entity = ISemiBlock.byTrackingId(accessor.getWorld(), entityId);
-                    if (entity instanceof EntitySemiblockBase) {
-                        if (!(entity instanceof IDirectionalSemiblock) || ((IDirectionalSemiblock) entity).getSide() == accessor.getSide()) {
-                            ITextComponent title = new StringTextComponent(TextFormatting.YELLOW + "[")
-                                    .append(entity.getDisplayName()).append("]");
-                            tooltip.add(title);
-                            entity.addTooltip(tooltip, accessor.getPlayer(), tag.getCompound(name), accessor.getPlayer().isShiftKeyDown());
+                    ISemiBlock entity = ISemiBlock.byTrackingId(blockAccessor.getLevel(), entityId);
+                    if (entity instanceof AbstractSemiblockEntity) {
+                        if (!(entity instanceof IDirectionalSemiblock) || ((IDirectionalSemiblock) entity).getSide() == blockAccessor.getSide()) {
+                            MutableComponent title = Component.literal("[")
+                                    .append(entity.getSemiblockDisplayName()).append("]").withStyle(ChatFormatting.YELLOW);
+                            iTooltip.add(title);
+                            entity.addTooltip(iTooltip::add, blockAccessor.getPlayer(), tag.getCompound(name), blockAccessor.getPlayer().isShiftKeyDown());
                         }
                     }
                 } catch (NumberFormatException ignored) {
                 }
             }
+        }
+
+        @Override
+        public ResourceLocation getUid() {
+            return ID;
         }
     }
 }

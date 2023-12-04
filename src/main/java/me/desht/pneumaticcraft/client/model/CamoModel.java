@@ -17,32 +17,32 @@
 
 package me.desht.pneumaticcraft.client.model;
 
-import me.desht.pneumaticcraft.common.block.BlockPneumaticCraftCamo;
-import me.desht.pneumaticcraft.common.tileentity.ICamouflageableTE;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
+import me.desht.pneumaticcraft.common.block.AbstractCamouflageBlock;
+import me.desht.pneumaticcraft.common.block.entity.CamouflageableBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.RenderTypeLookup;
-import net.minecraft.client.renderer.model.BakedQuad;
-import net.minecraft.client.renderer.model.IBakedModel;
-import net.minecraft.client.renderer.model.ItemCameraTransforms;
-import net.minecraft.client.renderer.model.ItemOverrideList;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockReader;
-import net.minecraftforge.client.MinecraftForgeClient;
-import net.minecraftforge.client.model.data.IDynamicBakedModel;
-import net.minecraftforge.client.model.data.IModelData;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraftforge.client.ChunkRenderTypeSet;
+import net.minecraftforge.client.model.IDynamicBakedModel;
+import net.minecraftforge.client.model.data.ModelData;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 /**
  * With credit to Vazkii for showing me how this can be made to work with connected textures (trick being
@@ -52,34 +52,39 @@ import java.util.Random;
  */
 public class CamoModel implements IDynamicBakedModel {
 
-    private final IBakedModel originalModel;
+    private final BakedModel originalModel;
 
-    public CamoModel(IBakedModel originalModel) {
+    public CamoModel(BakedModel originalModel) {
         this.originalModel = originalModel;
     }
 
     @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, Random rand, IModelData modelData) {
-        if (state == null || !(state.getBlock() instanceof BlockPneumaticCraftCamo)) {
-            return originalModel.getQuads(state, side, rand, modelData);
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData modelData, RenderType renderType) {
+        if (state == null || !(state.getBlock() instanceof AbstractCamouflageBlock)) {
+            return originalModel.getQuads(state, side, rand, modelData, renderType);
         }
-        BlockState camoState = modelData.getData(BlockPneumaticCraftCamo.CAMO_STATE);
+        BlockState camoState = modelData.get(AbstractCamouflageBlock.CAMO_STATE);
 
-        RenderType layer = MinecraftForgeClient.getRenderLayer();
-        if (layer == null) {
-            layer = RenderType.solid(); // workaround for when this isn't set (digging, etc.)
+        if (renderType == null) {
+            renderType = RenderType.solid(); // workaround for when this isn't set (digging, etc.)
         }
-        if (camoState == null && layer == RenderType.solid()) {
+        if (camoState == null && renderType == RenderType.solid()) {
             // No camo
-            return originalModel.getQuads(state, side, rand, modelData);
-        } else if (camoState != null && RenderTypeLookup.canRenderInLayer(camoState, layer)) {
+            return originalModel.getQuads(state, side, rand, modelData, renderType);
+        } else if (camoState != null && getRenderTypes(camoState, rand, modelData).contains(renderType)) {
             // Steal camo's model
-            IBakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(camoState);
-            return model.getQuads(camoState, side, rand, modelData);
+            BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(camoState);
+            return model.getQuads(camoState, side, rand, modelData, renderType);
         } else {
             // Not rendering in this layer
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    public ChunkRenderTypeSet getRenderTypes(@NotNull BlockState state, @NotNull RandomSource rand, @NotNull ModelData data) {
+        BlockState camoState = data.get(AbstractCamouflageBlock.CAMO_STATE);
+        return IDynamicBakedModel.super.getRenderTypes(camoState == null ? state : camoState, rand, data);
     }
 
     @Override
@@ -108,25 +113,25 @@ public class CamoModel implements IDynamicBakedModel {
     }
 
     @Override
-    public ItemCameraTransforms getTransforms() {
+    public ItemTransforms getTransforms() {
         return originalModel.getTransforms();
     }
 
     @Override
-    public ItemOverrideList getOverrides() {
+    public ItemOverrides getOverrides() {
         return originalModel.getOverrides();
     }
 
-    private static class FakeBlockAccess implements IBlockReader {
-        private final IBlockReader compose;
+    private static class FakeBlockAccess implements BlockGetter {
+        private final BlockGetter compose;
 
-        private FakeBlockAccess(IBlockReader compose) {
+        private FakeBlockAccess(BlockGetter compose) {
             this.compose = compose;
         }
 
         @Nullable
         @Override
-        public TileEntity getBlockEntity(BlockPos pos) {
+        public BlockEntity getBlockEntity(BlockPos pos) {
             return compose.getBlockEntity(pos);
         }
 
@@ -134,10 +139,10 @@ public class CamoModel implements IDynamicBakedModel {
         @Override
         public BlockState getBlockState(@Nonnull BlockPos pos) {
             BlockState state = compose.getBlockState(pos);
-            if (state.getBlock() instanceof BlockPneumaticCraftCamo) {
-                TileEntity te = compose.getBlockEntity(pos);
-                if (te instanceof ICamouflageableTE) {
-                    state = ((ICamouflageableTE) te).getCamouflage();
+            if (state.getBlock() instanceof AbstractCamouflageBlock) {
+                BlockEntity te = compose.getBlockEntity(pos);
+                if (te instanceof CamouflageableBlockEntity) {
+                    state = ((CamouflageableBlockEntity) te).getCamouflage();
                 }
             }
             return state == null ? Blocks.AIR.defaultBlockState() : state;
@@ -150,5 +155,14 @@ public class CamoModel implements IDynamicBakedModel {
             return compose.getFluidState(blockPos);
         }
 
+        @Override
+        public int getHeight() {
+            return compose.getHeight();
+        }
+
+        @Override
+        public int getMinBuildHeight() {
+            return compose.getMinBuildHeight();
+        }
     }
 }

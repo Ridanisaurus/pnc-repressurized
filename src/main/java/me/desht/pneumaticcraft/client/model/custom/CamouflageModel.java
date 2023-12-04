@@ -19,58 +19,68 @@ package me.desht.pneumaticcraft.client.model.custom;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
-import com.mojang.datafixers.util.Pair;
-import me.desht.pneumaticcraft.common.block.BlockPneumaticCraftCamo;
-import net.minecraft.block.BlockState;
+import com.google.gson.JsonParseException;
+import me.desht.pneumaticcraft.common.block.AbstractCamouflageBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.RenderTypeLookup;
-import net.minecraft.client.renderer.model.*;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.BlockModel;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.IResourceManager;
-import net.minecraft.util.Direction;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.MinecraftForgeClient;
-import net.minecraftforge.client.model.IModelConfiguration;
-import net.minecraftforge.client.model.IModelLoader;
-import net.minecraftforge.client.model.data.IDynamicBakedModel;
-import net.minecraftforge.client.model.data.IModelData;
-import net.minecraftforge.client.model.geometry.IModelGeometry;
+import net.minecraft.client.resources.model.*;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.client.ChunkRenderTypeSet;
+import net.minecraftforge.client.model.IDynamicBakedModel;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
+import net.minecraftforge.client.model.geometry.IGeometryLoader;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 
 public class CamouflageModel implements IDynamicBakedModel {
-    private final IBakedModel originalModel;
+    private final BakedModel originalModel;
 
-    private CamouflageModel(IBakedModel originalModel) {
+    private CamouflageModel(BakedModel originalModel) {
         this.originalModel = originalModel;
     }
 
     @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, Random rand, IModelData modelData) {
-        if (state == null || !(state.getBlock() instanceof BlockPneumaticCraftCamo)) {
-            return originalModel.getQuads(state, side, rand, modelData);
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand, ModelData modelData, RenderType renderType) {
+        if (state == null || !(state.getBlock() instanceof AbstractCamouflageBlock)) {
+            return originalModel.getQuads(state, side, rand, modelData, renderType);
         }
-        BlockState camoState = modelData.getData(BlockPneumaticCraftCamo.CAMO_STATE);
+        BlockState camoState = modelData.get(AbstractCamouflageBlock.CAMO_STATE);
 
-        RenderType layer = MinecraftForgeClient.getRenderLayer();
-        if (layer == null) {
-            layer = RenderType.solid(); // workaround for when this isn't set (digging, etc.)
+        if (renderType == null) {
+            renderType = RenderType.solid(); // workaround for when this isn't set (digging, etc.)
         }
-        if (camoState == null && layer == RenderType.solid()) {
+        if (camoState == null && renderType == RenderType.solid()) {
             // No camo
-            return originalModel.getQuads(state, side, rand, modelData);
-        } else if (camoState != null && RenderTypeLookup.canRenderInLayer(camoState, layer)) {
+            return originalModel.getQuads(state, side, rand, modelData, renderType);
+        } else if (camoState != null && getRenderTypes(camoState, rand, modelData).contains(renderType)) {
             // Steal camo's model
-            IBakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(camoState);
-            return model.getQuads(camoState, side, rand, modelData);
+            BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(camoState);
+            return model.getQuads(camoState, side, rand, modelData, renderType);
         } else {
             // Not rendering in this layer
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    public ChunkRenderTypeSet getRenderTypes(@NotNull BlockState state, @NotNull RandomSource rand, @NotNull ModelData data) {
+        BlockState camoState = data.get(AbstractCamouflageBlock.CAMO_STATE);
+        return IDynamicBakedModel.super.getRenderTypes(camoState == null ? state : camoState, rand, data);
     }
 
     @Override
@@ -99,44 +109,34 @@ public class CamouflageModel implements IDynamicBakedModel {
     }
 
     @Override
-    public ItemCameraTransforms getTransforms() {
+    public ItemTransforms getTransforms() {
         return originalModel.getTransforms();
     }
 
     @Override
-    public ItemOverrideList getOverrides() {
+    public ItemOverrides getOverrides() {
         return originalModel.getOverrides();
     }
 
-    public enum Loader implements IModelLoader<Geometry> {
+    public enum Loader implements IGeometryLoader<Geometry> {
         INSTANCE;
 
         @Override
-        public void onResourceManagerReload(IResourceManager resourceManager) {
-        }
-
-        @Override
-        public Geometry read(JsonDeserializationContext deserializationContext, JsonObject modelContents) {
-            BlockModel baseModel = deserializationContext.deserialize(JSONUtils.getAsJsonObject(modelContents, "base_model"), BlockModel.class);
+        public Geometry read(JsonObject jsonObject, JsonDeserializationContext deserializationContext) throws JsonParseException {
+            BlockModel baseModel = deserializationContext.deserialize(GsonHelper.getAsJsonObject(jsonObject, "base_model"), BlockModel.class);
             return new CamouflageModel.Geometry(baseModel);
         }
     }
 
-    private static class Geometry implements IModelGeometry<Geometry> {
-        private final BlockModel baseModel;
-
-        Geometry(BlockModel baseModel) {
-            this.baseModel = baseModel;
+    private record Geometry(BlockModel baseModel) implements IUnbakedGeometry<Geometry> {
+        @Override
+        public BakedModel bake(IGeometryBakingContext owner, ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides, ResourceLocation modelLocation) {
+            return new CamouflageModel(baseModel.bake(baker, baseModel, spriteGetter, modelTransform, modelLocation, true));
         }
 
         @Override
-        public IBakedModel bake(IModelConfiguration owner, ModelBakery bakery, Function<RenderMaterial, TextureAtlasSprite> spriteGetter, IModelTransform modelTransform, ItemOverrideList overrides, ResourceLocation modelLocation) {
-            return new CamouflageModel(baseModel.bake(bakery, baseModel, spriteGetter, modelTransform, modelLocation, true));
-        }
-
-        @Override
-        public Collection<RenderMaterial> getTextures(IModelConfiguration owner, Function<ResourceLocation, IUnbakedModel> modelGetter, Set<Pair<String, String>> missingTextureErrors) {
-            return baseModel.getMaterials(modelGetter, missingTextureErrors);
+        public void resolveParents(Function<ResourceLocation, UnbakedModel> modelGetter, IGeometryBakingContext context) {
+            baseModel.resolveParents(modelGetter);
         }
     }
 }

@@ -19,26 +19,24 @@ package me.desht.pneumaticcraft.api.harvesting;
 
 import com.google.common.collect.Sets;
 import me.desht.pneumaticcraft.api.drone.IDrone;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
-import net.minecraftforge.registries.ForgeRegistryEntry;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Defines a generic harvest handler.  Register new harvest handlers via Forge registry events:
- * {@link net.minecraftforge.event.RegistryEvent.Register}
+ * Defines a generic harvest handler.  Register new harvest handlers via the standard Forge deferred register system.
  *
  * @author MineMaarten, desht
  */
-public abstract class HarvestHandler extends ForgeRegistryEntry<HarvestHandler> {
+public abstract class HarvestHandler {
 
     /**
      * Should actually harvest the block. Usually this is just a matter of breaking the block, but you can override this for custom behavior.
@@ -50,7 +48,7 @@ public abstract class HarvestHandler extends ForgeRegistryEntry<HarvestHandler> 
      * @param state the blockstate at the position
      * @param drone the drone doing the harvesting
      */
-    public void harvest(World world, IBlockReader chunkCache, BlockPos pos, BlockState state, IDrone drone) {
+    public void harvest(Level world, BlockGetter chunkCache, BlockPos pos, BlockState state, IDrone drone) {
         world.destroyBlock(pos, true);
     }
     
@@ -65,7 +63,7 @@ public abstract class HarvestHandler extends ForgeRegistryEntry<HarvestHandler> 
      * @param drone the drone doing the harvesting
      * @return true if the replanting succeeded (and the hoe the Drone carries needs to be damaged). If nothing needed to be replanted return false.
      */
-    public boolean harvestAndReplant(World world, IBlockReader chunkCache, BlockPos pos, BlockState state, IDrone drone) {
+    public boolean harvestAndReplant(Level world, BlockGetter chunkCache, BlockPos pos, BlockState state, IDrone drone) {
         harvest(world, chunkCache, pos, state, drone);
         return false;
     }
@@ -81,11 +79,11 @@ public abstract class HarvestHandler extends ForgeRegistryEntry<HarvestHandler> 
      * @param drone the drone
      * @return true if the block can be harvested, false if not.
      */
-    public abstract boolean canHarvest(World world, IBlockReader chunkCache, BlockPos pos, BlockState state, IDrone drone);
+    public abstract boolean canHarvest(Level world, BlockGetter chunkCache, BlockPos pos, BlockState state, IDrone drone);
     
     /**
      * Should add the items the connected item filters in the Harvest puzzle piece in the Programmer can use to determine if a block should be harvested.
-     * Called after {@link HarvestHandler#canHarvest(World, IBlockReader, BlockPos, BlockState, IDrone)}, when that method returns true
+     * Called after {@link HarvestHandler#canHarvest(Level, BlockGetter, BlockPos, BlockState, IDrone)}, when that method returns true
      * @param world the world
      * @param chunkCache Use preferably methods from this cache as it's generally quicker than accessing via 'world'. 
      * The cache has access to the chunks that are accessed by the Drone current program, so as long as only the y pos is varied of the
@@ -94,8 +92,8 @@ public abstract class HarvestHandler extends ForgeRegistryEntry<HarvestHandler> 
      * @param state the blockstate
      * @param drone the drone
      */
-    public List<ItemStack> addFilterItems(World world, IBlockReader chunkCache, BlockPos pos, BlockState state, IDrone drone){
-        return world instanceof ServerWorld ? Block.getDrops(state, (ServerWorld) world, pos, world.getBlockEntity(pos)) : Collections.emptyList();
+    public List<ItemStack> addFilterItems(Level world, BlockGetter chunkCache, BlockPos pos, BlockState state, IDrone drone){
+        return world instanceof ServerLevel ? Block.getDrops(state, (ServerLevel) world, pos, world.getBlockEntity(pos)) : Collections.emptyList();
     }
 
     /**
@@ -109,7 +107,7 @@ public abstract class HarvestHandler extends ForgeRegistryEntry<HarvestHandler> 
         }
 
         @Override
-        public boolean canHarvest(World world, IBlockReader chunkCache, BlockPos pos, BlockState state, IDrone drone) {
+        public boolean canHarvest(Level world, BlockGetter chunkCache, BlockPos pos, BlockState state, IDrone drone) {
             return blocks.contains(state.getBlock());
         }
     }

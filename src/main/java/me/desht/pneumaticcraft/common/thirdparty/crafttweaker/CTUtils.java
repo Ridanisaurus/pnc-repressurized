@@ -19,12 +19,12 @@ package me.desht.pneumaticcraft.common.thirdparty.crafttweaker;
 
 import com.blamejared.crafttweaker.api.fluid.CTFluidIngredient;
 import com.blamejared.crafttweaker.api.fluid.IFluidStack;
-import com.blamejared.crafttweaker.api.item.IIngredientWithAmount;
+import com.blamejared.crafttweaker.api.ingredient.IIngredientWithAmount;
 import com.blamejared.crafttweaker.api.item.IItemStack;
 import me.desht.pneumaticcraft.api.crafting.ingredient.FluidIngredient;
 import me.desht.pneumaticcraft.api.crafting.ingredient.StackedIngredient;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.Ingredient;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.fluids.FluidStack;
 
 import java.util.Arrays;
@@ -49,6 +49,7 @@ public class CTUtils {
     }
 
     public static FluidIngredient toFluidIngredient(CTFluidIngredient ingredient) {
-        return ingredient.mapTo(FluidIngredient::of, (tag, amount) -> FluidIngredient.of(amount, tag), FluidIngredient::ofFluidStream);
+        // TODO is this OK?
+        return ingredient.mapTo(fStack -> FluidIngredient.of((FluidStack) fStack.getImmutableInternal()), (tag, amount) -> FluidIngredient.of(amount, tag), FluidIngredient::ofFluidStream);
     }
 }

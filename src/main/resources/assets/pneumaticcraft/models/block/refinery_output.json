@@ -3,9 +3,10 @@
 	"parent": "forge:block/default",
 	"texture_size": [64, 64],
 	"textures": {
-		"particle": "pneumaticcraft:model/refinery",
-		"base": "pneumaticcraft:model/refinery"
+		"particle": "pneumaticcraft:pnc_model/refinery",
+		"base": "pneumaticcraft:pnc_model/refinery"
 	},
+	"render_type": "cutout_mipped",
 	"elements": [
 		{
 			"name": "north_h_frame_2",

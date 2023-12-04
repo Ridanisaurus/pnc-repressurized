@@ -20,36 +20,56 @@ package me.desht.pneumaticcraft.common.fluid;
 import me.desht.pneumaticcraft.common.core.ModBlocks;
 import me.desht.pneumaticcraft.common.core.ModFluids;
 import me.desht.pneumaticcraft.common.core.ModItems;
-import net.minecraft.world.IWorldReader;
-import net.minecraftforge.fluids.FluidAttributes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.fluids.ForgeFlowingFluid;
 
-import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
-
 public abstract class FluidOil {
-    private static final FluidAttributes.Builder ATTRS = FluidAttributes.builder(
-            RL("block/fluid/oil_still"), RL("block/fluid/oil_flow")
-    ).density(800).viscosity(10000).temperature(300);
+    public static final PNCFluidRenderProps RENDER_PROPS = new PNCFluidRenderProps("oil_still", "oil_flow");
 
-    private static final ForgeFlowingFluid.Properties PROPS =
-            new ForgeFlowingFluid.Properties(ModFluids.OIL, ModFluids.OIL_FLOWING, ATTRS)
-                    .block(ModBlocks.OIL).bucket(ModItems.OIL_BUCKET);
+    private static ForgeFlowingFluid.Properties props() {
+        return new ForgeFlowingFluid.Properties(
+                ModFluids.OIL_FLUID_TYPE, ModFluids.OIL, ModFluids.OIL_FLOWING
+        ).block(ModBlocks.OIL).bucket(ModItems.OIL_BUCKET).tickRate(20);
+    }
 
     public static class Source extends ForgeFlowingFluid.Source {
         public Source() {
-            super(PROPS);
+            super(props());
         }
 
         @Override
-        public int getTickDelay(IWorldReader world) {
-            return 20;
-        }
+        public boolean move(FluidState state, LivingEntity entity, Vec3 movementVector, double gravity) {
+            // based on lava movement
+            double y = entity.getY();
+            boolean falling = entity.getDeltaMovement().y <= 0.0D;
+            entity.moveRelative(0.02F, movementVector);
+            entity.move(MoverType.SELF, entity.getDeltaMovement());
+            if (entity.getFluidTypeHeight(getFluidType()) <= entity.getFluidJumpThreshold()) {
+                entity.setDeltaMovement(entity.getDeltaMovement().multiply(0.5D, 0.8D, 0.5D));
+                Vec3 fallingMovement = entity.getFluidFallingAdjustedMovement(gravity, falling, entity.getDeltaMovement());
+                entity.setDeltaMovement(fallingMovement);
+            } else {
+                entity.setDeltaMovement(entity.getDeltaMovement().scale(0.5D));
+            }
 
+            if (!entity.isNoGravity()) {
+                entity.setDeltaMovement(entity.getDeltaMovement().add(0.0D, -gravity / 4.0D, 0.0D));
+            }
+
+            Vec3 delta = entity.getDeltaMovement();
+            if (entity.horizontalCollision && entity.isFree(delta.x, delta.y + (double)0.6F - entity.getY() + y, delta.z)) {
+                entity.setDeltaMovement(delta.x, 0.3D, delta.z);
+            }
+            return true;
+        }
     }
 
     public static class Flowing extends ForgeFlowingFluid.Flowing {
         public Flowing() {
-            super(PROPS);
+            super(props());
         }
     }
 }

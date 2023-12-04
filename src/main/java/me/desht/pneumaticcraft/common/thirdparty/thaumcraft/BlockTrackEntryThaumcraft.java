@@ -18,14 +18,14 @@
 package me.desht.pneumaticcraft.common.thirdparty.thaumcraft;
 
 import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IBlockTrackEntry;
-import net.minecraft.block.BlockState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,14 +33,16 @@ import java.util.List;
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
 public class BlockTrackEntryThaumcraft implements IBlockTrackEntry {
+    public static final ResourceLocation ID = RL("block_tracker_module_thaumcraft");
+
     @Override
-    public boolean shouldTrackWithThisEntry(IBlockReader world, BlockPos pos, BlockState state, TileEntity te) {
+    public boolean shouldTrackWithThisEntry(BlockGetter world, BlockPos pos, BlockState state, BlockEntity te) {
         return false;
         // return te instance IAspectContainer
     }
 
     @Override
-    public List<BlockPos> getServerUpdatePositions(TileEntity te) {
+    public List<BlockPos> getServerUpdatePositions(BlockEntity te) {
         return Collections.emptyList();
     }
 
@@ -50,7 +52,7 @@ public class BlockTrackEntryThaumcraft implements IBlockTrackEntry {
     }
 
     @Override
-    public void addInformation(World world, BlockPos pos, TileEntity te, Direction face, List<ITextComponent> infoList) {
+    public void addInformation(Level world, BlockPos pos, BlockEntity te, Direction face, List<Component> infoList) {
 //        if (te instanceof IAspectContainer) {
 //            IAspectContainer container = (IAspectContainer)te;
 //            AspectList aspects = container.getAspects();
@@ -67,6 +69,6 @@ public class BlockTrackEntryThaumcraft implements IBlockTrackEntry {
 
     @Override
     public ResourceLocation getEntryID() {
-        return RL("block_tracker_module_thaumcraft");
+        return ID;
     }
 }

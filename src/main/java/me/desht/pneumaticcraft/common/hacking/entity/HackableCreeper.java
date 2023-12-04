@@ -17,52 +17,51 @@
 
 package me.desht.pneumaticcraft.common.hacking.entity;
 
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.monster.CreeperEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableEntity;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.player.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
-public class HackableCreeper implements IHackableEntity {
+public class HackableCreeper implements IHackableEntity<Creeper> {
+    private static final ResourceLocation ID = RL("creeper");
+
     @Override
     public ResourceLocation getHackableId() {
-        return RL("creeper");
+        return ID;
+    }
+
+    @NotNull
+    @Override
+    public Class<Creeper> getHackableClass() {
+        return Creeper.class;
     }
 
     @Override
-    public boolean canHack(Entity entity, PlayerEntity player) {
-        return true;
-    }
-
-    @Override
-    public void addHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addHackInfo(Creeper entity, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.result.explode"));
     }
 
     @Override
-    public void addPostHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addPostHackInfo(Creeper entity, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.finished.exploded"));
     }
 
     @Override
-    public int getHackTime(Entity entity, PlayerEntity player) {
+    public int getHackTime(Creeper entity, Player player) {
         return 60;
     }
 
     @Override
-    public void onHackFinished(Entity entity, PlayerEntity player) {
-        ((CreeperEntity)entity).ignite();
+    public void onHackFinished(Creeper entity, Player player) {
+        entity.ignite();
     }
 
-    @Override
-    public boolean afterHackTick(Entity entity) {
-        return false;
-    }
 
 }

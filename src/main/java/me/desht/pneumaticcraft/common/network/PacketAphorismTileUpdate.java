@@ -17,12 +17,12 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.common.block.BlockAphorismTile;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityAphorismTile;
+import me.desht.pneumaticcraft.common.block.AphorismTileBlock;
+import me.desht.pneumaticcraft.common.block.entity.AphorismTileBlockEntity;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -40,7 +40,7 @@ public class PacketAphorismTileUpdate extends LocationIntPacket {
     private final byte margin;
     private final boolean invis;
 
-    public PacketAphorismTileUpdate(PacketBuffer buffer) {
+    public PacketAphorismTileUpdate(FriendlyByteBuf buffer) {
         super(buffer);
 
         textRotation = buffer.readByte();
@@ -53,17 +53,17 @@ public class PacketAphorismTileUpdate extends LocationIntPacket {
         invis = buffer.readBoolean();
     }
 
-    public PacketAphorismTileUpdate(TileEntityAphorismTile tile) {
+    public PacketAphorismTileUpdate(AphorismTileBlockEntity tile) {
         super(tile.getBlockPos());
 
         text = tile.getTextLines();
         textRotation = tile.textRotation;
         margin = tile.getMarginSize();
-        invis = tile.getBlockState().getValue(BlockAphorismTile.INVISIBLE);
+        invis = tile.getBlockState().getValue(AphorismTileBlock.INVISIBLE);
     }
 
     @Override
-    public void toBytes(PacketBuffer buffer) {
+    public void toBytes(FriendlyByteBuf buffer) {
         super.toBytes(buffer);
 
         buffer.writeByte(textRotation);
@@ -75,9 +75,9 @@ public class PacketAphorismTileUpdate extends LocationIntPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            PlayerEntity player = Objects.requireNonNull(ctx.get().getSender());
+            Player player = Objects.requireNonNull(ctx.get().getSender());
             if (PneumaticCraftUtils.canPlayerReach(player, pos)) {
-                PneumaticCraftUtils.getTileEntityAt(player.level, pos, TileEntityAphorismTile.class).ifPresent(te -> {
+                PneumaticCraftUtils.getTileEntityAt(player.level(), pos, AphorismTileBlockEntity.class).ifPresent(te -> {
                     te.setTextLines(text, false);
                     te.textRotation = textRotation;
                     te.setMarginSize(margin);

@@ -17,21 +17,18 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.client.gui.GuiPneumaticContainerBase;
-import me.desht.pneumaticcraft.common.inventory.ContainerPneumaticBase;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.inventory.ContainerScreen;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import me.desht.pneumaticcraft.client.util.ClientUtils;
+import me.desht.pneumaticcraft.common.inventory.AbstractPneumaticCraftMenu;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
 /**
  * Received on: CLIENT
  *
- * The primary mechanism for sync'ing TE fields to an open GUI.  TE fields annotated with @GuiSynced will be synced
- * in this packet, via {@link ContainerPneumaticBase#broadcastChanges()}.
+ * The primary mechanism for sync'ing BE fields to an open GUI.  BE fields annotated with @GuiSynced will be synced
+ * in this packet, via {@link AbstractPneumaticCraftMenu#broadcastChanges()}.
  */
 public class PacketUpdateGui {
     private final int syncId;
@@ -44,30 +41,21 @@ public class PacketUpdateGui {
         type = SyncedField.getType(syncField);
     }
 
-    public PacketUpdateGui(PacketBuffer buf) {
+    public PacketUpdateGui(FriendlyByteBuf buf) {
         syncId = buf.readVarInt();
         type = buf.readByte();
         value = SyncedField.fromBytes(buf, type);
     }
 
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         buf.writeVarInt(syncId);
         buf.writeByte(type);
         SyncedField.toBytes(buf, value, type);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            if (Minecraft.getInstance().screen instanceof ContainerScreen) {
-                Container container = ((ContainerScreen<?>) Minecraft.getInstance().screen).getMenu();
-                if (container instanceof ContainerPneumaticBase) {
-                    ((ContainerPneumaticBase<?>) container).updateField(syncId, value);
-                }
-                if (Minecraft.getInstance().screen instanceof GuiPneumaticContainerBase) {
-                    ((GuiPneumaticContainerBase<?,?>) Minecraft.getInstance().screen).onGuiUpdate();
-                }
-            }
-        });
+        ctx.get().enqueueWork(() -> ClientUtils.syncViaOpenContainerScreen(syncId, value));
         ctx.get().setPacketHandled(true);
     }
+
 }

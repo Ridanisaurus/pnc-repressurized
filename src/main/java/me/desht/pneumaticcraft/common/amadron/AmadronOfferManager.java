@@ -17,39 +17,42 @@
 
 package me.desht.pneumaticcraft.common.amadron;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import me.desht.pneumaticcraft.api.crafting.AmadronTradeResource;
 import me.desht.pneumaticcraft.api.crafting.recipe.AmadronRecipe;
 import me.desht.pneumaticcraft.api.lib.Names;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.common.config.ConfigHelper;
 import me.desht.pneumaticcraft.common.config.subconfig.AmadronPlayerOffers;
-import me.desht.pneumaticcraft.common.entity.living.EntityAmadrone;
-import me.desht.pneumaticcraft.common.inventory.ContainerAmadron;
-import me.desht.pneumaticcraft.common.item.ItemAmadronTablet;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
+import me.desht.pneumaticcraft.common.entity.drone.AmadroneEntity;
+import me.desht.pneumaticcraft.common.inventory.AmadronMenu;
+import me.desht.pneumaticcraft.common.item.AmadronTabletItem;
 import me.desht.pneumaticcraft.common.network.NetworkHandler;
 import me.desht.pneumaticcraft.common.network.PacketSyncAmadronOffers;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
 import me.desht.pneumaticcraft.common.recipes.amadron.AmadronOffer;
 import me.desht.pneumaticcraft.common.recipes.amadron.AmadronPlayerOffer;
 import me.desht.pneumaticcraft.common.util.IOHelper;
 import me.desht.pneumaticcraft.lib.Log;
-import net.minecraft.entity.merchant.villager.VillagerProfession;
-import net.minecraft.entity.merchant.villager.VillagerTrades;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.MerchantOffer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.npc.VillagerTrades;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.server.ServerLifecycleHooks;
 import net.minecraftforge.items.wrapper.CombinedInvWrapper;
 import net.minecraftforge.items.wrapper.PlayerMainInvWrapper;
 import net.minecraftforge.items.wrapper.PlayerOffhandInvWrapper;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -63,7 +66,7 @@ public enum AmadronOfferManager {
     // static trades, always available: loaded from recipes datapack
     private final List<AmadronRecipe> staticOffers = new ArrayList<>();
     // periodic trades, randomly appear: loaded from recipes datapack
-    private final Map<Integer,List<AmadronRecipe>> periodicOffers = new HashMap<>();  // a list due to random access needs
+    private final Int2ObjectMap<List<AmadronRecipe>> periodicOffers = new Int2ObjectOpenHashMap<>();  // a list due to random access needs
     // maps villager profession/level to list of trades
     private final Map<String,List<AmadronRecipe>> villagerTrades = new HashMap<>();
     // villager professions which actually have some trades
@@ -120,12 +123,7 @@ public enum AmadronOfferManager {
     }
 
     public boolean hasSimilarPlayerOffer(AmadronPlayerOffer offer) {
-        for (AmadronPlayerOffer existing : getPlayerOffers().values()) {
-            if (existing.equivalentTo(offer)) {
-                return true;
-            }
-        }
-        return false;
+        return getPlayerOffers().values().stream().anyMatch(existing -> existing.equivalentTo(offer));
     }
 
     private Map<ResourceLocation, AmadronPlayerOffer> getPlayerOffers() {
@@ -147,10 +145,10 @@ public enum AmadronOfferManager {
         }
     }
 
-    private void maybeNotifyPlayerOfUpdates(PlayerEntity player) {
-        CombinedInvWrapper inv = new CombinedInvWrapper(new PlayerMainInvWrapper(player.inventory), new PlayerOffhandInvWrapper(player.inventory));
+    private void maybeNotifyPlayerOfUpdates(Player player) {
+        CombinedInvWrapper inv = new CombinedInvWrapper(new PlayerMainInvWrapper(player.getInventory()), new PlayerOffhandInvWrapper(player.getInventory()));
         for (int i = 0; i < inv.getSlots(); i++) {
-            if (inv.getStackInSlot(i).getItem() instanceof ItemAmadronTablet) {
+            if (inv.getStackInSlot(i).getItem() instanceof AmadronTabletItem) {
                 player.displayClientMessage(xlate("pneumaticcraft.message.amadron.offersUpdated"), false);
                 break;
             }
@@ -160,7 +158,7 @@ public enum AmadronOfferManager {
     void maybeNotifyLocalPlayerOfUpdates() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null && !server.isDedicatedServer()) {
-            for (PlayerEntity player : server.getPlayerList().getPlayers()) {
+            for (Player player : server.getPlayerList().getPlayers()) {
                 if (server.isSingleplayerOwner(player.getGameProfile())) {
                     maybeNotifyPlayerOfUpdates(player);
                     break;
@@ -182,12 +180,9 @@ public enum AmadronOfferManager {
     }
 
     public int countPlayerOffers(UUID playerId) {
-        int count = 0;
-        for (AmadronRecipe offer : activeOffers.values()) {
-            if (offer instanceof AmadronPlayerOffer && ((AmadronPlayerOffer) offer).getPlayerId().equals(playerId))
-                count++;
-        }
-        return count;
+        return (int) activeOffers.values().stream()
+                .filter(offer -> offer instanceof AmadronPlayerOffer po && po.getPlayerId().equals(playerId))
+                .count();
     }
 
     /**
@@ -198,17 +193,17 @@ public enum AmadronOfferManager {
         boolean needSave = false;
         for (AmadronPlayerOffer offer : getPlayerOffers().values()) {
             AmadronPlayerOffer reversed = offer.getReversedOffer();
-            TileEntity provider = offer.getProvidingTileEntity();
+            BlockEntity provider = offer.getProvidingTileEntity();
             int possiblePickups = offer.getOutput().apply(
                     itemStack -> offer.getOutput().countTradesInInventory(IOHelper.getInventoryForTE(provider)),
                     fluidStack -> offer.getOutput().countTradesInTank(IOHelper.getFluidHandlerForTE(provider))
             );
             if (possiblePickups > 0) {
-                EntityAmadrone drone = ContainerAmadron.retrieveOrder(null, offer.getReversedOffer(), possiblePickups,
+                AmadroneEntity drone = AmadronMenu.retrieveOrder(null, offer.getReversedOffer(), possiblePickups,
                         offer.getProvidingPos(), offer.getProvidingPos());
                 if (drone != null) {
                     drone.setHandlingOffer(reversed.getId(), possiblePickups, ItemStack.EMPTY,
-                            "Restock", EntityAmadrone.AmadronAction.RESTOCKING);
+                            "Restock", AmadroneEntity.AmadronAction.RESTOCKING);
                 }
             }
             if (offer.payout()) needSave = true;
@@ -257,9 +252,8 @@ public enum AmadronOfferManager {
         int nVillager = allOffers.size() - s2;
         if (!validProfessions.isEmpty()) {
             for (int i = 0; i < Math.min(nVillager, ConfigHelper.common().amadron.numVillagerOffers.get()); i++) {
-                int profIdx = rand.nextInt(validProfessions.size());
-                AmadronRecipe offer = pickRandomVillagerTrade(validProfessions.get(profIdx), rand);
-                if (offer != null) addOffer(activeOffers, offer);
+                pickRandomVillagerTrade(validProfessions.get(rand.nextInt(validProfessions.size())), rand)
+                        .ifPresent(offer -> addOffer(activeOffers, offer));
             }
         }
 
@@ -300,20 +294,19 @@ public enum AmadronOfferManager {
         return null;
     }
 
-    private AmadronRecipe pickRandomVillagerTrade(VillagerProfession profession, Random rand) {
+    private Optional<AmadronRecipe> pickRandomVillagerTrade(VillagerProfession profession, Random rand) {
         int level = getWeightedTradeLevel(rand);
         do {
             String key = profession.toString() + "_" + level;
             List<AmadronRecipe> offers = villagerTrades.get(key);
             if (offers != null && !offers.isEmpty()) {
                 int idx = rand.nextInt(offers.size());
-                return offers.get(idx);
+                return Optional.ofNullable(offers.get(idx));
             } else {
                 level--;
             }
         } while (level > 0);
-        Log.warning("Amadron: failed to find any trades for profession %s ?", profession.toString());
-        return null;
+        return Optional.empty();
     }
 
     private int getWeightedTradeLevel(Random rand) {
@@ -336,7 +329,7 @@ public enum AmadronOfferManager {
         // this only needs to be done once, on first load
         if (villagerTrades.isEmpty()) {
             Set<VillagerProfession> validSet = new HashSet<>();
-            Random rand = ThreadLocalRandom.current();
+            RandomSource rand = RandomSource.createNewThreadLocalInstance();
             VillagerTrades.TRADES.forEach((profession, tradeMap) -> tradeMap.forEach((level, trades) -> {
                 IntStream.range(0, trades.length).forEach(i -> {
                     MerchantOffer offer = getOfferForNullVillager(trades[i], rand);
@@ -358,7 +351,7 @@ public enum AmadronOfferManager {
         }
     }
 
-    private MerchantOffer getOfferForNullVillager(VillagerTrades.ITrade trade, Random rand) {
+    private MerchantOffer getOfferForNullVillager(VillagerTrades.ItemListing trade, RandomSource rand) {
         try {
             // shouldn't really pass null here, but creating a fake villager can cause worldgen-related server lockups
             // https://github.com/TeamPneumatic/pnc-repressurized/issues/899
@@ -373,14 +366,14 @@ public enum AmadronOfferManager {
         rebuildRequired = true;
     }
 
-    public void checkForFullRebuild(World world) {
+    public void checkForFullRebuild(Level world) {
         if (rebuildRequired) {
             Log.debug("Rebuilding Amadron offer list");
 
             staticOffers.clear();
             periodicOffers.clear();
 
-            PneumaticCraftRecipeType.AMADRON_OFFERS.getRecipes(world).values().forEach(offer -> {
+            ModRecipeTypes.AMADRON.get().getRecipes(world).values().forEach(offer -> {
                 if (offer.isStaticOffer()) {
                     staticOffers.add(offer);
                 } else {
@@ -404,7 +397,7 @@ public enum AmadronOfferManager {
     public static class EventListener {
         @SubscribeEvent
         public static void serverLogin(PlayerEvent.PlayerLoggedInEvent evt) {
-            NetworkHandler.sendNonLocal((ServerPlayerEntity) evt.getPlayer(), new PacketSyncAmadronOffers(false));
+            NetworkHandler.sendNonLocal((ServerPlayer) evt.getEntity(), new PacketSyncAmadronOffers(false));
         }
     }
 }

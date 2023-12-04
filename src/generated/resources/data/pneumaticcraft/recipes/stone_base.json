@@ -1,9 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "S S",
-    "STS"
-  ],
+  "category": "misc",
   "key": {
     "S": {
       "tag": "forge:stone"
@@ -12,7 +9,12 @@
       "item": "pneumaticcraft:pressure_tube"
     }
   },
+  "pattern": [
+    "S S",
+    "STS"
+  ],
   "result": {
     "item": "pneumaticcraft:stone_base"
-  }
+  },
+  "show_notification": true
 }

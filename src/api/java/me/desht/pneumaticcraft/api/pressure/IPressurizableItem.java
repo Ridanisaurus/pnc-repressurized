@@ -18,7 +18,7 @@
 package me.desht.pneumaticcraft.api.pressure;
 
 import me.desht.pneumaticcraft.api.PneumaticRegistry;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Convenience interface; if your item implements this, you can take advantage of PneumaticCraft's built-in item
@@ -29,7 +29,7 @@ import net.minecraft.item.ItemStack;
  * the alternative is to provide a custom implementation of {@link me.desht.pneumaticcraft.api.tileentity.IAirHandlerItem}
  * for your capability, which is more work.
  * <p>
- * @see me.desht.pneumaticcraft.api.item.IItemRegistry#makeItemAirHandlerProvider(ItemStack, float)
+ * @see me.desht.pneumaticcraft.api.item.IItemRegistry#makeItemAirHandlerProvider(ItemStack)
  */
 public interface IPressurizableItem {
     /**
@@ -54,6 +54,14 @@ public interface IPressurizableItem {
      * @return the amount of air, in mL
      */
     int getAir(ItemStack stack);
+
+    /**
+     * Get the maximum pressure to which this item can be charged. Note that items (unlike machines) don't tend to
+     * explode when they reach their pressure limit; they just stop charging.
+     *
+     * @return the maximum pressure for this item
+     */
+    float getMaxPressure();
 
     /**
      * The effective volume is the item's base volume, modified by both the volume upgrades installed in the item,

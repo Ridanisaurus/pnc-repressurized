@@ -17,17 +17,16 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.common.item.ItemPneumaticArmor;
-import me.desht.pneumaticcraft.common.pneumatic_armor.ArmorUpgradeRegistry;
+import me.desht.pneumaticcraft.common.item.PneumaticArmorItem;
 import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorHandler;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.network.NetworkEvent;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonUpgradeHandlers;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.function.Supplier;
@@ -37,29 +36,30 @@ import java.util.function.Supplier;
  * Sent by client to update the searched item (Pneumatic Helmet search upgrade)
  */
 public class PacketUpdateSearchItem {
-    private final ResourceLocation itemId;
+    private final Item item;
 
     public PacketUpdateSearchItem(Item item) {
-        itemId = item.getRegistryName();
+        this.item = item;
     }
 
-    public PacketUpdateSearchItem(PacketBuffer buffer) {
-        itemId = buffer.readResourceLocation();
+    public PacketUpdateSearchItem(FriendlyByteBuf buffer) {
+        item = buffer.readRegistryIdSafe(Item.class);
     }
 
-    public void toBytes(PacketBuffer buffer) {
-        buffer.writeResourceLocation(itemId);
+    public void toBytes(FriendlyByteBuf buffer) {
+        buffer.writeRegistryId(ForgeRegistries.ITEMS, item);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            PlayerEntity player = ctx.get().getSender();
-            CommonArmorHandler handler = CommonArmorHandler.getHandlerForPlayer(player);
-            if (handler.upgradeUsable(ArmorUpgradeRegistry.getInstance().searchHandler, true)) {
-                ItemStack helmetStack = player.getItemBySlot(EquipmentSlotType.HEAD);
-                Item searchedItem = ForgeRegistries.ITEMS.getValue(itemId);
-                if (searchedItem != null && searchedItem != Items.AIR) {
-                    ItemPneumaticArmor.setSearchedItem(helmetStack, searchedItem);
+            Player player = ctx.get().getSender();
+            if (player != null && item != null && item != Items.AIR) {
+                CommonArmorHandler handler = CommonArmorHandler.getHandlerForPlayer(player);
+                if (handler.upgradeUsable(CommonUpgradeHandlers.searchHandler, true)) {
+                    ItemStack helmetStack = player.getItemBySlot(EquipmentSlot.HEAD);
+                    if (helmetStack.getItem() instanceof PneumaticArmorItem) {  // should be, but let's be paranoid...
+                        PneumaticArmorItem.setSearchedItem(helmetStack, item);
+                    }
                 }
             }
         });

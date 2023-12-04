@@ -20,17 +20,16 @@ package me.desht.pneumaticcraft.common.recipes.machine;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import me.desht.pneumaticcraft.api.crafting.recipe.AssemblyRecipe;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.IRecipeType;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapedRecipe;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.registries.ForgeRegistryEntry;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import org.apache.commons.lang3.Validate;
 
 import javax.annotation.Nonnull;
@@ -81,42 +80,41 @@ public class AssemblyRecipeImpl extends AssemblyRecipe {
     }
 
     @Override
-    public void write(PacketBuffer buffer) {
+    public void write(FriendlyByteBuf buffer) {
         input.toNetwork(buffer);
         buffer.writeItem(output);
         buffer.writeVarInt(program.ordinal());
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        switch (getProgramType()) {
-            case LASER: return ModRecipes.ASSEMBLY_LASER.get();
-            case DRILL: return ModRecipes.ASSEMBLY_DRILL.get();
-            default: throw new IllegalStateException("invalid program type: " + getProgramType());
-        }
+    public RecipeSerializer<?> getSerializer() {
+        return switch (getProgramType()) {
+            case LASER -> ModRecipeSerializers.ASSEMBLY_LASER.get();
+            case DRILL -> ModRecipeSerializers.ASSEMBLY_DRILL.get();
+            default -> throw new IllegalStateException("invalid program type: " + getProgramType());
+        };
     }
 
     @Override
-    public IRecipeType<?> getType() {
-        switch (getProgramType()) {
-            case DRILL: return PneumaticCraftRecipeType.ASSEMBLY_DRILL;
-            case LASER: return PneumaticCraftRecipeType.ASSEMBLY_LASER;
-            case DRILL_LASER: return PneumaticCraftRecipeType.ASSEMBLY_DRILL_LASER;
-        }
-        throw new IllegalStateException("invalid program type: " + getProgramType());
+    public RecipeType<?> getType() {
+        return switch (getProgramType()) {
+            case DRILL -> ModRecipeTypes.ASSEMBLY_DRILL.get();
+            case LASER -> ModRecipeTypes.ASSEMBLY_LASER.get();
+            case DRILL_LASER -> ModRecipeTypes.ASSEMBLY_DRILL_LASER.get();
+        };
     }
 
     /**
      * Work out which recipes can be chained.  E.g. if laser recipe makes B from A, and drill recipe makes C from B,
-     * then add a synthetic laser/drill recipe to make C from A. Takes into account the number of inputs & outputs
+     * then add a synthetic laser/drill recipe to make C from A. Takes into account the number of inputs and outputs
      * from each step.
      *
      * @param drillRecipes all known drill recipes
      * @param laserRecipes all known laser recipes
      * @return a map (recipeId -> recipe) of all synthetic laser/drill recipes
      */
-    public static Map<ResourceLocation, AssemblyRecipeImpl> calculateAssemblyChain(Collection<AssemblyRecipe> drillRecipes, Collection<AssemblyRecipe> laserRecipes) {
-        Map<ResourceLocation, AssemblyRecipeImpl> drillLaser = new HashMap<>();
+    public static Map<ResourceLocation, AssemblyRecipe> calculateAssemblyChain(Collection<AssemblyRecipe> drillRecipes, Collection<AssemblyRecipe> laserRecipes) {
+        Map<ResourceLocation, AssemblyRecipe> drillLaser = new HashMap<>();
         for (AssemblyRecipe r1 : drillRecipes) {
             for (AssemblyRecipe r2 : laserRecipes) {
                 if (r2.getInput().test(r1.getOutput())
@@ -132,7 +130,7 @@ public class AssemblyRecipeImpl extends AssemblyRecipe {
         return drillLaser;
     }
 
-    public static class Serializer<T extends AssemblyRecipe> extends ForgeRegistryEntry<IRecipeSerializer<?>> implements IRecipeSerializer<T> {
+    public static class Serializer<T extends AssemblyRecipe> implements RecipeSerializer<T> {
         private final IFactory<T> factory;
 
         public Serializer(IFactory<T> factory) {
@@ -142,8 +140,8 @@ public class AssemblyRecipeImpl extends AssemblyRecipe {
         @Override
         public T fromJson(ResourceLocation recipeId, JsonObject json) {
             Ingredient input = Ingredient.fromJson(json.get("input"));
-            ItemStack result = ShapedRecipe.itemFromJson(JSONUtils.getAsJsonObject(json, "result"));
-            String program = JSONUtils.getAsString(json, "program").toUpperCase(Locale.ROOT);
+            ItemStack result = ShapedRecipe.itemStackFromJson(GsonHelper.getAsJsonObject(json, "result"));
+            String program = GsonHelper.getAsString(json, "program").toUpperCase(Locale.ROOT);
             try {
                 AssemblyProgramType programType = AssemblyProgramType.valueOf(program);
                 Validate.isTrue(programType != AssemblyProgramType.DRILL_LASER, "'drill_laser' may not be used in recipe JSON!");
@@ -155,7 +153,7 @@ public class AssemblyRecipeImpl extends AssemblyRecipe {
 
         @Nullable
         @Override
-        public T fromNetwork(ResourceLocation recipeId, PacketBuffer buffer) {
+        public T fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
             Ingredient input = Ingredient.fromNetwork(buffer);
             ItemStack out = buffer.readItem();
             AssemblyProgramType program = AssemblyProgramType.values()[buffer.readVarInt()];
@@ -163,7 +161,7 @@ public class AssemblyRecipeImpl extends AssemblyRecipe {
         }
 
         @Override
-        public void toNetwork(PacketBuffer buffer, T recipe) {
+        public void toNetwork(FriendlyByteBuf buffer, T recipe) {
             recipe.write(buffer);
         }
 

@@ -1,10 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    " C ",
-    "CPC",
-    " C "
-  ],
+  "category": "misc",
   "key": {
     "C": {
       "item": "pneumaticcraft:charging_station"
@@ -13,7 +9,13 @@
       "item": "pneumaticcraft:pressure_tube"
     }
   },
+  "pattern": [
+    " C ",
+    "CPC",
+    " C "
+  ],
   "result": {
     "item": "pneumaticcraft:charging_module"
-  }
+  },
+  "show_notification": true
 }

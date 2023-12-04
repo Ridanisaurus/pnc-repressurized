@@ -17,14 +17,15 @@
 
 package me.desht.pneumaticcraft.api.tileentity;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.INBT;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import it.unimi.dsi.fastutil.floats.FloatPredicate;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.util.INBTSerializable;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -35,9 +36,9 @@ import java.util.List;
  * over-pressurized.
  * <p>
  * Don't implement this class yourself!  Use one of the methods in {@link IAirHandlerMachineFactory} to obtain
- * a suitable implementation for your tile entity.
+ * a suitable implementation for your block entity.
  */
-public interface IAirHandlerMachine extends IAirHandler, IManoMeasurable {
+public interface IAirHandlerMachine extends IAirHandler, IManoMeasurable, INBTSerializable<CompoundTag> {
     /**
      * Get the "danger" pressure level.  If air is added to the handler and the pressure level is above the danger
      * level, there is a chance of explosion, which increases as the pressure increases.
@@ -60,7 +61,7 @@ public interface IAirHandlerMachine extends IAirHandler, IManoMeasurable {
     void setPressure(float newPressure);
 
     /**
-     * Should be called by the owning tile entity when its volume upgrades change.  This will cause the air handler
+     * Should be called by the owning block entity when its volume upgrades change.  This will cause the air handler
      * to recalculate its current volume.  A decrease in volume will cause air to be lost, keeping the pressure
      * constant.  An increase in volume will keep the air constant, causing a pressure drop.
      *
@@ -69,26 +70,32 @@ public interface IAirHandlerMachine extends IAirHandler, IManoMeasurable {
     void setVolumeUpgrades(int newVolumeUpgrades);
 
     /**
-     * Should be called by the owning tile entity when its security upgrades change. A Security Upgrade will cause
-     * the air handler to leak air instead of exploding.
+     * Allow this air handler to vent air when over-pressure.
      *
-     * @param hasSecurityUpgrade true if the holder has one or more security upgrades
+     * @param pressureCheck a predicate to test if venting is required
+     * @param dir direction to leak air in
      */
-    void setHasSecurityUpgrade(boolean hasSecurityUpgrade);
+    void enableSafetyVenting(FloatPredicate pressureCheck, Direction dir);
 
     /**
-     * Must be called every tick by the owning tile entity.
-     *
-     * @param ownerTE the owning tile entity
+     * Disallow any safety venting.
      */
-    void tick(TileEntity ownerTE);
+    void disableSafetyVenting();
+
+    /**
+     * Must be called every tick by the owning block entity. This is called on both server and client (client needs to
+     * handle sounds and particles if the air handler is leaking).
+     *
+     * @param ownerTE the owning block entity
+     */
+    void tick(BlockEntity ownerTE);
 
     /**
      * Mark a face of the air handler as leaking or otherwise.  When called server-side, changes will be automatically
      * synced to clients on the next tick so that particles and sound effects can be played there.  The amount of air
      * leaked in a tick is pressure-dependent; the exact amount is {@code pressure * 40 + 20 mL}.
      * <p>(Note: in theory, an air handler could leak in multiple directions at once, but this is a simplified
-     * implementation to keep the code straightforward & efficient, while still being effective)</p>
+     * implementation to keep the code straightforward &amp; efficient, while still being effective)</p>
      *
      * @param dir the direction the leak is occurring (affects particle velocities), or null for no leak
      */
@@ -104,18 +111,14 @@ public interface IAirHandlerMachine extends IAirHandler, IManoMeasurable {
     /**
      * Get a list of all air handlers connected to this one.
      *
-     * @param ownerTE the owning tile entity
+     * @param ownerTE the owning block entity
      * @return a list of all connected air handlers
      */
-    List<IAirHandlerMachine.Connection> getConnectedAirHandlers(TileEntity ownerTE);
-
-    INBT serializeNBT();
-
-    void deserializeNBT(CompoundNBT compound);
+    List<IAirHandlerMachine.Connection> getConnectedAirHandlers(BlockEntity ownerTE);
 
     /**
      * Set the connected faces of this air handler. This should be called on the first server tick, and when
-     * neighbouring blocks change (i.e. via {@link net.minecraft.block.Block#neighborChanged(BlockState, World, BlockPos, Block, BlockPos, boolean)}.
+     * neighbouring blocks change (i.e. via {@link net.minecraft.world.level.block.Block#neighborChanged(BlockState, Level, BlockPos, Block, BlockPos, boolean)})
      * <p>
      * This also invalidates any cached neighbour data.
      *
@@ -151,14 +154,14 @@ public interface IAirHandlerMachine extends IAirHandler, IManoMeasurable {
 
         /**
          * Set the max air which may be dispersed along this connection. You should not normally call this directly;
-         * it is handled by {@link IAirHandlerMachine#tick(TileEntity)}
+         * it is handled by {@link IAirHandlerMachine#tick(BlockEntity)}
          * @param maxDispersion the maximum dispersal allowed
          */
         void setMaxDispersion(int maxDispersion);
 
         /**
          * Get the amount of air has been dispersed along this connection in this tick.  Note that this will be 0 until
-         * calculated during {@link IAirHandlerMachine#tick(TileEntity)}.
+         * calculated during {@link IAirHandlerMachine#tick(BlockEntity)}.
          *
          * @return the air which has been dispersed this tick.
          */
@@ -166,7 +169,7 @@ public interface IAirHandlerMachine extends IAirHandler, IManoMeasurable {
 
         /**
          * Set the air which will be dispersed along this connection in this tick. You should not normally call this
-         * directly; it is handled by {@link IAirHandlerMachine#tick(TileEntity)}.
+         * directly; it is handled by {@link IAirHandlerMachine#tick(BlockEntity)}.
          * @param toDisperse the air which will be dispersed this tick
          */
         void setAirToDisperse(int toDisperse);

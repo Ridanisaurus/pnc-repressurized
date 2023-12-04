@@ -21,13 +21,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
 import me.desht.pneumaticcraft.api.universal_sensor.IPollSensorSetting;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import me.desht.pneumaticcraft.common.upgrades.ModUpgrades;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -45,8 +45,8 @@ public class TwitchStreamerSensor implements IPollSensorSetting {
     }
 
     @Override
-    public Set<EnumUpgrade> getRequiredUpgrades() {
-        return ImmutableSet.of(EnumUpgrade.DISPENSER);
+    public Set<PNCUpgrade> getRequiredUpgrades() {
+        return ImmutableSet.of(ModUpgrades.DISPENSER.get());
     }
 
     @Override
@@ -55,17 +55,17 @@ public class TwitchStreamerSensor implements IPollSensorSetting {
     }
 
     @Override
-    public void getAdditionalInfo(List<ITextComponent> info) {
-        info.add(new StringTextComponent("Player Name"));
+    public void getAdditionalInfo(List<Component> info) {
+        info.add(Component.literal("Player Name"));
     }
 
     @Override
-    public int getPollFrequency(TileEntity te) {
+    public int getPollFrequency(BlockEntity te) {
         return 20;
     }
 
     @Override
-    public int getRedstoneValue(World world, BlockPos pos, int sensorRange, String textBoxText) {
+    public int getRedstoneValue(Level level, BlockPos pos, int sensorRange, String textBoxText) {
         return TwitchStream.isOnline(textBoxText) ? 15 : 0;
     }
 
@@ -74,8 +74,6 @@ public class TwitchStreamerSensor implements IPollSensorSetting {
 
         private final String channel;
         private boolean keptAlive = true;
-
-        private URL url;
 
         private boolean online = false;
 
@@ -101,19 +99,14 @@ public class TwitchStreamerSensor implements IPollSensorSetting {
 
         private void refresh() {
             try {
-                url = new URL("https://api.twitch.tv/kraken/streams/" + channel);
+                URL url = new URL("https://api.twitch.tv/kraken/streams/" + channel);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
-                JsonElement json = new JsonParser().parse(reader);
+                JsonElement json = JsonParser.parseReader(reader);
                 JsonObject obj = json.getAsJsonObject();
                 JsonElement streaming = obj.get("stream");
                 online = !streaming.isJsonNull();
-            } catch (Throwable e) {
-                // e.printStackTrace();
+            } catch (Throwable ignored) {
             }
-        }
-
-        public URL getUrl() {
-            return url;
         }
 
         static boolean isOnline(String name) {

@@ -17,19 +17,19 @@
 
 package me.desht.pneumaticcraft.common.hacking.secstation;
 
-import me.desht.pneumaticcraft.common.inventory.ContainerSecurityStationHacking;
-import me.desht.pneumaticcraft.common.item.ItemNetworkComponent;
-import me.desht.pneumaticcraft.common.item.ItemNetworkComponent.NetworkComponentType;
+import me.desht.pneumaticcraft.common.block.entity.SecurityStationBlockEntity;
+import me.desht.pneumaticcraft.common.inventory.SecurityStationHackingMenu;
+import me.desht.pneumaticcraft.common.item.NetworkComponentItem;
+import me.desht.pneumaticcraft.common.item.NetworkComponentItem.NetworkComponentType;
 import me.desht.pneumaticcraft.common.network.NetworkHandler;
 import me.desht.pneumaticcraft.common.network.PacketSyncHackSimulationUpdate;
-import me.desht.pneumaticcraft.common.tileentity.TileEntitySecurityStation;
-import me.desht.pneumaticcraft.lib.TileEntityConstants;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.text.TextFormatting;
+import me.desht.pneumaticcraft.lib.BlockEntityConstants;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -43,11 +43,11 @@ import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
  * This is done on both client and server side.  Both sides will be ticked but the server will periodically sync
  * its state to the client, so client is using dead reckoning with periodic updates from the server.  Only the
  * server state actually matters for security station hacking, of course; the client state is purely for display
- * by GuiSecurityStationHacking.
+ * by SecurityStationHackingScreen.
  */
 public class SimulationController implements ISimulationController {
-    private final TileEntitySecurityStation te;
-    private final PlayerEntity hacker;
+    private final SecurityStationBlockEntity te;
+    private final Player hacker;
     private final HackSimulation playerSimulation;
     private final HackSimulation aiSimulation;
     private final boolean justTesting;
@@ -58,14 +58,14 @@ public class SimulationController implements ISimulationController {
      * @param te the security station
      * @param hacker the hacking player
      */
-    public SimulationController(TileEntitySecurityStation te, PlayerEntity hacker, boolean justTesting) {
+    public SimulationController(SecurityStationBlockEntity te, Player hacker, boolean justTesting) {
         this.te = te;
         this.hacker = hacker;
 
         this.playerSimulation = new HackSimulation(this, te.findComponent(NetworkComponentType.NETWORK_IO_PORT),
-                TileEntityConstants.NETWORK_NORMAL_BRIDGE_SPEED, HackingSide.PLAYER);
+                BlockEntityConstants.NETWORK_NORMAL_BRIDGE_SPEED, HackingSide.PLAYER);
         this.aiSimulation = new HackSimulation(this, te.findComponent(NetworkComponentType.DIAGNOSTIC_SUBROUTINE),
-                TileEntityConstants.NETWORK_AI_BRIDGE_SPEED, HackingSide.AI);
+                BlockEntityConstants.NETWORK_AI_BRIDGE_SPEED, HackingSide.AI);
 
         for (int i = 0; i < te.getPrimaryInventory().getSlots(); i++) {
             this.playerSimulation.addNode(i, te.getPrimaryInventory().getStackInSlot(i));
@@ -83,7 +83,7 @@ public class SimulationController implements ISimulationController {
      * @param playerSimulation the hacking player's simulation object
      * @param aiSimulation the security station's simulation object
      */
-    public SimulationController(TileEntitySecurityStation te, PlayerEntity hacker, HackSimulation playerSimulation, HackSimulation aiSimulation, boolean justTesting) {
+    public SimulationController(SecurityStationBlockEntity te, Player hacker, HackSimulation playerSimulation, HackSimulation aiSimulation, boolean justTesting) {
         this.te = te;
         this.hacker = hacker;
         this.playerSimulation = playerSimulation.setController(this);
@@ -101,7 +101,7 @@ public class SimulationController implements ISimulationController {
     }
 
     @Override
-    public void toBytes(PacketBuffer buffer) {
+    public void toBytes(FriendlyByteBuf buffer) {
         buffer.writeBlockPos(te.getBlockPos());
 
         playerSimulation.writeToNetwork(buffer);
@@ -139,7 +139,7 @@ public class SimulationController implements ISimulationController {
     }
 
     private void maybeWakeAI() {
-        if (!te.getLevel().isClientSide && aiSimulation.isStarted() && te.getLevel().random.nextInt(100) < te.getDetectionChance()) {
+        if (!te.nonNullLevel().isClientSide && aiSimulation.isStarted() && te.nonNullLevel().random.nextInt(100) < te.getDetectionChance()) {
             aiSimulation.wakeUp();
         }
     }
@@ -153,10 +153,10 @@ public class SimulationController implements ISimulationController {
 
         boolean wasDone = isSimulationDone();
 
-        if (!(hacker.containerMenu instanceof ContainerSecurityStationHacking) && !playerSimulation.isHackComplete()) {
+        if (!(hacker.containerMenu instanceof SecurityStationHackingMenu) && !playerSimulation.isHackComplete()) {
             // hacker closed their window before hack complete: AI wins
             for (int slot = 0; slot < HackSimulation.GRID_SIZE; slot++) {
-                if (ItemNetworkComponent.getType(te.getPrimaryInventory().getStackInSlot(slot)) == NetworkComponentType.NETWORK_IO_PORT) {
+                if (NetworkComponentItem.isType(te.getPrimaryInventory().getStackInSlot(slot), NetworkComponentType.NETWORK_IO_PORT)) {
                     aiSimulation.getNodeAt(slot).setHackProgress(slot, 1F, true);
                     break;
                 }
@@ -166,18 +166,18 @@ public class SimulationController implements ISimulationController {
             aiSimulation.tick();
         }
 
-        boolean syncToClient = (te.getLevel().getGameTime() & 0x7) == 0;
+        boolean syncToClient = (te.nonNullLevel().getGameTime() & 0x7) == 0;
         if (!wasDone && aiSimulation.isHackComplete()) {
             // security station wins
             syncToClient = true;
             if (aiSimulation.isAwake()) {
                 // if hack window is closed before AI detects intrustion, hacker gets away with it
-                if (te.getLevel().isClientSide) {
+                if (te.nonNullLevel().isClientSide) {
                     hacker.playSound(SoundEvents.ENDERMAN_DEATH, 1f, 1f);
                 } else {
-                    hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackFailed.1").withStyle(TextFormatting.RED), false);
+                    hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackFailed.1").withStyle(ChatFormatting.RED), false);
                     if (!justTesting) {
-                        hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackFailed.2").withStyle(TextFormatting.RED), false);
+                        hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackFailed.2").withStyle(ChatFormatting.RED), false);
                         te.retaliate(hacker);
                     }
                 }
@@ -185,18 +185,18 @@ public class SimulationController implements ISimulationController {
         } else if (!wasDone && playerSimulation.isHackComplete()) {
             // hacker wins
             syncToClient = true;
-            if (te.getLevel().isClientSide) {
+            if (te.nonNullLevel().isClientSide) {
                 hacker.playSound(SoundEvents.PLAYER_LEVELUP, 1f, 1f);
             } else {
-                hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackSucceeded.1").withStyle(TextFormatting.GREEN), false);
+                hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackSucceeded.1").withStyle(ChatFormatting.GREEN), false);
                 if (!justTesting) {
-                    hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackSucceeded.2").withStyle(TextFormatting.GREEN), false);
+                    hacker.displayClientMessage(xlate("pneumaticcraft.message.securityStation.hackSucceeded.2").withStyle(ChatFormatting.GREEN), false);
                     te.addHacker(hacker.getGameProfile());
                 }
             }
         }
-        if (!te.getLevel().isClientSide() && syncToClient) {
-            NetworkHandler.sendToPlayer(new PacketSyncHackSimulationUpdate(te), (ServerPlayerEntity) hacker);
+        if (!te.nonNullLevel().isClientSide() && syncToClient) {
+            NetworkHandler.sendToPlayer(new PacketSyncHackSimulationUpdate(te), (ServerPlayer) hacker);
         }
     }
 
@@ -211,7 +211,7 @@ public class SimulationController implements ISimulationController {
     }
 
     @Override
-    public PlayerEntity getHacker() {
+    public Player getHacker() {
         return hacker;
     }
 }

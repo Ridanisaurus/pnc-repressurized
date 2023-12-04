@@ -18,26 +18,26 @@
 package me.desht.pneumaticcraft.common.heat;
 
 import me.desht.pneumaticcraft.lib.Textures;
-import net.minecraft.util.IStringSerializable;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.StringRepresentable;
 
-public enum TemperatureCategory implements IStringSerializable {
-    SUPER_COLD(0, "super_cold"),
-    VERY_COLD(1, "very_cold"),
-    COLD(2, "cold"),
-    COOL(3, "cool"),
-    NORMAL(4, "normal"),
-    WARM(5, "warm"),
-    HOT(6, "hot"),
-    VERY_HOT(7, "very_hot"),
-    SUPER_HOT(8, "super_hot");
+public enum TemperatureCategory implements StringRepresentable {
+    SUPER_COLD("super_cold"),
+    VERY_COLD("very_cold"),
+    COLD("cold"),
+    COOL("cool"),
+    NORMAL("normal"),
+    WARM("warm"),
+    HOT("hot"),
+    VERY_HOT("very_hot"),
+    SUPER_HOT("super_hot");
 
-    private final int index;
     private final String name;
+    private final ResourceLocation textureLoc;
 
-    TemperatureCategory(int index, String name) {
-        this.index = index;
+    TemperatureCategory(String name) {
         this.name = name;
+        this.textureLoc = Textures.modelTexture("heat_frame_" + name + ".png");
     }
 
     public static TemperatureCategory forTemperature(double temp) {
@@ -67,11 +67,7 @@ public enum TemperatureCategory implements IStringSerializable {
         return name;
     }
 
-    public int getIndex() {
-        return index;
-    }
-
-    public ResourceLocation getTextureName(String base) {
-        return Textures.modelTexture(base + "_" + name + ".png");
+    public ResourceLocation getTextureLocation() {
+        return textureLoc;
     }
 }

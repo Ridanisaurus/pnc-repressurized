@@ -17,14 +17,14 @@
 
 package me.desht.pneumaticcraft.common.item;
 
-import me.desht.pneumaticcraft.common.inventory.ContainerChargingStationUpgradeManager;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityChargingStation;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.ContainerType;
-import net.minecraft.inventory.container.INamedContainerProvider;
-import net.minecraft.util.text.ITextComponent;
+import me.desht.pneumaticcraft.common.block.entity.ChargingStationBlockEntity;
+import me.desht.pneumaticcraft.common.inventory.ChargingStationUpgradeManagerMenu;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 
 import javax.annotation.Nullable;
 
@@ -37,26 +37,26 @@ public interface IChargeableContainerProvider {
      * @param te the charging station that the item is in
      * @return the container provider
      */
-    INamedContainerProvider getContainerProvider(TileEntityChargingStation te);
+    MenuProvider getContainerProvider(ChargingStationBlockEntity te);
 
-    class Provider implements INamedContainerProvider {
-        private final TileEntityChargingStation te;
-        private final ContainerType<? extends ContainerChargingStationUpgradeManager> type;
+    class Provider implements MenuProvider {
+        private final ChargingStationBlockEntity te;
+        private final MenuType<? extends ChargingStationUpgradeManagerMenu> type;
 
-        public Provider(TileEntityChargingStation te, ContainerType<? extends ContainerChargingStationUpgradeManager> type) {
+        public Provider(ChargingStationBlockEntity te, MenuType<? extends ChargingStationUpgradeManagerMenu> type) {
             this.te = te;
             this.type = type;
         }
 
         @Override
-        public ITextComponent getDisplayName() {
+        public Component getDisplayName() {
             return te.getChargingStack().getHoverName();
         }
 
         @Nullable
         @Override
-        public Container createMenu(int windowId, PlayerInventory playerInventory, PlayerEntity playerEntity) {
-            return new ContainerChargingStationUpgradeManager(type, windowId, playerInventory, te.getBlockPos());
+        public AbstractContainerMenu createMenu(int windowId, Inventory playerInventory, Player playerEntity) {
+            return new ChargingStationUpgradeManagerMenu(type, windowId, playerInventory, te.getBlockPos());
         }
     }
 }

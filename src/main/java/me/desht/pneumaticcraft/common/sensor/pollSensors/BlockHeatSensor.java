@@ -20,17 +20,18 @@ package me.desht.pneumaticcraft.common.sensor.pollSensors;
 import com.google.common.collect.ImmutableSet;
 import me.desht.pneumaticcraft.api.PNCCapabilities;
 import me.desht.pneumaticcraft.api.heat.IHeatExchangerLogic;
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
+import me.desht.pneumaticcraft.api.misc.RangedInt;
 import me.desht.pneumaticcraft.api.universal_sensor.IBlockAndCoordinatePollSensor;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
 import me.desht.pneumaticcraft.common.heat.HeatExchangerManager;
 import me.desht.pneumaticcraft.common.heat.HeatUtil;
+import me.desht.pneumaticcraft.common.upgrades.ModUpgrades;
 import me.desht.pneumaticcraft.common.util.DirectionUtil;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.RangedInteger;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import java.util.List;
@@ -46,8 +47,8 @@ public class BlockHeatSensor implements IBlockAndCoordinatePollSensor {
     }
 
     @Override
-    public Set<EnumUpgrade> getRequiredUpgrades() {
-        return ImmutableSet.of(EnumUpgrade.BLOCK_TRACKER);
+    public Set<PNCUpgrade> getRequiredUpgrades() {
+        return ImmutableSet.of(ModUpgrades.BLOCK_TRACKER.get());
     }
 
     @Override
@@ -61,19 +62,19 @@ public class BlockHeatSensor implements IBlockAndCoordinatePollSensor {
     }
 
     @Override
-    public RangedInteger getTextboxIntRange() {
-        return new RangedInteger(-273, 2000);  // 0K - 2273K
+    public RangedInt getTextboxIntRange() {
+        return new RangedInt(-273, 2000);  // 0K - 2273K
     }
 
     @Override
-    public int getRedstoneValue(World world, BlockPos pos, int sensorRange, String textBoxText, Set<BlockPos> positions) {
+    public int getRedstoneValue(Level world, BlockPos pos, int sensorRange, String textBoxText, Set<BlockPos> positions) {
         double temperature = 0D;
         for (BlockPos p : positions) {
             temperature = Math.max(temperature, HeatExchangerManager.getInstance().getLogic(world, p, null)
                     .map(IHeatExchangerLogic::getTemperature).orElse(0d));
-            TileEntity te = world.getBlockEntity(p);
+            BlockEntity te = world.getBlockEntity(p);
             if (te != null) {
-                // possibly sided TE?
+                // possibly sided BE?
                 for (Direction side : DirectionUtil.VALUES) {
                     temperature = Math.max(temperature, te.getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY, side)
                             .map(IHeatExchangerLogic::getTemperature).orElse(0d));
@@ -86,7 +87,7 @@ public class BlockHeatSensor implements IBlockAndCoordinatePollSensor {
     }
 
     @Override
-    public void getAdditionalInfo(List<ITextComponent> info) {
+    public void getAdditionalInfo(List<Component> info) {
         info.add(xlate("pneumaticcraft.gui.universalSensor.text.thresholdTemp"));
     }
 }

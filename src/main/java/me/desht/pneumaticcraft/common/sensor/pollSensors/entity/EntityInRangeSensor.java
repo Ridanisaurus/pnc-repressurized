@@ -18,17 +18,14 @@
 package me.desht.pneumaticcraft.common.sensor.pollSensors.entity;
 
 import me.desht.pneumaticcraft.common.util.EntityFilter;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
 public class EntityInRangeSensor extends EntityPollSensor {
-
-    private EntityFilter filter;
-
     @Override
     public String getSensorPath() {
         return "Within Range";
@@ -40,20 +37,22 @@ public class EntityInRangeSensor extends EntityPollSensor {
     }
 
     @Override
-    public boolean isEntityFilter() {
-        return true;
+    public String getHelpText() {
+        return "pneumaticcraft.gui.entityFilter.helpText";
     }
 
     @Override
-    public int getRedstoneValue(List<Entity> entities, String textboxText) {
-        if (filter == null) {
-            filter = new EntityFilter(textboxText);
-        }
+    public String getHelpPromptText() {
+        return "pneumaticcraft.gui.entityFilter.holdF1";
+    }
 
-        int entitiesFound = textboxText.isEmpty() ?
-                entities.size() :
-                (int) entities.stream().filter(entity -> filter.test(entity)).count();
-        return Math.min(15, entitiesFound);
+    @Override
+    public int getRedstoneValue(List<? extends Entity> entities, String textboxText) {
+        if (textboxText.isEmpty()) return entities.size();
+
+        EntityFilter filter = EntityFilter.fromString(textboxText);
+        if (filter == null) return 0;
+        return Math.min(15, (int) entities.stream().filter(filter).count());
     }
 
     @Override
@@ -62,12 +61,7 @@ public class EntityInRangeSensor extends EntityPollSensor {
     }
 
     @Override
-    public void getAdditionalInfo(List<ITextComponent> info) {
+    public void getAdditionalInfo(List<Component> info) {
         info.add(xlate("pneumaticcraft.gui.entityFilter"));
-    }
-
-    @Override
-    public void notifyTextChange(String newText) {
-        filter = new EntityFilter(newText);
     }
 }

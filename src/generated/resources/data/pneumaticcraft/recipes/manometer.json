@@ -1,18 +1,20 @@
 {
   "type": "pneumaticcraft:crafting_shaped_pressurizable",
+  "category": "misc",
+  "key": {
+    "C": {
+      "item": "pneumaticcraft:air_canister"
+    },
+    "G": {
+      "item": "pneumaticcraft:pressure_gauge"
+    }
+  },
   "pattern": [
     "G",
     "C"
   ],
-  "key": {
-    "G": {
-      "item": "pneumaticcraft:pressure_gauge"
-    },
-    "C": {
-      "item": "pneumaticcraft:air_canister"
-    }
-  },
   "result": {
     "item": "pneumaticcraft:manometer"
-  }
+  },
+  "show_notification": true
 }

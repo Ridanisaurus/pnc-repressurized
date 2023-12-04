@@ -23,7 +23,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import me.desht.pneumaticcraft.api.drone.ProgWidgetType;
 import me.desht.pneumaticcraft.common.core.ModProgWidgets;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -38,7 +39,8 @@ public class ProgWidgetConfig extends AuxConfigJson {
     }
 
     public boolean isWidgetBlacklisted(ProgWidgetType<?> widgetType) {
-        return blacklistedPieces.contains(widgetType.getRegistryName());
+        ResourceLocation regName = PneumaticCraftUtils.getRegistryName(ModProgWidgets.PROG_WIDGETS.get(), widgetType).orElseThrow();
+        return blacklistedPieces.contains(regName);
     }
 
     @Override
@@ -60,8 +62,8 @@ public class ProgWidgetConfig extends AuxConfigJson {
         json.add("blacklist", array);
 
         JsonArray allArray = new JsonArray();
-        for (ProgWidgetType<?> name : ModProgWidgets.PROG_WIDGETS.get().getValues()) {
-            allArray.add(new JsonPrimitive(name.getRegistryName().toString()));
+        for (ResourceLocation entry : ModProgWidgets.PROG_WIDGETS.get().getKeys()) {
+            allArray.add(new JsonPrimitive(entry.toString()));
         }
         json.add("allWidgets", allArray);
     }
@@ -73,5 +75,10 @@ public class ProgWidgetConfig extends AuxConfigJson {
         for (JsonElement element : array) {
             blacklistedPieces.add(new ResourceLocation(element.getAsString()));
         }
+    }
+
+    @Override
+    public Sidedness getSidedness() {
+        return Sidedness.BOTH;
     }
 }

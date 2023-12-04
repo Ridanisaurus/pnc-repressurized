@@ -19,30 +19,31 @@ package me.desht.pneumaticcraft.common.thirdparty.computer_common;
 
 import com.google.common.collect.ImmutableList;
 import me.desht.pneumaticcraft.api.drone.ProgWidgetType;
-import me.desht.pneumaticcraft.common.ai.IDroneBase;
-import me.desht.pneumaticcraft.common.ai.StringFilterEntitySelector;
 import me.desht.pneumaticcraft.common.core.ModProgWidgets;
-import me.desht.pneumaticcraft.common.entity.living.EntityDrone;
-import me.desht.pneumaticcraft.common.progwidgets.*;
-import me.desht.pneumaticcraft.common.recipes.CraftingRecipeCache;
+import me.desht.pneumaticcraft.common.drone.IDroneBase;
+import me.desht.pneumaticcraft.common.drone.progwidgets.*;
+import me.desht.pneumaticcraft.common.entity.drone.DroneEntity;
+import me.desht.pneumaticcraft.common.recipes.RecipeCache;
 import me.desht.pneumaticcraft.common.thirdparty.ThirdPartyManager;
 import me.desht.pneumaticcraft.common.util.DummyContainer;
 import me.desht.pneumaticcraft.common.util.LegacyAreaWidgetConverter;
 import me.desht.pneumaticcraft.common.util.LegacyAreaWidgetConverter.EnumOldAreaType;
+import me.desht.pneumaticcraft.common.util.StringFilterEntitySelector;
 import me.desht.pneumaticcraft.lib.Textures;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.DyeColor;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.ICraftingRecipe;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.inventory.TransientCraftingContainer;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
@@ -50,7 +51,8 @@ import java.util.function.Predicate;
 
 public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrdered, IGotoWidget, IItemPickupWidget,
         IEntityProvider, ITextWidget, ICondition, IItemDropper, ILiquidFiltered, IRedstoneEmissionWidget,
-        IRenamingWidget, ICraftingWidget, IMaxActions, IBlockRightClicker, ILiquidExport, ISignEditWidget, IToolUser {
+        IRenamingWidget, ICraftingWidget, IMaxActions, IBlockRightClicker, ILiquidExport, ISignEditWidget,
+        IToolUser, ICheckLineOfSight, IStandbyWidget {
     private Ordering order = Ordering.CLOSEST;
     private boolean[] sides = new boolean[6];
     private final Set<BlockPos> area = new HashSet<>();
@@ -78,6 +80,9 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
     private RightClickType clickType = RightClickType.CLICK_ITEM;
     private String measureVar = "";
     private boolean canSteal;
+    private boolean checkSight;
+    private boolean signBackSide;
+    private boolean allowStandbyPickup;
 
     public ProgWidgetCC() {
         super(ModProgWidgets.COMPUTER_CONTROL.get());
@@ -105,12 +110,12 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
 
     @Override
     public Goal getWidgetAI(IDroneBase drone, IProgWidget widget) {
-        return new DroneAICC((EntityDrone) drone, (ProgWidgetCC) widget, false);
+        return new DroneAICC((DroneEntity) drone, (ProgWidgetCC) widget, false);
     }
 
     @Override
     public Goal getWidgetTargetAI(IDroneBase drone, IProgWidget widget) {
-        return new DroneAICC((EntityDrone) drone, (ProgWidgetCC) widget, true);
+        return new DroneAICC((DroneEntity) drone, (ProgWidgetCC) widget, true);
     }
 
     Set<BlockPos> getInterfaceArea() {
@@ -171,12 +176,8 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
             throw new IllegalArgumentException("Unknown area type: '" + areaType + "'. Use `getAreaTypes()` to list accepted values.");
         }
         ProgWidgetArea helperWidget = new ProgWidgetArea();
-        helperWidget.x1 = x1;
-        helperWidget.y1 = y1;
-        helperWidget.z1 = z1;
-        helperWidget.x2 = x2;
-        helperWidget.y2 = y2;
-        helperWidget.z2 = z2;
+        helperWidget.setPos(0, new BlockPos(x1, y1, z1));
+        helperWidget.setPos(1, new BlockPos(x2, y2, z2));
         helperWidget.type = LegacyAreaWidgetConverter.convertFromLegacyFormat(type, 0);
         Set<BlockPos> a = new HashSet<>();
         helperWidget.getArea(a);
@@ -239,25 +240,19 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
     }
 
     @Override
-    public synchronized List<Entity> getValidEntities(World world) {
+    public synchronized List<Entity> getValidEntities(Level world) {
         return ProgWidgetAreaItemBase.getEntitiesInArea(getEntityAreaWidget(), null, world, whitelistFilter, blacklistFilter);
     }
 
     private ProgWidgetArea getEntityAreaWidget() {
         ProgWidgetArea widget = new ProgWidgetArea();
-        BlockPos minPos = getMinPos();
-        BlockPos maxPos = getMaxPos();
-        widget.x1 = minPos.getX();
-        widget.y1 = minPos.getY();
-        widget.z1 = minPos.getZ();
-        widget.x2 = maxPos.getX();
-        widget.y2 = maxPos.getY();
-        widget.z2 = maxPos.getZ();
+        widget.setPos(0, getMinPos());
+        widget.setPos(1, getMaxPos());
         return widget;
     }
 
     @Override
-    public synchronized List<Entity> getEntitiesInArea(World world, Predicate<? super Entity> filter) {
+    public synchronized List<Entity> getEntitiesInArea(Level world, Predicate<? super Entity> filter) {
         return ProgWidgetAreaItemBase.getEntitiesInArea(getEntityAreaWidget(), null, world, filter, null);
     }
 
@@ -460,8 +455,8 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
     }
 
     @Override
-    public CraftingInventory getCraftingGrid() {
-        CraftingInventory invCrafting = new CraftingInventory(new DummyContainer(), 3, 3);
+    public CraftingContainer getCraftingGrid() {
+        CraftingContainer invCrafting = new TransientCraftingContainer(new DummyContainer(), 3, 3);
         for (int i = 0; i < 9; i++) {
             invCrafting.setItem(i, craftingGrid[i]);
         }
@@ -469,8 +464,8 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
     }
 
     @Override
-    public Optional<ICraftingRecipe> getRecipe(World world, CraftingInventory grid) {
-        return CraftingRecipeCache.INSTANCE.getCachedRecipe(world, grid);
+    public Optional<CraftingRecipe> getRecipe(Level world, CraftingContainer grid) {
+        return RecipeCache.CRAFTING.getCachedRecipe(world, grid);
     }
 
     @Override
@@ -527,6 +522,16 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
     }
 
     @Override
+    public boolean isSignBackSide() {
+        return signBackSide;
+    }
+
+    @Override
+    public void setSignBackSide(boolean signBackSide) {
+        this.signBackSide = signBackSide;
+    }
+
+    @Override
     public boolean requiresTool(){
         return requiresTool;
     }
@@ -544,5 +549,25 @@ public class ProgWidgetCC extends ProgWidgetInventoryBase implements IBlockOrder
     @Override
     public void setCanSteal(boolean canSteal) {
         this.canSteal = canSteal;
+    }
+
+    @Override
+    public void setCheckSight(boolean checkSight) {
+        this.checkSight = checkSight;
+    }
+
+    @Override
+    public boolean isCheckSight() {
+        return checkSight;
+    }
+
+    @Override
+    public boolean allowPickupOnStandby() {
+        return allowStandbyPickup;
+    }
+
+    @Override
+    public void setAllowStandbyPickup(boolean allowStandbyPickup) {
+        this.allowStandbyPickup = allowStandbyPickup;
     }
 }

@@ -17,18 +17,19 @@
 
 package me.desht.pneumaticcraft.api.crafting.recipe;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.level.Level;
 
 /**
  * Base class for all PneumaticCraft machine recipes, which are registered in the vanilla RecipeManager.
  */
-public abstract class PneumaticCraftRecipe implements IRecipe<PneumaticCraftRecipe.DummyIInventory> {
+public abstract class PneumaticCraftRecipe implements Recipe<PneumaticCraftRecipe.DummyIInventory> {
     private final ResourceLocation id;
 
     protected PneumaticCraftRecipe(ResourceLocation id) {
@@ -40,15 +41,15 @@ public abstract class PneumaticCraftRecipe implements IRecipe<PneumaticCraftReci
      *
      * @param buffer The buffer to write to.
      */
-    public abstract void write(PacketBuffer buffer);
+    public abstract void write(FriendlyByteBuf buffer);
 
     @Override
-    public boolean matches(DummyIInventory inv, World worldIn) {
+    public boolean matches(DummyIInventory inv, Level worldIn) {
         return true;
     }
 
     @Override
-    public ItemStack assemble(DummyIInventory inv) {
+    public ItemStack assemble(DummyIInventory inv, RegistryAccess registryAccess) {
         return ItemStack.EMPTY;
     }
 
@@ -58,7 +59,7 @@ public abstract class PneumaticCraftRecipe implements IRecipe<PneumaticCraftReci
     }
 
     @Override
-    public ItemStack getResultItem() {
+    public ItemStack getResultItem(RegistryAccess registryAccess) {
         return ItemStack.EMPTY;
     }
 
@@ -75,7 +76,7 @@ public abstract class PneumaticCraftRecipe implements IRecipe<PneumaticCraftReci
     /**
      * Just to keep vanilla happy...
      */
-    public static class DummyIInventory implements IInventory {
+    public static class DummyIInventory implements Container {
         private static final DummyIInventory INSTANCE = new DummyIInventory();
 
         public static DummyIInventory getInstance() {
@@ -116,7 +117,7 @@ public abstract class PneumaticCraftRecipe implements IRecipe<PneumaticCraftReci
         }
 
         @Override
-        public boolean stillValid(PlayerEntity player) {
+        public boolean stillValid(Player player) {
             return false;
         }
 

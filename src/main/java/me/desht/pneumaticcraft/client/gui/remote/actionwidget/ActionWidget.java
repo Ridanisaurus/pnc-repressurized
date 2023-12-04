@@ -17,15 +17,19 @@
 
 package me.desht.pneumaticcraft.client.gui.remote.actionwidget;
 
-import me.desht.pneumaticcraft.client.gui.GuiRemoteEditor;
-import me.desht.pneumaticcraft.common.variables.GlobalVariableManager;
+import me.desht.pneumaticcraft.client.gui.RemoteEditorScreen;
+import me.desht.pneumaticcraft.client.util.ClientUtils;
+import me.desht.pneumaticcraft.common.variables.GlobalVariableHelper;
 import me.desht.pneumaticcraft.lib.Log;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.math.BlockPos;
+import me.desht.pneumaticcraft.mixin.accessors.TooltipAccess;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 
-public abstract class ActionWidget<W extends Widget> {
+public abstract class ActionWidget<W extends AbstractWidget> {
     protected W widget;
     private String enableVariable = "";
     private BlockPos enablingValue = BlockPos.ZERO;
@@ -37,13 +41,13 @@ public abstract class ActionWidget<W extends Widget> {
     ActionWidget() {
     }
 
-    public void readFromNBT(CompoundNBT tag, int guiLeft, int guiTop) {
+    public void readFromNBT(CompoundTag tag, int guiLeft, int guiTop) {
         enableVariable = tag.getString("enableVariable");
         enablingValue = tag.contains("enablingX") ? new BlockPos(tag.getInt("enablingX"), tag.getInt("enablingY"), tag.getInt("enablingZ")) : new BlockPos(1, 0, 0);
     }
 
-    public CompoundNBT toNBT(int guiLeft, int guiTop) {
-        CompoundNBT tag = new CompoundNBT();
+    public CompoundTag toNBT(int guiLeft, int guiTop) {
+        CompoundTag tag = new CompoundTag();
         tag.putString("id", getId());
         tag.putString("enableVariable", enableVariable);
         tag.putInt("enablingX", enablingValue.getX());
@@ -54,7 +58,7 @@ public abstract class ActionWidget<W extends Widget> {
 
     public ActionWidget<?> copy() {
         try {
-            ActionWidget<?> widget = this.getClass().newInstance();
+            ActionWidget<?> widget = this.getClass().getDeclaredConstructor().newInstance();
             widget.readFromNBT(this.toNBT(0, 0), 0, 0);
             return widget;
         } catch (Exception e) {
@@ -72,7 +76,7 @@ public abstract class ActionWidget<W extends Widget> {
 
     public abstract String getId();
 
-    public Screen getGui(GuiRemoteEditor guiRemote) {
+    public Screen getGui(RemoteEditorScreen guiRemote) {
         return null;
     }
 
@@ -85,7 +89,9 @@ public abstract class ActionWidget<W extends Widget> {
     }
 
     public boolean isEnabled() {
-        return enableVariable.equals("") || GlobalVariableManager.getInstance().getPos(enableVariable).equals(enablingValue);
+        if (enableVariable.isEmpty()) return true;
+        BlockPos pos = GlobalVariableHelper.getPos(ClientUtils.getClientPlayer().getUUID(), enableVariable, BlockPos.ZERO);
+        return pos.equals(enablingValue);
     }
 
     public void setEnablingValue(int x, int y, int z) {
@@ -94,5 +100,27 @@ public abstract class ActionWidget<W extends Widget> {
 
     public BlockPos getEnablingValue() {
         return enablingValue;
+    }
+
+    public void setTooltip(Tooltip tooltip) {
+        widget.setTooltip(tooltip);
+    }
+
+    public Tooltip getTooltip() {
+        return widget.getTooltip();
+    }
+
+    public Component getTooltipMessage() {
+        Tooltip tooltip = getWidget().getTooltip();
+        return tooltip == null ? Component.empty() : ((TooltipAccess) tooltip).getMessage();
+    }
+
+    void deserializeTooltip(String val) {
+        if (!val.isEmpty()) {
+            Component c = Component.Serializer.fromJson(val);
+            widget.setTooltip(c == null ? null : Tooltip.create(c));
+        } else {
+            widget.setTooltip(null);
+        }
     }
 }

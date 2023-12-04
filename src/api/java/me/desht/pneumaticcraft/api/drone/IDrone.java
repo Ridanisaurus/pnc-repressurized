@@ -17,18 +17,18 @@
 
 package me.desht.pneumaticcraft.api.drone;
 
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
-import net.minecraft.block.Block;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.goal.GoalSelector;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.goal.GoalSelector;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.fluids.IFluidTank;
@@ -41,27 +41,30 @@ import java.util.UUID;
 /**
  * Represents a drone or drone-like object (e.g. a Programmable Controller).
  * <p>
- * Do not implement this class yourself!
+ * Do not implement this class yourself! Instances of it are available via drone events ({@link AmadronRetrievalEvent},
+ * {@link DroneConstructingEvent}, {@link DroneSuicideEvent}), and via {@code getDrone(...)} methods in
+ * {@link IDroneRegistry}.
  */
 public interface IDrone extends ICapabilityProvider {
     /**
-     * Get the number of installed upgrades of the given item type.
+     * Get a count of the installed upgrades of the given type.
      *
+     * @param upgrade the upgrade to check
      * @return amount of installed upgrades in the drone
      */
-    int getUpgrades(EnumUpgrade upgrade);
+    int getUpgrades(PNCUpgrade upgrade);
 
     /**
      * Get the drone's world.
      *
      * @return a world
      */
-    World world();
+    Level world();
 
     /**
      * Get the drone's fluid tank.  Note that this is also accessible via the
-     * {@link net.minecraftforge.fluids.capability.CapabilityFluidHandler#FLUID_HANDLER_CAPABILITY}
-     * capability.
+     * {@link net.minecraftforge.common.capabilities.ForgeCapabilities#FLUID_HANDLER}
+     * capability, which should be used in preference.
      *
      * @return a fluid tank
      */
@@ -69,7 +72,8 @@ public interface IDrone extends ICapabilityProvider {
 
     /**
      * Get the drone's inventory.  Note that this is also accessible via the
-     * {@link net.minecraftforge.items.CapabilityItemHandler#ITEM_HANDLER_CAPABILITY} capability.
+     * {@link net.minecraftforge.common.capabilities.ForgeCapabilities#ITEM_HANDLER} capability,
+     * which should be used in preference.
      *
      * @return an inventory
      */
@@ -80,11 +84,11 @@ public interface IDrone extends ICapabilityProvider {
      *
      * @return the entity position
      */
-    Vector3d getDronePos();
+    Vec3 getDronePos();
 
     /**
-     * Get the position of the drone's controller. For actual drone entities, this will always be (0,0,0).  If the
-     * drone is actually a Programmable Controller, it will be the controller's block position.
+     * Get the position of the drone's controller. For actual drone entities, this will always be {@code BlockPos.ZERO}.
+     * If the drone is actually a Programmable Controller, it will be the controller's block position.
      */
     BlockPos getControllerPos();
 
@@ -138,7 +142,7 @@ public interface IDrone extends ICapabilityProvider {
     /**
      * Get the drone's current collection of tasks.
      *
-     * @return a vanilla EntityAITasks object
+     * @return a vanilla GoalSelector object
      */
     GoalSelector getTargetAI();
 
@@ -155,10 +159,11 @@ public interface IDrone extends ICapabilityProvider {
      *
      * @param string a custom name
      */
-    void setName(ITextComponent string);
+    void setName(Component string);
 
     /**
-     * Make the drone pick up the given entity.  The given entity will be set as a rider of the drone.
+     * Make the drone pick up the given entity.  The given entity will be set as a rider of the drone, but it will
+     * not have any control over the drone (in fact, its AI is disabled while being carried).
      *
      * @param entity an entity to pick up
      */
@@ -166,6 +171,7 @@ public interface IDrone extends ICapabilityProvider {
 
     /**
      * Get the list of entities currently carried by this drone.
+     * Note: although this method returns a list, drones currently support only a single carried entity.
      *
      * @return a list of entities
      */
@@ -193,7 +199,7 @@ public interface IDrone extends ICapabilityProvider {
      *
      * @return the owning player; will be null if the owner is offline or the drone was not player-deployed
      */
-    PlayerEntity getOwner();
+    Player getOwner();
 
     /**
      * Get the UUID of the drone's owner.  This will be non-null even if the owning player is offline. A drone

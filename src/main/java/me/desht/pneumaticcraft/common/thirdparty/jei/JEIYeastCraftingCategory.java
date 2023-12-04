@@ -17,24 +17,22 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
-import com.google.common.collect.ImmutableList;
 import me.desht.pneumaticcraft.api.crafting.ingredient.FluidIngredient;
 import me.desht.pneumaticcraft.common.core.ModFluids;
 import me.desht.pneumaticcraft.common.core.ModItems;
-import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
 import me.desht.pneumaticcraft.lib.Textures;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
-import mezz.jei.api.ingredients.IIngredients;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.text.ITextComponent;
+import mezz.jei.api.forge.ForgeTypes;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,43 +40,26 @@ import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
 public class JEIYeastCraftingCategory extends AbstractPNCCategory<JEIYeastCraftingCategory.YeastCraftingRecipe> {
     public JEIYeastCraftingCategory() {
-        super(ModCategoryUid.YEAST_CRAFTING, YeastCraftingRecipe.class,
+        super(RecipeTypes.YEAST_CRAFTING,
                 xlate("pneumaticcraft.gui.jei.title.yeastCrafting"),
                 guiHelper().createDrawable(Textures.GUI_JEI_YEAST_CRAFTING, 0, 0, 128, 40),
-                guiHelper().createDrawableIngredient(new ItemStack(ModItems.YEAST_CULTURE_BUCKET.get()))
+                guiHelper().createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(ModItems.YEAST_CULTURE_BUCKET.get()))
         );
     }
 
-
     @Override
-    public void setIngredients(YeastCraftingRecipe recipe, IIngredients ingredients) {
-        ingredients.setInput(VanillaTypes.ITEM, recipe.itemInput);
-        ingredients.setInputs(VanillaTypes.FLUID, ImmutableList.of(
-                new FluidStack(ModFluids.YEAST_CULTURE.get(), 1000),
-                new FluidStack(Fluids.WATER, 1000)
-        ));
-        ingredients.setOutput(VanillaTypes.FLUID, recipe.output);
+    public void setRecipe(IRecipeLayoutBuilder builder, YeastCraftingRecipe recipe, IFocusGroup focuses) {
+        List<FluidStack> yeastStack = recipe.fluidInput().getFluidStacks();
+        List<FluidStack> waterStack = Collections.singletonList(new FluidStack(Fluids.WATER, 1000));
+
+        builder.addSlot(RecipeIngredientRole.INPUT, 1, 1).addItemStack(recipe.itemInput);
+        builder.addSlot(RecipeIngredientRole.CATALYST, 16, 16).addIngredients(ForgeTypes.FLUID_STACK, yeastStack);
+        builder.addSlot(RecipeIngredientRole.INPUT, 32, 16).addIngredients(ForgeTypes.FLUID_STACK, waterStack);
+        builder.addSlot(RecipeIngredientRole.OUTPUT, 80, 16).addIngredients(ForgeTypes.FLUID_STACK, yeastStack);
+        builder.addSlot(RecipeIngredientRole.OUTPUT, 96, 16).addIngredients(ForgeTypes.FLUID_STACK, yeastStack);
     }
 
-    @Override
-    public void setRecipe(IRecipeLayout recipeLayout, YeastCraftingRecipe recipe, IIngredients ingredients) {
-        recipeLayout.getItemStacks().init(0, true, 0, 0);
-        recipeLayout.getItemStacks().set(0, ingredients.getInputs(VanillaTypes.ITEM).get(0));
-
-        recipeLayout.getFluidStacks().init(0, true, 16, 16);
-        recipeLayout.getFluidStacks().set(0, ingredients.getInputs(VanillaTypes.FLUID).get(0));
-
-        recipeLayout.getFluidStacks().init(1, true, 32, 16);
-        recipeLayout.getFluidStacks().set(1, ingredients.getInputs(VanillaTypes.FLUID).get(1));
-
-        recipeLayout.getFluidStacks().init(2, false, 80, 16);
-        recipeLayout.getFluidStacks().set(2, ingredients.getOutputs(VanillaTypes.FLUID).get(0));
-
-        recipeLayout.getFluidStacks().init(3, false, 96, 16);
-        recipeLayout.getFluidStacks().set(3, ingredients.getOutputs(VanillaTypes.FLUID).get(0));
-    }
-
-    public static Collection<?> getAllRecipes() {
+    public static List<YeastCraftingRecipe> getAllRecipes() {
         return Collections.singletonList(new YeastCraftingRecipe(
                         new ItemStack(Items.SUGAR),
                         FluidIngredient.of(1000, ModFluids.YEAST_CULTURE.get()),
@@ -88,23 +69,10 @@ public class JEIYeastCraftingCategory extends AbstractPNCCategory<JEIYeastCrafti
     }
 
     @Override
-    public List<ITextComponent> getTooltipStrings(YeastCraftingRecipe recipe, double mouseX, double mouseY) {
-        List<ITextComponent> res = new ArrayList<>();
-        if (mouseX >= 48 && mouseX <= 80) {
-            res.addAll(PneumaticCraftUtils.splitStringComponent(I18n.get("pneumaticcraft.gui.jei.tooltip.yeastCrafting")));
-        }
-        return res;
+    public List<Component> getTooltipStrings(YeastCraftingRecipe recipe, IRecipeSlotsView recipeSlotsView, double mouseX, double mouseY) {
+        return positionalTooltip(mouseX, mouseY, (x, y) -> x >= 48 && x <= 80, "pneumaticcraft.gui.jei.tooltip.yeastCrafting");
     }
 
-    static class YeastCraftingRecipe {
-        final ItemStack itemInput;
-        final FluidIngredient fluidInput;
-        final FluidStack output;
-
-        YeastCraftingRecipe(ItemStack itemInput, FluidIngredient fluidInput, FluidStack output) {
-            this.itemInput = itemInput;
-            this.fluidInput = fluidInput;
-            this.output = output;
-        }
+    record YeastCraftingRecipe(ItemStack itemInput, FluidIngredient fluidInput, FluidStack output) {
     }
 }

@@ -17,34 +17,34 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
+import com.google.common.collect.ImmutableList;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.function.BiPredicate;
 
 public abstract class AbstractPNCCategory<T> implements IRecipeCategory<T> {
-    private final ITextComponent localizedName;
+    private final RecipeType<T> type;
+    private final Component localizedName;
     private final IDrawable background;
     private final IDrawable icon;
-    private final ResourceLocation id;
-    private final Class<? extends T> cls;
 
-    protected AbstractPNCCategory(ResourceLocation id, Class<? extends T> cls, ITextComponent localizedName, IDrawable background, IDrawable icon) {
-        this.id = id;
-        this.cls = cls;
+    protected AbstractPNCCategory(RecipeType<T> type, Component localizedName, IDrawable background, IDrawable icon) {
+        this.type = type;
         this.localizedName = localizedName;
         this.background = background;
         this.icon = icon;
     }
 
     @Override
-    public String getTitle() {
-        return null;
-    }
-
-    @Override
-    public ITextComponent getTitleAsTextComponent() {
+    public Component getTitle() {
         return localizedName;
     }
 
@@ -59,16 +59,17 @@ public abstract class AbstractPNCCategory<T> implements IRecipeCategory<T> {
     }
 
     @Override
-    public ResourceLocation getUid() {
-        return id;
-    }
-
-    @Override
-    public Class<? extends T> getRecipeClass() {
-        return cls;
+    public RecipeType<T> getRecipeType() {
+        return type;
     }
 
     static IGuiHelper guiHelper() {
         return JEIPlugin.jeiHelpers.getGuiHelper();
+    }
+
+    List<Component> positionalTooltip(double mouseX, double mouseY, BiPredicate<Double,Double> predicate, String translationKey, Object... args) {
+        return predicate.test(mouseX, mouseY) ?
+                ImmutableList.copyOf(PneumaticCraftUtils.splitStringComponent(I18n.get(translationKey, args))) :
+                Collections.emptyList();
     }
 }

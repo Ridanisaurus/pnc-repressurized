@@ -22,20 +22,20 @@ import com.google.gson.JsonSyntaxException;
 import me.desht.pneumaticcraft.api.crafting.TemperatureRange;
 import me.desht.pneumaticcraft.api.crafting.ingredient.FluidIngredient;
 import me.desht.pneumaticcraft.api.crafting.recipe.ThermoPlantRecipe;
+import me.desht.pneumaticcraft.api.lib.Names;
 import me.desht.pneumaticcraft.common.core.ModBlocks;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
 import me.desht.pneumaticcraft.common.recipes.ModCraftingHelper;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.IRecipeType;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapedRecipe;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.registries.ForgeRegistryEntry;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,12 +49,12 @@ public class ThermoPlantRecipeImpl extends ThermoPlantRecipe {
     private final boolean exothermic;
     private final TemperatureRange operatingTemperature;
     private final ItemStack outputItem;
+    private final float airUseMultiplier;
 
-    // TODO 1.17 make inputItem a StackedIngredient to support item counts
     public ThermoPlantRecipeImpl(
             ResourceLocation id, @Nonnull FluidIngredient inputFluid, @Nonnull Ingredient inputItem,
             FluidStack outputFluid, ItemStack outputItem, TemperatureRange operatingTemperature, float requiredPressure,
-            float recipeSpeed, boolean exothermic)
+            float recipeSpeed, float airUseMultiplier, boolean exothermic)
     {
         super(id);
 
@@ -65,6 +65,7 @@ public class ThermoPlantRecipeImpl extends ThermoPlantRecipe {
         this.operatingTemperature = operatingTemperature;
         this.requiredPressure = requiredPressure;
         this.recipeSpeed = recipeSpeed;
+        this.airUseMultiplier = airUseMultiplier;
         this.exothermic = exothermic;
     }
 
@@ -111,12 +112,17 @@ public class ThermoPlantRecipeImpl extends ThermoPlantRecipe {
     }
 
     @Override
-    public double getRecipeSpeed() {
+    public float getRecipeSpeed() {
         return recipeSpeed;
     }
 
     @Override
-    public void write(PacketBuffer buffer) {
+    public float getAirUseMultiplier() {
+        return airUseMultiplier;
+    }
+
+    @Override
+    public void write(FriendlyByteBuf buffer) {
         operatingTemperature.write(buffer);
         buffer.writeFloat(requiredPressure);
         inputItem.toNetwork(buffer);
@@ -124,22 +130,23 @@ public class ThermoPlantRecipeImpl extends ThermoPlantRecipe {
         outputFluid.writeToPacket(buffer);
         buffer.writeItem(outputItem);
         buffer.writeFloat(recipeSpeed);
+        buffer.writeFloat(airUseMultiplier);
         buffer.writeBoolean(exothermic);
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        return ModRecipes.THERMO_PLANT.get();
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeSerializers.THERMO_PLANT.get();
     }
 
     @Override
-    public IRecipeType<?> getType() {
-        return PneumaticCraftRecipeType.THERMO_PLANT;
+    public RecipeType<?> getType() {
+        return ModRecipeTypes.THERMO_PLANT.get();
     }
 
     @Override
     public String getGroup() {
-        return ModBlocks.THERMOPNEUMATIC_PROCESSING_PLANT.get().getRegistryName().getPath();
+        return Names.MOD_ID + ":thermo_plant";
     }
 
     @Override
@@ -147,7 +154,7 @@ public class ThermoPlantRecipeImpl extends ThermoPlantRecipe {
         return new ItemStack(ModBlocks.THERMOPNEUMATIC_PROCESSING_PLANT.get());
     }
 
-    public static class Serializer<T extends ThermoPlantRecipe> extends ForgeRegistryEntry<IRecipeSerializer<?>> implements IRecipeSerializer<T> {
+    public static class Serializer<T extends ThermoPlantRecipe> implements RecipeSerializer<T> {
         private final IFactory<T> factory;
 
         public Serializer(IFactory<T> factory) {
@@ -174,25 +181,27 @@ public class ThermoPlantRecipeImpl extends ThermoPlantRecipe {
                     ModCraftingHelper.fluidStackFromJson(json.getAsJsonObject("fluid_output")):
                     FluidStack.EMPTY;
             ItemStack itemOutput = json.has("item_output") ?
-                    ShapedRecipe.itemFromJson(JSONUtils.getAsJsonObject(json, "item_output")) :
+                    ShapedRecipe.itemStackFromJson(GsonHelper.getAsJsonObject(json, "item_output")) :
                     ItemStack.EMPTY;
 
             TemperatureRange range = json.has("temperature") ?
                     TemperatureRange.fromJson(json.getAsJsonObject("temperature")) :
                     TemperatureRange.any();
 
-            float pressure = JSONUtils.getAsFloat(json, "pressure", 0f);
+            float pressure = GsonHelper.getAsFloat(json, "pressure", 0f);
 
-            boolean exothermic = JSONUtils.getAsBoolean(json, "exothermic", false);
+            boolean exothermic = GsonHelper.getAsBoolean(json, "exothermic", false);
 
-            float recipeSpeed = JSONUtils.getAsFloat(json, "speed", 1.0f);
+            float recipeSpeed = GsonHelper.getAsFloat(json, "speed", 1.0f);
 
-            return factory.create(recipeId, (FluidIngredient) fluidInput, itemInput, fluidOutput, itemOutput, range, pressure, recipeSpeed, exothermic);
+            float airUseMultiplier = GsonHelper.getAsFloat(json, "air_use_multiplier", 1.0f);
+
+            return factory.create(recipeId, (FluidIngredient) fluidInput, itemInput, fluidOutput, itemOutput, range, pressure, recipeSpeed, airUseMultiplier, exothermic);
         }
 
         @Nullable
         @Override
-        public T fromNetwork(ResourceLocation recipeId, PacketBuffer buffer) {
+        public T fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
             TemperatureRange range = TemperatureRange.read(buffer);
             float pressure = buffer.readFloat();
             Ingredient input = Ingredient.fromNetwork(buffer);
@@ -200,19 +209,20 @@ public class ThermoPlantRecipeImpl extends ThermoPlantRecipe {
             FluidStack fluidOut = FluidStack.readFromPacket(buffer);
             ItemStack itemOutput = buffer.readItem();
             float recipeSpeed = buffer.readFloat();
+            float airUseMultiplier = buffer.readFloat();
             boolean exothermic = buffer.readBoolean();
-            return factory.create(recipeId, fluidIn, input, fluidOut, itemOutput, range, pressure, recipeSpeed, exothermic);
+            return factory.create(recipeId, fluidIn, input, fluidOut, itemOutput, range, pressure, recipeSpeed, airUseMultiplier, exothermic);
         }
 
         @Override
-        public void toNetwork(PacketBuffer buffer, T recipe) {
+        public void toNetwork(FriendlyByteBuf buffer, T recipe) {
             recipe.write(buffer);
         }
 
         public interface IFactory <T extends ThermoPlantRecipe> {
             T create(ResourceLocation id, @Nonnull FluidIngredient inputFluid, @Nullable Ingredient inputItem,
                      FluidStack outputFluid, ItemStack outputItem, TemperatureRange operatingTemperature, float requiredPressure,
-                     float recipeSpeed, boolean exothermic);
+                     float recipeSpeed, float airUseMultiplier, boolean exothermic);
         }
     }
 }

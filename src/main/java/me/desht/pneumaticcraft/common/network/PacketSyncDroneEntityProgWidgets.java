@@ -17,12 +17,12 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.common.ai.IDroneBase;
-import me.desht.pneumaticcraft.common.progwidgets.IProgWidget;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityProgrammer;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.PacketBuffer;
+import me.desht.pneumaticcraft.client.pneumatic_armor.upgrade_handler.DroneDebugClientHandler;
+import me.desht.pneumaticcraft.common.drone.IDroneBase;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IProgWidget;
+import me.desht.pneumaticcraft.common.drone.progwidgets.WidgetSerializer;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
 
@@ -35,23 +35,24 @@ public class PacketSyncDroneEntityProgWidgets extends PacketDroneDebugBase {
 
     public PacketSyncDroneEntityProgWidgets(IDroneBase drone) {
         super(drone);
-        progWidgets = drone.getProgWidgets();
+        progWidgets = drone.getActiveAIManager().widgets();
     }
 
-    PacketSyncDroneEntityProgWidgets(PacketBuffer buffer) {
-        super(buffer);
-        progWidgets = TileEntityProgrammer.getWidgetsFromNBT(buffer.readNbt());
+    PacketSyncDroneEntityProgWidgets(FriendlyByteBuf buf) {
+        super(buf);
+        progWidgets = WidgetSerializer.readWidgetsFromPacket(buf);
     }
 
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         super.toBytes(buf);
-        buf.writeNbt(TileEntityProgrammer.putWidgetsToNBT(progWidgets, new CompoundNBT()));
+        WidgetSerializer.writeProgWidgetsToPacket(progWidgets, buf);
     }
 
     @Override
-    void handle(PlayerEntity player, IDroneBase droneBase) {
+    void handle(Player player, IDroneBase droneBase) {
         List<IProgWidget> widgets = droneBase.getProgWidgets();
         widgets.clear();
         widgets.addAll(progWidgets);
+        DroneDebugClientHandler.onWidgetsChanged();
     }
 }

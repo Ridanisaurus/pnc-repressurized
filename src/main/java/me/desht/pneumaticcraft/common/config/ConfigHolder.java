@@ -17,13 +17,13 @@
 
 package me.desht.pneumaticcraft.common.config;
 
-import me.desht.pneumaticcraft.client.pneumatic_armor.ArmorUpgradeClientRegistry;
-import me.desht.pneumaticcraft.common.item.ItemSeismicSensor;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityVacuumTrap;
-import me.desht.pneumaticcraft.common.worldgen.ModWorldGen;
+import me.desht.pneumaticcraft.client.pneumatic_armor.ClientArmorRegistry;
+import me.desht.pneumaticcraft.common.block.entity.AerialInterfaceBlockEntity;
+import me.desht.pneumaticcraft.common.worldgen.OilLakeFilter;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -48,7 +48,7 @@ public class ConfigHolder {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(ConfigHolder::onConfigChanged);
     }
 
-    private static void onConfigChanged(final ModConfig.ModConfigEvent event) {
+    private static void onConfigChanged(final ModConfigEvent event) {
         ModConfig config = event.getConfig();
         if (config.getSpec() == ConfigHolder.configClientSpec) {
             refreshClient();
@@ -58,12 +58,11 @@ public class ConfigHolder {
     }
 
     static void refreshClient() {
-        ArmorUpgradeClientRegistry.getInstance().refreshConfig();
+        ClientArmorRegistry.getInstance().refreshConfig();
     }
 
     static void refreshCommon() {
-        TileEntityVacuumTrap.clearBlacklistCache();
-        ModWorldGen.clearBlacklistCache();
-        ItemSeismicSensor.clearCachedFluids();
+        OilLakeFilter.DimensionFilter.clearMatcherCaches();
+        AerialInterfaceBlockEntity.clearDimensionBlacklist();
     }
 }

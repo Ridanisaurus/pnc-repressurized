@@ -18,21 +18,20 @@
 package me.desht.pneumaticcraft.client.gui.widget;
 
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import org.lwjgl.opengl.GL11;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class WidgetList<T> extends Widget implements ITooltipProvider {
+public class WidgetList<T> extends AbstractWidget {
     @Nonnull
     private final Consumer<WidgetList<T>> pressable;
     private final List<T> items = new ArrayList<>();
@@ -50,7 +49,7 @@ public class WidgetList<T> extends Widget implements ITooltipProvider {
     }
 
     public WidgetList(int xIn, int yIn, int width, int height, @Nonnull Consumer<WidgetList<T>> pressable) {
-        super(xIn, yIn, width, height, StringTextComponent.EMPTY);
+        super(xIn, yIn, width, height, Component.empty());
 
         this.pressable = pressable;
     }
@@ -77,9 +76,21 @@ public class WidgetList<T> extends Widget implements ITooltipProvider {
     }
 
     @Override
-    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
         if (visible) {
-            drawList(matrixStack);
+            drawList(graphics);
+
+            setTooltip(null);
+            if (toolTipType != ToolTipType.NONE) {
+                int h = Minecraft.getInstance().font.lineHeight;
+                int idx = Math.max(0, (mouseY - this.getY()) / h);
+                if (idx < items.size()) {
+                    String s = items.get(idx).toString();
+                    if (toolTipType == ToolTipType.ALWAYS || Minecraft.getInstance().font.width(s) * 3 / 4 > width) {
+                        setTooltip(Tooltip.create(Component.literal(s)));
+                    }
+                }
+            }
         }
     }
 
@@ -135,27 +146,25 @@ public class WidgetList<T> extends Widget implements ITooltipProvider {
         return items.size();
     }
 
-    private void drawList(MatrixStack matrixStack) {
+    private void drawList(GuiGraphics graphics) {
         Minecraft mc = Minecraft.getInstance();
-        int sf = mc.options.guiScale;
-        int h = mc.font.lineHeight;
-        int lines = height / h;
+        int lineHeight = mc.font.lineHeight;
+        int lines = height / lineHeight;
 
-        matrixStack.pushPose();
-        GL11.glEnable(GL11.GL_SCISSOR_TEST);
-        GL11.glScissor(x * sf, (y + height) * sf, width * sf, height * sf);
+        int x = getX(), y = getY();
+
+        graphics.pose().pushPose();
+        graphics.enableScissor(x, y, x + width, y + height);
         if (inverseSelected && selected >= 0) {
-            RenderSystem.disableTexture();
-            fill(matrixStack, x, y + h * selected, x + width, y + h * (selected + 1), 0xFF000000 | selectedBg);
-            RenderSystem.enableTexture();
+            graphics.fill(x, y + lineHeight * selected, x + width, y + lineHeight * (selected + 1), 0xFF000000 | selectedBg);
         }
-        matrixStack.translate(x, y, 0);
-        matrixStack.scale(0.75f, 1f, 1f);
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(0.75f, 1f, 1f);
         for (int i = 0; i < items.size() && i < lines; i++) {
-            mc.font.draw(matrixStack, items.get(i).toString(), 0, i * h, i == selected ? selectedFg : fgColor);
+            graphics.drawString(mc.font, items.get(i).toString(), 0, i * lineHeight, i == selected ? selectedFg : fgColor, false);
         }
-        GL11.glDisable(GL11.GL_SCISSOR_TEST);
-        matrixStack.popPose();
+        graphics.disableScissor();
+        graphics.pose().popPose();
     }
 
     @Override
@@ -163,7 +172,7 @@ public class WidgetList<T> extends Widget implements ITooltipProvider {
         if (active) {
             long now = System.currentTimeMillis();
             int h = Minecraft.getInstance().font.lineHeight;
-            int newSel = MathHelper.clamp((int) (mouseY - this.y) / h, 0, items.size() - 1);
+            int newSel = Mth.clamp((int) (mouseY - this.getY()) / h, 0, items.size() - 1);
             doubleClicked = now - lastClick < 250 && newSel == selected;
             setSelected(newSel);
             lastClick = now;
@@ -172,17 +181,7 @@ public class WidgetList<T> extends Widget implements ITooltipProvider {
     }
 
     @Override
-    public void addTooltip(double mouseX, double mouseY, List<ITextComponent> curTip, boolean shift) {
-        if (toolTipType == ToolTipType.NONE) return;
-
-        int h = Minecraft.getInstance().font.lineHeight;
-        int idx = Math.max(0, (int) (mouseY - this.y) / h);
-        if (idx >= 0 && idx < items.size()) {
-            String s = items.get(idx).toString();
-            if (toolTipType == ToolTipType.ALWAYS || Minecraft.getInstance().font.width(s) * 3 / 4 > width) {
-                curTip.add(new StringTextComponent(s));
-            }
-        }
+    public void updateWidgetNarration(NarrationElementOutput pNarrationElementOutput) {
     }
 
     public enum ToolTipType {

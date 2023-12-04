@@ -17,11 +17,11 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
-import me.desht.pneumaticcraft.client.gui.GuiPneumaticScreenBase;
+import me.desht.pneumaticcraft.client.gui.AbstractPneumaticCraftScreen;
 import me.desht.pneumaticcraft.lib.Textures;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.handlers.IGuiProperties;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 
 class Helpers {
     static IDrawable makeTankOverlay(int height) {
@@ -30,17 +30,11 @@ class Helpers {
                 .setTextureSize(16, 64).build();
     }
 
-    static IGuiProperties getGuiProperties(GuiPneumaticScreenBase gui) {
+    static IGuiProperties getGuiProperties(AbstractPneumaticCraftScreen gui) {
         return gui.width == 0 || gui.height == 0 ? null : new GuiProps(gui);
     }
 
-    private static class GuiProps implements IGuiProperties {
-        private final GuiPneumaticScreenBase gui;
-
-        GuiProps(GuiPneumaticScreenBase gui) {
-            this.gui = gui;
-        }
-
+    private record GuiProps(AbstractPneumaticCraftScreen gui) implements IGuiProperties {
         @Override
         public Class<? extends Screen> getScreenClass() {
             return gui.getClass();

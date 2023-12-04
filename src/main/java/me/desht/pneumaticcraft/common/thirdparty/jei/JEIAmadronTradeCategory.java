@@ -17,19 +17,23 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
 import me.desht.pneumaticcraft.api.crafting.recipe.AmadronRecipe;
 import me.desht.pneumaticcraft.client.gui.widget.WidgetAmadronOffer;
 import me.desht.pneumaticcraft.common.core.ModItems;
 import me.desht.pneumaticcraft.lib.Textures;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.forge.ForgeTypes;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
-import mezz.jei.api.ingredients.IIngredients;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import java.util.ArrayList;
@@ -41,10 +45,10 @@ public class JEIAmadronTradeCategory extends AbstractPNCCategory<AmadronRecipe> 
     private final IDrawable limitedIcon;
 
     JEIAmadronTradeCategory() {
-        super(ModCategoryUid.AMADRON_TRADE, AmadronRecipe.class,
+        super(RecipeTypes.AMADRON_TRADE,
                 xlate(ModItems.AMADRON_TABLET.get().getDescriptionId()),
                 guiHelper().createDrawable(Textures.WIDGET_AMADRON_OFFER, 0, 0, 73, 35),
-                guiHelper().createDrawableIngredient(new ItemStack(ModItems.AMADRON_TABLET.get()))
+                guiHelper().createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(ModItems.AMADRON_TABLET.get()))
         );
 
         limitedIcon = guiHelper()
@@ -54,60 +58,36 @@ public class JEIAmadronTradeCategory extends AbstractPNCCategory<AmadronRecipe> 
     }
 
     @Override
-    public void setIngredients(AmadronRecipe recipe, IIngredients ingredients) {
+    public void setRecipe(IRecipeLayoutBuilder builder, AmadronRecipe recipe, IFocusGroup focuses) {
+        IRecipeSlotBuilder inputSlot = builder.addSlot(RecipeIngredientRole.INPUT, 6, 15);
         recipe.getInput().accept(
-                itemStack -> ingredients.setInput(VanillaTypes.ITEM, itemStack),
-                fluidStack -> ingredients.setInput(VanillaTypes.FLUID, fluidStack)
+                inputSlot::addItemStack,
+                fluidStack -> inputSlot.addIngredient(ForgeTypes.FLUID_STACK, fluidStack)
+                        .setOverlay(new FluidTextOverlay(fluidStack), 0, 0)
         );
+        IRecipeSlotBuilder outputSlot = builder.addSlot(RecipeIngredientRole.OUTPUT, 51, 15);
         recipe.getOutput().accept(
-                itemStack -> ingredients.setOutput(VanillaTypes.ITEM, itemStack),
-                fluidStack -> ingredients.setOutput(VanillaTypes.FLUID, fluidStack)
+                outputSlot::addItemStack,
+                fluidStack -> outputSlot.addIngredient(ForgeTypes.FLUID_STACK, fluidStack)
+                        .setOverlay(new FluidTextOverlay(fluidStack), 0, 0)
         );
     }
 
     @Override
-    public void setRecipe(IRecipeLayout recipeLayout, AmadronRecipe recipe, IIngredients ingredients) {
-        recipe.getInput().accept(
-                itemStack -> {
-                    recipeLayout.getItemStacks().init(0, true, 5, 14);
-                    recipeLayout.getItemStacks().set(0, itemStack);
-                },
-                fluidStack -> {
-                    recipeLayout.getFluidStacks().init(0, true, 6, 15, 16, 16,
-                            1000, false, new FluidTextOverlay(fluidStack));
-                    recipeLayout.getFluidStacks().set(0, fluidStack);
-                }
-        );
-
-        recipe.getOutput().accept(
-                itemStack -> {
-                    recipeLayout.getItemStacks().init(1, false, 50, 14);
-                    recipeLayout.getItemStacks().set(1, itemStack);
-                },
-                fluidStack -> {
-                    recipeLayout.getFluidStacks().init(1, false, 51, 15, 16, 16,
-                            1000, false, new FluidTextOverlay(fluidStack));
-                    recipeLayout.getFluidStacks().set(1, fluidStack);
-                }
-        );
-
-    }
-
-    @Override
-    public void draw(AmadronRecipe recipe, MatrixStack matrixStack, double mouseX, double mouseY) {
-        FontRenderer fr = Minecraft.getInstance().font;
+    public void draw(AmadronRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
+        Font fr = Minecraft.getInstance().font;
         int x = (getBackground().getWidth() - fr.width(recipe.getVendorName())) / 2;
         if (recipe.isLocationLimited()) {
-            limitedIcon.draw(matrixStack, 60, -4);
+            limitedIcon.draw(graphics, 60, -4);
         }
-        fr.draw(matrixStack, recipe.getVendorName(), x, 3, 0xFF404040);
+        graphics.drawString(fr, recipe.getVendorName(), x, 3, 0xFF404040, false);
     }
 
     @Override
-    public List<ITextComponent> getTooltipStrings(AmadronRecipe recipe, double mouseX, double mouseY) {
-        List<ITextComponent> res = new ArrayList<>();
+    public List<Component> getTooltipStrings(AmadronRecipe recipe, IRecipeSlotsView recipeSlotsView, double mouseX, double mouseY) {
+        List<Component> res = new ArrayList<>();
         if (mouseX >= 22 && mouseX <= 51) {
-            WidgetAmadronOffer.addTooltip(recipe, res, -1);
+            res.addAll(WidgetAmadronOffer.makeTooltip(recipe, -1));
         }
         return res;
     }
@@ -130,9 +110,9 @@ public class JEIAmadronTradeCategory extends AbstractPNCCategory<AmadronRecipe> 
         }
 
         @Override
-        public void draw(MatrixStack matrixStack, int x, int y) {
-            FontRenderer fr = Minecraft.getInstance().font;
-            fr.drawShadow(matrixStack, text, x + getWidth() - fr.width(text), y + getHeight() - fr.lineHeight, 0xFFFFFFFF);
+        public void draw(GuiGraphics graphics, int x, int y) {
+            Font fr = Minecraft.getInstance().font;
+            graphics.drawString(fr, text, x + getWidth() - fr.width(text), y + getHeight() - fr.lineHeight, 0xFFFFFFFF, false);
         }
     }
 }

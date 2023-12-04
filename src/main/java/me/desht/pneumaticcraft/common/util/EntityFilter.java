@@ -20,26 +20,28 @@ package me.desht.pneumaticcraft.common.util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
-import me.desht.pneumaticcraft.common.entity.living.EntityDrone;
-import me.desht.pneumaticcraft.common.progwidgets.IEntityProvider;
-import me.desht.pneumaticcraft.common.progwidgets.IProgWidget;
-import me.desht.pneumaticcraft.common.progwidgets.ProgWidgetText;
-import me.desht.pneumaticcraft.lib.Log;
-import net.minecraft.entity.AgeableEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.item.BoatEntity;
-import net.minecraft.entity.item.ExperienceOrbEntity;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.item.PaintingEntity;
-import net.minecraft.entity.item.minecart.AbstractMinecartEntity;
-import net.minecraft.entity.monster.IMob;
-import net.minecraft.entity.passive.*;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.DyeColor;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IEntityProvider;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IProgWidget;
+import me.desht.pneumaticcraft.common.drone.progwidgets.ProgWidgetText;
+import me.desht.pneumaticcraft.common.entity.drone.DroneEntity;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.Cat;
+import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.decoration.Painting;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.AbstractMinecart;
+import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.scores.PlayerTeam;
 import net.minecraftforge.common.IForgeShearable;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.commons.lang3.StringUtils;
@@ -48,29 +50,34 @@ import org.apache.commons.lang3.Validate;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class EntityFilter implements Predicate<Entity> {
     private static final Pattern ELEMENT_DIVIDER = Pattern.compile(";");
     private static final Pattern ELEMENT_SUBDIVIDER = Pattern.compile("[(),]");
     private static final Map<String,Predicate<Entity>> ENTITY_PREDICATES = ImmutableMap.<String,Predicate<Entity>>builder()
-            .put("mob", e -> e instanceof IMob && !(e instanceof TameableEntity && ((TameableEntity) e).isTame()))
-            .put("animal", e -> e instanceof AnimalEntity)
+            .put("mob", e -> e instanceof Enemy && !(e instanceof TamableAnimal t && t.isTame()))
+            .put("animal", e -> e instanceof Animal)
             .put("living", e -> e instanceof LivingEntity)
-            .put("player", e -> e instanceof PlayerEntity)
+            .put("player", e -> e instanceof Player)
             .put("item", e -> e instanceof ItemEntity)
-            .put("drone", e -> e instanceof EntityDrone)
-            .put("boat", e -> e instanceof BoatEntity)
-            .put("minecart", e -> e instanceof AbstractMinecartEntity)
-            .put("painting", e -> e instanceof PaintingEntity)
-            .put("orb", e -> e instanceof ExperienceOrbEntity)
+            .put("drone", e -> e instanceof DroneEntity)
+            .put("boat", e -> e instanceof Boat)
+            .put("minecart", e -> e instanceof AbstractMinecart)
+            .put("painting", e -> e instanceof Painting)
+            .put("orb", e -> e instanceof ExperienceOrb)
+            .put("nothing", e -> false)
             .build();
 
     private final List<EntityMatcher> matchers = new ArrayList<>();
     private final boolean sense;
     private final String rawFilter;
 
+    /**
+     * Create a new entity filter
+     * @param filter the filter specification
+     * @throws IllegalArgumentException if the spec is not valid
+     */
     public EntityFilter(String filter) {
         if (filter.startsWith("!")) {
             filter = filter.substring(1);
@@ -86,6 +93,14 @@ public class EntityFilter implements Predicate<Entity> {
         }
     }
 
+    /**
+     * Create a new entity filter from a progwidget, which has one or more text widgets attached
+     * @param widget the progwidget
+     * @param whitelist true if this should be a whitelist (look to the widget's right) or blacklist (look to the left)
+     * @param <T> widget type
+     * @return an entity filter
+     * @throws IllegalArgumentException if any of the attached text widgets contain an invalid filter spec
+     */
     public static <T extends IProgWidget & IEntityProvider> EntityFilter fromProgWidget(T widget, boolean whitelist) {
         if (widget.getParameters().size() > 1) {
             int pos = widget.getEntityFilterPosition();
@@ -104,26 +119,54 @@ public class EntityFilter implements Predicate<Entity> {
         return whitelist ? ConstantEntityFilter.ALLOW : ConstantEntityFilter.DENY;
     }
 
+    /**
+     * Create an entity filter from string
+     * @param s the filter spec
+     * @return an entity filter, or null if the spec is not valid
+     */
     public static EntityFilter fromString(String s) {
+        return fromString(s, null);
+    }
+
+    /**
+     * Create an entity filter from string
+     * @param s the filter spec
+     * @param fallback a fallback filter to use
+     * @return an entity filter, or the fallback filter if the spec is not valid
+     */
+    public static EntityFilter fromString(String s, EntityFilter fallback) {
         try {
             return new EntityFilter(s);
         } catch (Exception e) {
-            Log.warning("ignoring invalid filter: " + s);
-            return null;
+            return fallback;
         }
     }
 
+    /**
+     * An entity filter which allows everything
+     * @return an entity filter
+     */
     public static EntityFilter allow() {
         return ConstantEntityFilter.ALLOW;
     }
 
+    /**
+     * An entity filter which allows nothing
+     * @return an entity filter
+     */
     public static EntityFilter deny() {
         return ConstantEntityFilter.DENY;
     }
 
     @Override
     public String toString() {
-        return sense ? rawFilter : "!" + rawFilter;
+        if (this == ConstantEntityFilter.ALLOW) {
+            return "";
+        } else if (this == ConstantEntityFilter.DENY) {
+            return "@nothing";
+        } else {
+            return sense ? rawFilter : "!" + rawFilter;
+        }
     }
 
     @Override
@@ -147,6 +190,18 @@ public class EntityFilter implements Predicate<Entity> {
         AGE(ImmutableSet.of("adult", "baby"),
                 Modifier::testAge
         ),
+        AQUATIC(ImmutableSet.of("yes", "no"),
+                (entity, val) -> testMobType(entity, val, MobType.WATER)
+        ),
+        UNDEAD(ImmutableSet.of("yes", "no"),
+                (entity, val) -> testMobType(entity, val, MobType.UNDEAD)
+        ),
+        ILLAGER(ImmutableSet.of("yes", "no"),
+                (entity, val) -> testMobType(entity, val, MobType.ILLAGER)
+        ),
+        ARTHROPOD(ImmutableSet.of("yes", "no"),
+                (entity, val) -> testMobType(entity, val, MobType.ARTHROPOD)
+        ),
         BREEDABLE(ImmutableSet.of("yes", "no"),
                 Modifier::testBreedable
         ),
@@ -157,13 +212,25 @@ public class EntityFilter implements Predicate<Entity> {
                 Modifier::hasColor
         ),
         HOLDING((item) -> ForgeRegistries.ITEMS.containsKey(new ResourceLocation(item)),
-                "any valid item registry name, e.g. 'minecraft:cobblestone'",
+                "any valid item ID, e.g. 'minecraft:cobblestone'",
                 (entity, val) -> isHeldItem(entity, val, true)
         ),
         HOLDING_OFFHAND((item) -> ForgeRegistries.ITEMS.containsKey(new ResourceLocation(item)),
-                "any valid item registry name, e.g. 'minecraft:cobblestone'",
+                "any valid item ID, e.g. 'minecraft:cobblestone'",
                 (entity, val) -> isHeldItem(entity, val, false)
-        );
+        ),
+        MOD((str) -> true,
+                "any mod name, e.g. 'minecraft' or 'pneumaticcraft'",
+                Modifier::testMod),
+        ENTITY_TAG((str) -> true,
+                "any string tag (added to entities with the /tag command)",
+                Modifier::testEntityTag),
+        TYPE_TAG(ResourceLocation::isValidResourceLocation,
+                "any known entity type tag, e.g 'minecraft:skeletons'",
+                Modifier::testTypeTag),
+        TEAM((str) -> true,
+                "any valid Minecraft team name",
+                Modifier::testTeamName);
 
         private final Set<String> validationSet;
         private final Predicate<String> validationPredicate;
@@ -185,20 +252,41 @@ public class EntityFilter implements Predicate<Entity> {
         }
 
         private static boolean testShearable(Entity entity, String val) {
-            return entity instanceof IForgeShearable
-                    && ((IForgeShearable) entity).isShearable(new ItemStack(Items.SHEARS), entity.getCommandSenderWorld(), entity.blockPosition()) ?
+            return entity instanceof IForgeShearable s
+                    && s.isShearable(new ItemStack(Items.SHEARS), entity.getCommandSenderWorld(), entity.blockPosition()) ?
                     val.equalsIgnoreCase("yes") : val.equalsIgnoreCase("no");
         }
 
         private static boolean testBreedable(Entity entity, String val) {
-            return entity instanceof AnimalEntity && (((AnimalEntity) entity).getAge() == 0 ?
-                    val.equalsIgnoreCase("yes") : val.equalsIgnoreCase("no")
-            );
+            return entity instanceof Animal a && val.equalsIgnoreCase(a.getAge() == 0 ? "yes" : "no");
+        }
+
+        private static boolean testMobType(Entity entity, String val, MobType type) {
+            return entity instanceof LivingEntity l && val.equalsIgnoreCase(l.getMobType() == type ? "yes" : "no");
         }
 
         private static boolean testAge(Entity entity, String val) {
-            return entity instanceof AgeableEntity && (((AgeableEntity) entity).getAge() >= 0 ?
-                    val.equalsIgnoreCase("adult") : val.equalsIgnoreCase("baby"));
+            return val.equalsIgnoreCase(entity instanceof AgeableMob a && a.getAge() >= 0 ? "adult" : "baby");
+        }
+
+        private static boolean testMod(Entity entity, String modName) {
+            ResourceLocation rl = PneumaticCraftUtils.getRegistryName(entity).orElseThrow();
+            return rl.getNamespace().toLowerCase(Locale.ROOT).equals(modName.toLowerCase(Locale.ROOT));
+        }
+
+        private static boolean testEntityTag(Entity entity, String val) {
+            return entity.getTags().contains(val);
+        }
+
+        private static boolean testTypeTag(Entity entity, String val) {
+            if (!ResourceLocation.isValidResourceLocation(val)) return false;
+            TagKey<EntityType<?>> key = TagKey.create(Registries.ENTITY_TYPE, new ResourceLocation(val));
+            return entity.getType().is(key);
+        }
+
+        private static boolean testTeamName(Entity entity, String val) {
+            return entity.getTeam() instanceof PlayerTeam t
+                    && (t.getName().equalsIgnoreCase(val) || t.getDisplayName().getString().equalsIgnoreCase(val));
         }
 
         boolean isValid(String s) {
@@ -215,102 +303,91 @@ public class EntityFilter implements Predicate<Entity> {
         }
 
         private static boolean hasColor(Entity entity, String val) {
-            if (entity instanceof SheepEntity) {
-                return ((SheepEntity) entity).getColor().getName().equalsIgnoreCase(val);
-            } else if (entity instanceof WolfEntity) {
-                return ((WolfEntity) entity).getCollarColor().getName().equalsIgnoreCase(val);
-            } else if (entity instanceof CatEntity) {
-                return ((CatEntity) entity).getCollarColor().getName().equalsIgnoreCase(val);
+            if (entity instanceof Sheep s) {
+                return s.getColor().getName().equalsIgnoreCase(val);
+            } else if (entity instanceof Wolf w) {
+                return w.getCollarColor().getName().equalsIgnoreCase(val);
+            } else if (entity instanceof Cat c) {
+                return c.getCollarColor().getName().equalsIgnoreCase(val);
             } else {
                 return false;
             }
         }
 
         private static boolean isHeldItem(Entity entity, String name, boolean mainHand) {
-            if (entity instanceof LivingEntity) {
+            if (entity instanceof LivingEntity l) {
                 if (!name.contains(":")) {
                     name = "minecraft:" + name;
                 }
-                ItemStack stack = mainHand ? ((LivingEntity) entity).getMainHandItem() : ((LivingEntity) entity).getOffhandItem();
-                return stack.getItem().getRegistryName() != null && stack.getItem().getRegistryName().toString().equals(name);
+                ItemStack stack = mainHand ? l.getMainHandItem() : l.getOffhandItem();
+                return PneumaticCraftUtils.getRegistryName(stack.getItem()).orElseThrow().toString().equals(name);
             }
             return false;
         }
     }
 
     private static class EntityMatcher implements Predicate<Entity> {
-        private final Pattern regex;
-        private final Predicate<Entity> entityPredicate;
+        private final Predicate<Entity> matcher;
         private final List<ModifierEntry> modifiers = new ArrayList<>();
 
         private EntityMatcher(String element) {
-            String[] splits = ELEMENT_SUBDIVIDER.split(element);
-            for (int i = 0; i < splits.length; i++) {
-                splits[i] = splits[i].trim();
-            }
+            List<String> splits = Arrays.stream(ELEMENT_SUBDIVIDER.split(element)).map(String::trim).toList();
 
-            if (splits[0].startsWith("@")) {
+            String arg0 = splits.get(0);
+            if (arg0.startsWith("@")) {
                 // match by entity predicate
-                String sub = splits[0].substring(1);
+                String sub = arg0.substring(1);
                 if (StringUtils.countMatches(element, "(") != StringUtils.countMatches(element, ")")) {
                     throw new IllegalArgumentException("Mismatched opening/closing braces");
                 }
-                entityPredicate = ENTITY_PREDICATES.get(sub);
-                Validate.isTrue(entityPredicate != null, "Unknown entity type specifier: @" + sub);
-                regex = null;
+                matcher = ENTITY_PREDICATES.get(sub);
+                Validate.isTrue(matcher != null, "Unknown entity type specifier: @" + sub);
+            } else if (arg0.length() > 2 && (arg0.startsWith("\"") && arg0.endsWith("\"") || arg0.startsWith("'") && arg0.endsWith("'"))) {
+                // match an entity with a custom name
+                Pattern regex = Pattern.compile(wildcardToRegex(arg0.substring(1, arg0.length() - 1)));
+                matcher = e -> matchByName(e, regex);
             } else {
-                // wildcard match on entity name
-                entityPredicate = null;
-                regex = Pattern.compile(wildcardToRegex(splits[0]), Pattern.CASE_INSENSITIVE);
+                // wildcard match on entity type name
+                Pattern regex = Pattern.compile(wildcardToRegex(arg0), Pattern.CASE_INSENSITIVE);
+                matcher = e -> regex.matcher(PneumaticCraftUtils.getRegistryName(e).orElseThrow().getPath()).matches();
             }
 
-            for (int i = 1; i < splits.length; i++) {
-                String[] parts = splits[i].split("=");
-                Validate.isTrue(parts.length == 2, "Invalid modifier syntax: " + splits[i]);
+            for (int i = 1; i < splits.size(); i++) {
+                String[] parts = splits.get(i).split("=");
+                Validate.isTrue(parts.length == 2, "Invalid modifier syntax: " + splits.get(i));
+                String key = parts[0], arg = parts[1];
                 boolean sense = true;
-                if (parts[0].endsWith("!")) {
-                    parts[0] = parts[0].substring(0, parts[0].length() - 1);
+                if (key.endsWith("!")) {
+                    key = key.substring(0, key.length() - 1);
                     sense = false;
                 }
-                Modifier modifier;
                 try {
-                    modifier = Modifier.valueOf(parts[0].toUpperCase(Locale.ROOT));
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("Unknown modifier: " + parts[0]);
+                    Modifier modifier = Modifier.valueOf(key.toUpperCase(Locale.ROOT));
+                    if (!modifier.isValid(arg)) {
+                        throw new IllegalArgumentException(String.format("Invalid value '%s' for modifier '%s'. Valid values: %s",
+                                arg, key, modifier.displayValidOptions()));
+                    }
+                    modifiers.add(new ModifierEntry(modifier, arg, sense));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Unknown modifier: " + key);
                 }
-                if (!modifier.isValid(parts[1])) {
-                    throw new IllegalArgumentException(String.format("Invalid value '%s' for modifier '%s'. Valid values: %s",
-                            parts[1], parts[0], modifier.displayValidOptions()));
-                }
-                modifiers.add(new ModifierEntry(modifier, parts[1], sense));
             }
         }
 
         @Override
         public boolean test(Entity entity) {
-            boolean ok = false;
-            if (entityPredicate != null) {
-                ok = entityPredicate.test(entity);
-            } else if (regex != null) {
-                Matcher m = regex.matcher(entity.getName().getString());
-                ok = m.matches();
-            }
             // modifiers test is a match-all (e.g. "sheep(sheared=false,color=black)" matches sheep which are unsheared AND black)
-            return ok && modifiers.stream().allMatch(modifierEntry -> modifierEntry.test(entity));
+            return matcher.test(entity) && modifiers.stream().allMatch(modifierEntry -> modifierEntry.test(entity));
+        }
+
+        private static boolean matchByName(Entity entity, Pattern regex) {
+            return entity instanceof Player player ?
+                    player.getGameProfile().getName() != null && regex.matcher(player.getGameProfile().getName()).matches() :
+                    entity.getCustomName() != null && regex.matcher(entity.getCustomName().getString()).matches();
         }
     }
 
-    private static class ModifierEntry implements Predicate<Entity> {
-        final Modifier modifier;
-        final String value;
-        final boolean sense;
-
-        private ModifierEntry(Modifier modifier, String value, boolean sense) {
-            this.modifier = modifier;
-            this.value = value;
-            this.sense = sense;
-        }
-
+    private record ModifierEntry(Modifier modifier, String value, boolean sense) implements Predicate<Entity> {
         @Override
         public boolean test(Entity e) {
             return modifier.test(e, value) == sense;
@@ -340,28 +417,10 @@ public class EntityFilter implements Predicate<Entity> {
         for (int i = 0, is = wildcard.length(); i < is; i++) {
             char c = wildcard.charAt(i);
             switch (c) {
-                case '*':
-                    s.append(".*");
-                    break;
-                case '?':
-                    s.append(".");
-                    break;
-                case '(':
-                case ')':
-                case '[':
-                case ']':
-                case '$':
-                case '^':
-                case '.':
-                case '{':
-                case '}':
-                case '|':
-                case '\\':
-                    s.append("\\").append(c);
-                    break;
-                default:
-                    s.append(c);
-                    break;
+                case '*' -> s.append(".*");
+                case '?' -> s.append(".");
+                case '(', ')', '[', ']', '$', '^', '.', '{', '}', '|', '\\' -> s.append("\\").append(c);
+                default -> s.append(c);
             }
         }
         s.append('$');

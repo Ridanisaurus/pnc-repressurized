@@ -17,28 +17,34 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
 import me.desht.pneumaticcraft.api.crafting.TemperatureRange.TemperatureScale;
 import me.desht.pneumaticcraft.api.crafting.recipe.ThermoPlantRecipe;
+import me.desht.pneumaticcraft.api.pressure.PressureTier;
 import me.desht.pneumaticcraft.client.gui.widget.WidgetTemperature;
 import me.desht.pneumaticcraft.client.render.pressure_gauge.PressureGaugeRenderer2D;
 import me.desht.pneumaticcraft.common.core.ModBlocks;
 import me.desht.pneumaticcraft.common.heat.HeatUtil;
-import me.desht.pneumaticcraft.lib.PneumaticValues;
 import me.desht.pneumaticcraft.lib.Textures;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.forge.ForgeTypes;
 import mezz.jei.api.gui.ITickTimer;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawableAnimated;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.api.ingredients.IIngredients;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraftforge.fluids.FluidStack;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
@@ -48,10 +54,10 @@ public class JEIThermopneumaticProcessingPlantCategory extends AbstractPNCCatego
     private final IDrawableAnimated progressBar;
 
     JEIThermopneumaticProcessingPlantCategory() {
-        super(ModCategoryUid.THERMO_PLANT, ThermoPlantRecipe.class,
+        super(RecipeTypes.THERMO_PLANT,
                 xlate(ModBlocks.THERMOPNEUMATIC_PROCESSING_PLANT.get().getDescriptionId()),
                 guiHelper().createDrawable(Textures.GUI_JEI_THERMOPNEUMATIC_PROCESSING_PLANT, 0, 0, 166, 70),
-                guiHelper().createDrawableIngredient(new ItemStack(ModBlocks.THERMOPNEUMATIC_PROCESSING_PLANT.get()))
+                guiHelper().createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(ModBlocks.THERMOPNEUMATIC_PROCESSING_PLANT.get()))
         );
         tickTimer = guiHelper().createTickTimer(60, 60, false);
         IDrawableStatic d = guiHelper().createDrawable(Textures.GUI_THERMOPNEUMATIC_PROCESSING_PLANT, 176, 0, 48, 30);
@@ -59,79 +65,71 @@ public class JEIThermopneumaticProcessingPlantCategory extends AbstractPNCCatego
     }
 
     @Override
-    public void setIngredients(ThermoPlantRecipe recipe, IIngredients ingredients) {
-        if (!recipe.getInputFluid().isEmpty()) {
-            ingredients.setInputLists(VanillaTypes.FLUID, Collections.singletonList(recipe.getInputFluid().getFluidStacks()));
-        }
-        if (!recipe.getInputItem().isEmpty()) {
-            ingredients.setInputIngredients(Collections.singletonList(recipe.getInputItem()));
-        }
-        if (!recipe.getOutputFluid().isEmpty()) {
-            ingredients.setOutput(VanillaTypes.FLUID, recipe.getOutputFluid());
-        }
-        if (!recipe.getOutputItem().isEmpty()) {
-            ingredients.setOutput(VanillaTypes.ITEM, recipe.getOutputItem());
-        }
-    }
-
-    @Override
-    public void setRecipe(IRecipeLayout recipeLayout, ThermoPlantRecipe recipe, IIngredients ingredients) {
-        FluidStack in = ingredients.getInputs(VanillaTypes.FLUID).isEmpty() ? FluidStack.EMPTY : ingredients.getInputs(VanillaTypes.FLUID).get(0).get(0);
-
+    public void setRecipe(IRecipeLayoutBuilder builder, ThermoPlantRecipe recipe, IFocusGroup focuses) {
         int inH = 64, outH = 64;
-        FluidStack out = FluidStack.EMPTY;
-        if (!recipe.getOutputFluid().isEmpty()) {
-            out = ingredients.getOutputs(VanillaTypes.FLUID).get(0).get(0);
-            if (in.getAmount() > out.getAmount()) {
-                outH = Math.min(64, out.getAmount() * 64 / in.getAmount());
+        int inputAmount = recipe.getInputFluid().getAmount();
+        int outputAmount = recipe.getOutputFluid().getAmount();
+        if (outputAmount > 0) {
+            if (inputAmount > outputAmount) {
+                outH = Math.min(64, outputAmount * 64 / inputAmount);
             } else {
-                inH = Math.min(64, in.getAmount() * 64 / out.getAmount());
+                inH = Math.min(64, inputAmount * 64 / outputAmount);
             }
         }
 
-        if (!recipe.getInputFluid().isEmpty()) {
-            recipeLayout.getFluidStacks().init(0, true, 8, 3 + (64 - inH), 16, inH, in.getAmount(), false, Helpers.makeTankOverlay(inH));
-            recipeLayout.getFluidStacks().set(0, ingredients.getInputs(VanillaTypes.FLUID).get(0));
+        if (inputAmount > 0) {
+            builder.addSlot(RecipeIngredientRole.INPUT, 8, 3 + (64 - inH))
+                    .addIngredients(ForgeTypes.FLUID_STACK, recipe.getInputFluid().getFluidStacks())
+                    .setFluidRenderer(inputAmount, false, 16, inH)
+                    .setOverlay(Helpers.makeTankOverlay(inH), 0, 0);
         }
         if (!recipe.getInputItem().isEmpty()) {
-            recipeLayout.getItemStacks().init(0, true, 32, 2);
-            recipeLayout.getItemStacks().set(0, ingredients.getInputs(VanillaTypes.ITEM).get(0));
+            builder.addSlot(RecipeIngredientRole.INPUT, 33, 3)
+                    .addIngredients(recipe.getInputItem());
         }
-        if (!recipe.getOutputFluid().isEmpty()) {
-            recipeLayout.getFluidStacks().init(1, false, 74, 3 + (64 - outH), 16, outH, out.getAmount(), false, Helpers.makeTankOverlay(outH));
-            recipeLayout.getFluidStacks().set(1, recipe.getOutputFluid());
+        if (outputAmount > 0) {
+            builder.addSlot(RecipeIngredientRole.OUTPUT, 74, 3 + (64 - outH))
+                    .addIngredient(ForgeTypes.FLUID_STACK, recipe.getOutputFluid())
+                    .setFluidRenderer(outputAmount, false, 16, outH)
+                    .setOverlay(Helpers.makeTankOverlay(outH), 0, 0);
         }
         if (!recipe.getOutputItem().isEmpty()) {
-            recipeLayout.getItemStacks().init(1, false, 47, 50);
-            recipeLayout.getItemStacks().set(1, recipe.getOutputItem());
+            builder.addSlot(RecipeIngredientRole.OUTPUT, 48, 51)
+                    .addItemStack(recipe.getOutputItem());
         }
     }
 
     @Override
-    public void draw(ThermoPlantRecipe recipe, MatrixStack matrixStack, double mouseX, double mouseY) {
+    public void draw(ThermoPlantRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
         if (recipe.getRequiredPressure() != 0) {
             float pressure = recipe.getRequiredPressure() * ((float) tickTimer.getValue() / tickTimer.getMaxValue());
-            PressureGaugeRenderer2D.drawPressureGauge(matrixStack, Minecraft.getInstance().font, -1, PneumaticValues.MAX_PRESSURE_TIER_ONE, PneumaticValues.DANGER_PRESSURE_TIER_ONE, recipe.getRequiredPressure(), pressure, 141, 42);
+            PressureGaugeRenderer2D.drawPressureGauge(graphics, Minecraft.getInstance().font, -1,
+                    PressureTier.TIER_ONE_HALF.getCriticalPressure(), PressureTier.TIER_ONE_HALF.getDangerPressure(),
+                    recipe.getRequiredPressure(), pressure, 141, 42);
         }
 
         if (!recipe.getOperatingTemperature().isAny()) {
             WidgetTemperature w = tempWidgets.computeIfAbsent(recipe.getId(),
                     id -> WidgetTemperature.fromOperatingRange(100, 12, recipe.getOperatingTemperature()));
             w.setTemperature(w.getTotalRange().getMin() + (w.getTotalRange().getMax() - w.getTotalRange().getMin()) * tickTimer.getValue() / tickTimer.getMaxValue());
-            w.render(matrixStack, (int) mouseX, (int) mouseY, 0f);
+            w.render(graphics, (int) mouseX, (int) mouseY, 0f);
         }
-        progressBar.draw(matrixStack, 25, 20);
+        progressBar.draw(graphics, 25, 20);
     }
 
     @Override
-    public List<ITextComponent> getTooltipStrings(ThermoPlantRecipe recipe, double mouseX, double mouseY) {
-        List<ITextComponent> res = new ArrayList<>();
+    public List<Component> getTooltipStrings(ThermoPlantRecipe recipe, IRecipeSlotsView recipeSlotsView, double mouseX, double mouseY) {
+        List<Component> res = new ArrayList<>();
         WidgetTemperature w = tempWidgets.get(recipe.getId());
         if (w != null && w.isMouseOver(mouseX, mouseY)) {
             res.add(HeatUtil.formatHeatString(recipe.getOperatingTemperature().asString(TemperatureScale.CELSIUS)));
         }
         if (recipe.getRequiredPressure() > 0 && mouseX >= 116 && mouseY >= 22 && mouseX <= 156 && mouseY <= 62) {
             res.add(xlate("pneumaticcraft.gui.tooltip.pressure", recipe.getRequiredPressure()));
+            if (recipe.getAirUseMultiplier() != 1f) {
+                res.add(xlate("pneumaticcraft.gui.tab.info.pneumatic_armor.usage").append(" x")
+                        .append(String.format("%.1f", recipe.getAirUseMultiplier())).withStyle(ChatFormatting.GRAY));
+            }
         }
         return res;
     }

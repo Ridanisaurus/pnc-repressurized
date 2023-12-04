@@ -17,25 +17,29 @@
 
 package me.desht.pneumaticcraft.api.heat;
 
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.capabilities.CapabilityToken;
 import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.Optional;
 import java.util.function.BiPredicate;
 
 /**
- * Represents a heat exchanger owned by a tile entity. Retrieve instances of this via capability lookup; you
+ * Represents a heat exchanger owned by a block entity. Retrieve instances of this via capability lookup; you
  * can use {@link me.desht.pneumaticcraft.api.PNCCapabilities#HEAT_EXCHANGER_CAPABILITY} or get your own
- * instance with {@code @CapabilityInject}.
+ * instance with {@link net.minecraftforge.common.capabilities.CapabilityManager#get(CapabilityToken)}.
  * <p>
- * If you are implementing a tile entity with a heat exchanger, you should <strong>not</strong> implement this
+ * If you are implementing a block entity with a heat exchanger, you should <strong>not</strong> implement this
  * interface yourself; get an instance of it via {@link IHeatRegistry#makeHeatExchangerLogic()}, store it as field
- * in your TE, and provide via capability as described above. Your TE should also call {@link #tick()} and
- * {@link #initializeAsHull(World, BlockPos, BiPredicate, Direction...)} as documented in those methods.
+ * in your BE, and provide it via capability as described above. Your BE should also call {@link #tick()} and
+ * {@link #initializeAsHull(Level, BlockPos, BiPredicate, Direction...)} as documented in those methods.
  * <p>
  * If you want to attach this capability as an <em>adapater</em> to other mods' heat systems, see
  * {@link IHeatExchangerAdapter} and {@link IHeatExchangerAdapter.Simple} which are convenience extensions and
@@ -43,48 +47,53 @@ import java.util.function.BiPredicate;
  *
  * @author MineMaarten, desht
  */
-public interface IHeatExchangerLogic extends INBTSerializable<CompoundNBT> {
+public interface IHeatExchangerLogic extends INBTSerializable<CompoundTag> {
     /**
      * Call this to tick this logic, and make the heat disperse itself. In general this should be called each tick
-     * by the owning tile entity's {@code tick()} method, on the server side only.
+     * by the owning block entity's {@code tick()} method, on the server side only.
      */
     void tick();
 
     /**
-     * When called (on tile entity first tick and on neighbor block updates), this discovers all heat
-     * exchanging neighbor tile entities as connected heat exchangers (i.e. tile entities who provide the
-     * {@link IHeatExchangerLogic} capability on that side).  It will also account for neighbouring blocks with
-     * special heat properties, like Magma or Lava, and other special cases like Heat Frames (which are entities).
+     * Discovers all heat exchanging neighbor block entities  (i.e. block entities who provide the
+     * {@link IHeatExchangerLogic} capability on that side) and adds them as connected heat exchangers.  It also
+     * accounts for neighbouring blocks with special heat properties, like Magma or Lava, and other special cases like
+     * Heat Frames (which are entities).
+     * <p>
+     * This should be called by the owning block entity on first tick ({@link BlockEntity#onLoad()} is suitable)
+     * and when neighboring blocks update
+     * ({@link net.minecraft.world.level.block.Block#neighborChanged(BlockState, Level, BlockPos, Block, BlockPos, boolean)}.
      * <p>
      * You don't need to call this method if this heat exchanger is not connected to the outside world (e.g.
-     * the connecting heat exchanger within a Vortex Tube).
+     * the internal connecting heat exchanger within a Vortex Tube).
      *
      * @param world the world
-     * @param pos  the position
-     * @param blockFilter a whitelist check; can be used to exclude certain blocks, e.g. air or fluids
+     * @param pos the blockpos of the owning block entity
+     * @param blockFilter a whitelist check; can be used to exclude certain blocks, e.g. air or fluids. In most cases,
+     *                    {@link #ALL_BLOCKS} can be passed here.
      * @param validSides an array of sides to check for heat exchanging neighbours
      */
-    void initializeAsHull(World world, BlockPos pos, BiPredicate<IWorld,BlockPos> blockFilter, Direction... validSides);
+    void initializeAsHull(Level world, BlockPos pos, BiPredicate<LevelAccessor,BlockPos> blockFilter, Direction... validSides);
 
     /**
-     * Initialize this heat exchanger's ambient temperature based on the given world & position.  You don't need to call
-     * this method if your heat exchanger is a hull exchanger (i.e. provides an {@link IHeatExchangerLogic} object via
-     * capability lookup), as hulls are automatically initialized by
-     * {@link IHeatExchangerLogic#initializeAsHull(World, BlockPos, BiPredicate, Direction...)}
+     * Initialize this heat exchanger's ambient temperature based on the given world &amp; position.  You don't need to
+     * call this method if your heat exchanger is a hull exchanger (i.e. provides an {@link IHeatExchangerLogic} object
+     * via capability lookup), as such heat exchangers are automatically initialized by
+     * {@link IHeatExchangerLogic#initializeAsHull(Level, BlockPos, BiPredicate, Direction...)}.
      *
      * @param world the world
      * @param pos the position
      */
-    void initializeAmbientTemperature(World world, BlockPos pos);
+    void initializeAmbientTemperature(Level world, BlockPos pos);
 
     /**
      * When called, this will create a thermal connection between this heat exchanger and the given one. This should
-     * be used when your TE contains more than one heat exchanger and you need a thermal connection between them;
-     * an example is the Vortex Tube.
+     * be used when your BE contains more than one heat exchanger and you need a thermal connection between them;
+     * an example is the hot and cold ends of the Vortex Tube.
      * <p>
-     * You <strong>don't</strong> need to call this method if your TE just has one heat exchanger to
-     * expose to the world; in that case {@link #initializeAsHull(World, BlockPos, BiPredicate, Direction...)} will
-     * handle connecting your TE's heat exchanger to neighbouring blocks.
+     * You <strong>don't</strong> need to call this method if your BE just has one heat exchanger to
+     * expose to the world; in that case {@link #initializeAsHull(Level, BlockPos, BiPredicate, Direction...)} will
+     * handle connecting your BE's heat exchanger to neighbouring blocks.
      * <p>
      * You should only call this method on one of the two heat exchangers being connected; a reciprocal connection
      * on the target heat exchanger will automatically be added.
@@ -114,7 +123,7 @@ public interface IHeatExchangerLogic extends INBTSerializable<CompoundNBT> {
 
     /**
      * @param exchanger the other heat exchanger
-     * @param reciprocate whether the other exchanger should also add this one
+     * @param reciprocate whether the other exchanger should also remove this one
      * @apiNote non-api; don't call directly
      */
     default void removeConnectedExchanger(IHeatExchangerLogic exchanger, boolean reciprocate) {
@@ -200,7 +209,7 @@ public interface IHeatExchangerLogic extends INBTSerializable<CompoundNBT> {
      * Check if this side of the heat exchanger has a thermal connection of any kind to the neighbouring block in the
      * given direction; whether to another heat exchanger, a static heat source like air, or a custom handler such as
      * a furnace or heat frame. The connection data is initialized in
-     * {@link #initializeAsHull(World, BlockPos, BiPredicate, Direction...)}.
+     * {@link #initializeAsHull(Level, BlockPos, BiPredicate, Direction...)}.
      *
      * @param side the side to check
      * @return true if this side has a thermal connection of any kind
@@ -208,10 +217,10 @@ public interface IHeatExchangerLogic extends INBTSerializable<CompoundNBT> {
     boolean isSideConnected(Direction side);
 
     @Override
-    default CompoundNBT serializeNBT() { return new CompoundNBT(); }
+    default CompoundTag serializeNBT() { return new CompoundTag(); }
 
     @Override
-    default void deserializeNBT(CompoundNBT nbt) {
+    default void deserializeNBT(CompoundTag nbt) {
     }
 
     /**
@@ -219,13 +228,13 @@ public interface IHeatExchangerLogic extends INBTSerializable<CompoundNBT> {
      * entity, and in this heat exchanger's list of heat behaviours that it handles.
      * @param pos position of the heat behaviour
      * @param cls required class of the heat behaviour (any heat behaviour which extends this class will match)
-     * @param <T>
-     * @return an optional heat behaviour, or {@code Optional.empty()} the position is invalid or there is no matching
-     * heat behaviour there
+     * @param <T> the heat behaviour type
+     * @return an optional heat behaviour, or {@code Optional.empty()} if the position is invalid or there is no
+     * matching heat behaviour there
      */
-    default <T extends HeatBehaviour<?>> Optional<T> getHeatBehaviour(BlockPos pos, Class<T> cls) {
+    default <T extends HeatBehaviour> Optional<T> getHeatBehaviour(BlockPos pos, Class<T> cls) {
         return Optional.empty();
     }
 
-    BiPredicate<IWorld,BlockPos> ALL_BLOCKS = (world, pos) -> true;
+    BiPredicate<LevelAccessor,BlockPos> ALL_BLOCKS = (world, pos) -> true;
 }

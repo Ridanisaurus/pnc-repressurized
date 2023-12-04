@@ -20,15 +20,18 @@ package me.desht.pneumaticcraft.common.amadron;
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonSyntaxException;
 import me.desht.pneumaticcraft.api.misc.IPlayerMatcher;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.world.biome.Biome;
+import me.desht.pneumaticcraft.lib.Log;
+import net.minecraft.ResourceLocationException;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraftforge.registries.ForgeRegistries;
 
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -36,61 +39,62 @@ import java.util.stream.Collectors;
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
 public class BiomeMatcher implements IPlayerMatcher {
-    private final Set<Biome.Category> categories;
+    private final Set<TagKey<Biome>> tags;
 
-    public BiomeMatcher(Set<Biome.Category> categories) {
-        this.categories = ImmutableSet.copyOf(categories);
+    public BiomeMatcher(Set<TagKey<Biome>> tags) {
+        this.tags = ImmutableSet.copyOf(tags);
     }
 
     @Override
-    public void toBytes(PacketBuffer buffer) {
-        buffer.writeVarInt(categories.size());
-        categories.forEach(buffer::writeEnum);
+    public void toBytes(FriendlyByteBuf buffer) {
+        buffer.writeVarInt(tags.size());
+        tags.forEach(key -> buffer.writeResourceLocation(key.location()));
     }
 
     @Override
     public JsonElement toJson() {
-        JsonArray cats = new JsonArray();
-        categories.forEach(cat -> cats.add(cat.name()));
-        return cats;
+        JsonArray tags = new JsonArray();
+        this.tags.forEach(tag -> tags.add(tag.location().toString()));
+        return tags;
     }
 
     @Override
-    public void addDescription(PlayerEntity player, List<ITextComponent> tooltip) {
-        if (!categories.isEmpty()) {
-            List<ITextComponent> items = categories.stream().map(cat -> new StringTextComponent(cat.getName())).collect(Collectors.toList());
+    public void addDescription(Player player, List<Component> tooltip) {
+        if (!tags.isEmpty()) {
+            List<Component> items = tags.stream().map(tag -> Component.literal(tag.location().toString())).collect(Collectors.toList());
             standardTooltip(player, tooltip, xlate("pneumaticcraft.playerFilter.biomes"), items);
         }
     }
 
     @Override
-    public boolean test(PlayerEntity playerEntity) {
-        return categories.isEmpty() || categories.contains(playerEntity.level.getBiome(playerEntity.blockPosition()).getBiomeCategory());
+    public boolean test(Player playerEntity) {
+        return tags.isEmpty() || playerEntity.level().getBiome(playerEntity.blockPosition()).tags().anyMatch(tags::contains);
     }
 
     public static class Factory implements MatcherFactory<BiomeMatcher> {
         @Override
         public BiomeMatcher fromJson(JsonElement json) {
-            Set<Biome.Category> categories = EnumSet.noneOf(Biome.Category.class);
+            Set<TagKey<Biome>> tags = new HashSet<>();
             json.getAsJsonArray().forEach(element -> {
-                Biome.Category cat = Biome.Category.byName(element.getAsString());
-                //noinspection ConstantConditions
-                if (cat == null) {  // yes, the category can be null here... shut up Intellij
-                    throw new JsonSyntaxException("unknown biome category: " + element.getAsString());
+                try {
+                    TagKey<Biome> cat = TagKey.create(ForgeRegistries.BIOMES.getRegistryKey(), new ResourceLocation(element.getAsString()));
+                    tags.add(cat);
+                } catch (ResourceLocationException e) {
+                    Log.error("invalid biome tag resource location: %s", element);
                 }
-                categories.add(cat);
             });
-            return new BiomeMatcher(categories);
+            return new BiomeMatcher(tags);
         }
 
         @Override
-        public BiomeMatcher fromBytes(PacketBuffer buffer) {
-            Set<Biome.Category> categories = EnumSet.noneOf(Biome.Category.class);
-            int nCats = buffer.readVarInt();
-            for (int i = 0; i < nCats; i++) {
-                categories.add(buffer.readEnum(Biome.Category.class));
+        public BiomeMatcher fromBytes(FriendlyByteBuf buffer) {
+            Set<TagKey<Biome>> tags = new HashSet<>();
+            int nTags = buffer.readVarInt();
+            for (int i = 0; i < nTags; i++) {
+                ResourceLocation rl = buffer.readResourceLocation();
+                tags.add(TagKey.create(ForgeRegistries.BIOMES.getRegistryKey(), rl));
             }
-            return new BiomeMatcher(categories);
+            return new BiomeMatcher(tags);
         }
     }
 }

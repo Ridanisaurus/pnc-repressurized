@@ -20,24 +20,23 @@ package me.desht.pneumaticcraft.common.heat.behaviour;
 import me.desht.pneumaticcraft.api.heat.HeatBehaviour;
 import me.desht.pneumaticcraft.api.heat.IHeatExchangerLogic;
 import me.desht.pneumaticcraft.api.semiblock.ISemiBlock;
-import me.desht.pneumaticcraft.common.entity.semiblock.EntityHeatFrame;
+import me.desht.pneumaticcraft.common.entity.semiblock.HeatFrameEntity;
 import me.desht.pneumaticcraft.common.heat.HeatExchangerLogicTicking;
 import me.desht.pneumaticcraft.common.semiblock.SemiblockTracker;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
-public class HeatBehaviourHeatFrame extends HeatBehaviour<TileEntity> {
+public class HeatBehaviourHeatFrame extends HeatBehaviour {
     static final ResourceLocation ID = RL("heat_frame");
 
-    private EntityHeatFrame semiBlock;
+    private HeatFrameEntity semiBlock;
 
     @Override
-    public HeatBehaviour<?> initialize(IHeatExchangerLogic connectedHeatLogic, World world, BlockPos pos, Direction direction) {
+    public HeatBehaviour initialize(IHeatExchangerLogic connectedHeatLogic, Level world, BlockPos pos, Direction direction) {
         super.initialize(connectedHeatLogic, world, pos, direction);
         semiBlock = null;
         return this;
@@ -48,11 +47,11 @@ public class HeatBehaviourHeatFrame extends HeatBehaviour<TileEntity> {
         return ID;
     }
 
-    private EntityHeatFrame getHeatFrame() {
+    private HeatFrameEntity getHeatFrame() {
         if (semiBlock == null || !semiBlock.isAlive()) {
             ISemiBlock s = SemiblockTracker.getInstance().getSemiblock(getWorld(), getPos());
-            if (s instanceof EntityHeatFrame) {
-                semiBlock = (EntityHeatFrame) s;
+            if (s instanceof HeatFrameEntity) {
+                semiBlock = (HeatFrameEntity) s;
             }
         }
         return semiBlock;

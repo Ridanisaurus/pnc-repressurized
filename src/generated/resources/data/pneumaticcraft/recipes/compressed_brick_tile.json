@@ -1,16 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "BB",
-    "BB"
-  ],
+  "category": "misc",
   "key": {
     "B": {
       "item": "pneumaticcraft:compressed_bricks"
     }
   },
+  "pattern": [
+    "BB",
+    "BB"
+  ],
   "result": {
-    "item": "pneumaticcraft:compressed_brick_tile",
-    "count": 4
-  }
+    "count": 4,
+    "item": "pneumaticcraft:compressed_brick_tile"
+  },
+  "show_notification": true
 }

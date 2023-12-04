@@ -17,37 +17,43 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
-import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.platform.InputConstants;
 import me.desht.pneumaticcraft.api.crafting.recipe.HeatPropertiesRecipe;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.client.util.GuiUtils;
 import me.desht.pneumaticcraft.common.heat.BlockHeatProperties;
 import me.desht.pneumaticcraft.common.thirdparty.ModNameCache;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
 import me.desht.pneumaticcraft.lib.Textures;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.forge.ForgeTypes;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
-import mezz.jei.api.ingredients.IIngredients;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.IFocus;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.FlowingFluidBlock;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.renderer.Rectangle2d;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.client.util.ITooltipFlag.TooltipFlags;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag.Default;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.fluids.FluidStack;
 
 import java.text.NumberFormat;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
@@ -56,13 +62,13 @@ public class JEIBlockHeatPropertiesCategory extends AbstractPNCCategory<HeatProp
     private final IDrawable coldArea;
     private final IDrawable air;
 
-    private static final Rectangle2d INPUT_AREA = new Rectangle2d(65, 44, 18, 18);
-    private static final Rectangle2d COLD_AREA = new Rectangle2d(5, 44, 18, 18);
-    private static final Rectangle2d HOT_AREA = new Rectangle2d(125, 44, 18, 18);
-    private static final Rectangle2d[] OUTPUT_AREAS = new Rectangle2d[] { COLD_AREA, HOT_AREA };
+    private static final Rect2i INPUT_AREA = new Rect2i(65, 44, 18, 18);
+    private static final Rect2i COLD_AREA = new Rect2i(5, 44, 18, 18);
+    private static final Rect2i HOT_AREA = new Rect2i(125, 44, 18, 18);
+    private static final Rect2i[] OUTPUT_AREAS = new Rect2i[] { COLD_AREA, HOT_AREA };
 
     public JEIBlockHeatPropertiesCategory() {
-        super(ModCategoryUid.HEAT_PROPERTIES, HeatPropertiesRecipe.class,
+        super(RecipeTypes.HEAT_PROPERTIES,
                 xlate("pneumaticcraft.gui.jei.title.heatProperties"),
                 guiHelper().createDrawable(Textures.GUI_JEI_HEAT_PROPERTIES, 0, 0, 146, 73),
                 guiHelper()
@@ -75,38 +81,43 @@ public class JEIBlockHeatPropertiesCategory extends AbstractPNCCategory<HeatProp
         this.air = guiHelper().createDrawable(Textures.GUI_JEI_HEAT_PROPERTIES, 150, 36, 16, 16);
     }
 
-    public static Collection<HeatPropertiesRecipe> getAllRecipes() {
+    public static List<HeatPropertiesRecipe> getAllRecipes() {
         // FIXME filtering out recipes whose input block has no item (e.g. minecraft:fire) is a kludge:
         //  it suppresses JEI errors when loading recipes, but such recipes still aren't shown in JEI
         //  (on the other hand the blocks in the recipe don't appear in JEI's display anyway so ¯\_(ツ)_/¯)
-        //noinspection UnstableApiUsage
         return BlockHeatProperties.getInstance().getAllEntries(Minecraft.getInstance().level).stream()
-                .filter(r -> r.getBlock() instanceof FlowingFluidBlock || !new ItemStack(r.getBlock()).isEmpty())
+                .filter(r -> r.getBlock() instanceof LiquidBlock || !new ItemStack(r.getBlock()).isEmpty())
                 .sorted(Comparator.comparingInt(HeatPropertiesRecipe::getTemperature)
                         .thenComparing(o -> o.getInputDisplayName().getString()))
-                .collect(ImmutableList.toImmutableList());
+                .toList();
     }
 
     @Override
-    public void setIngredients(HeatPropertiesRecipe recipe, IIngredients ingredients) {
-        setInputIngredient(recipe.getBlock(), ingredients);
+    public void setRecipe(IRecipeLayoutBuilder builder, HeatPropertiesRecipe recipe, IFocusGroup focuses) {
+        setInputIngredient(builder, recipe);
 
         List<ItemStack> items = new ArrayList<>();
         List<FluidStack> fluids = new ArrayList<>();
-
         collectOutputs(recipe.getTransformCold(), items, fluids);
         collectOutputs(recipe.getTransformHot(), items, fluids);
 
-        ingredients.setOutputLists(VanillaTypes.ITEM, items.stream().map(Collections::singletonList).collect(Collectors.toList()));
-        ingredients.setOutputLists(VanillaTypes.FLUID, fluids.stream().map(Collections::singletonList).collect(Collectors.toList()));
+        for (int idx = 0; idx < 2; idx++) {
+            if (!fluids.get(idx).isEmpty()) {
+                builder.addSlot(RecipeIngredientRole.OUTPUT, OUTPUT_AREAS[idx].getX() + 2, OUTPUT_AREAS[idx].getY() - 1)
+                        .addIngredient(ForgeTypes.FLUID_STACK, fluids.get(idx));
+            } else if (!items.get(idx).isEmpty()) {
+                builder.addInvisibleIngredients(RecipeIngredientRole.OUTPUT)
+                        .addItemStack(items.get(idx));
+            }
+        }
     }
 
     private void collectOutputs(BlockState state, List<ItemStack> items, List<FluidStack> fluids) {
         if (state != null) {
-            if (state.getBlock() instanceof FlowingFluidBlock) {
-                int level = state.hasProperty(FlowingFluidBlock.LEVEL) ? state.getValue(FlowingFluidBlock.LEVEL) : 15;
+            if (state.getBlock() instanceof LiquidBlock l) {
+                int level = state.hasProperty(LiquidBlock.LEVEL) ? state.getValue(LiquidBlock.LEVEL) : 15;
                 if (level == 0) level = 15;
-                FluidStack stack = new FluidStack(((FlowingFluidBlock) state.getBlock()).getFluid(), 1000 * level / 15);
+                FluidStack stack = new FluidStack(l.getFluid(), 1000 * level / 15);
                 fluids.add(stack);
                 items.add(new ItemStack(Blocks.BARRIER));
             } else {
@@ -120,91 +131,97 @@ public class JEIBlockHeatPropertiesCategory extends AbstractPNCCategory<HeatProp
         }
     }
 
-    private void setInputIngredient(Block block, IIngredients ingredients) {
-        if (block instanceof FlowingFluidBlock) {
-            FluidStack stack = new FluidStack(((FlowingFluidBlock) block).getFluid(), 1000);
-            ingredients.setInput(VanillaTypes.FLUID, stack);
+    private void setInputIngredient(IRecipeLayoutBuilder builder, HeatPropertiesRecipe recipe) {
+        Block block = recipe.getBlock();
+        if (block instanceof LiquidBlock l) {
+            FluidStack stack = new FluidStack(l.getFluid(), 1000);
+            builder.addSlot(RecipeIngredientRole.INPUT, INPUT_AREA.getX() + 2, INPUT_AREA.getY() - 1)
+                            .addIngredient(ForgeTypes.FLUID_STACK, stack);
         } else {
-            ingredients.setInput(VanillaTypes.ITEM, new ItemStack(block));
+            // items are rendered as blocks by renderBlock()
+            builder.addInvisibleIngredients(RecipeIngredientRole.INPUT).addItemStack(new ItemStack(block));
         }
     }
 
     @Override
-    public void setRecipe(IRecipeLayout layout, HeatPropertiesRecipe recipe, IIngredients ingredients) {
-        List<List<FluidStack>> in = ingredients.getInputs(VanillaTypes.FLUID);
-        if (!in.isEmpty()) {
-            layout.getFluidStacks().init(0, true, INPUT_AREA.getX() + 2, INPUT_AREA.getY() - 1);
-            layout.getFluidStacks().set(0, in.get(0));
-        }
-
-        List<List<FluidStack>> out = ingredients.getOutputs(VanillaTypes.FLUID);
-        for (int idx = 0; idx < out.size(); idx++) {
-            if (!out.get(idx).isEmpty() && !out.get(idx).get(0).isEmpty()) {
-                layout.getFluidStacks().init(idx, false, OUTPUT_AREAS[idx].getX() + 2, OUTPUT_AREAS[idx].getY() - 1);
-                layout.getFluidStacks().set(idx, out.get(idx).get(0));
-            }
-        }
-    }
-
-    @Override
-    public void draw(HeatPropertiesRecipe recipe, MatrixStack matrixStack, double mouseX, double mouseY) {
-        FontRenderer fontRenderer = Minecraft.getInstance().font;
+    public void draw(HeatPropertiesRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
+        Font fontRenderer = Minecraft.getInstance().font;
 
         int h = fontRenderer.lineHeight;
 
-        ITextComponent desc = recipe.getDescriptionKey().isEmpty() ?
-                StringTextComponent.EMPTY :
-                new StringTextComponent(" (" + I18n.get(recipe.getDescriptionKey()) + ")");
-        fontRenderer.draw(matrixStack, recipe.getInputDisplayName().copy().append(desc), 0, 0, 0x4040a0);
+        Component desc = recipe.getDescriptionKey().isEmpty() ?
+                Component.empty() :
+                Component.literal(" (" + I18n.get(recipe.getDescriptionKey()) + ")");
+        graphics.drawString(fontRenderer, recipe.getInputDisplayName().copy().append(desc), 0, 0, 0x4040a0, false);
 
-        ITextComponent temp = xlate("pneumaticcraft.waila.temperature").append(new StringTextComponent((recipe.getTemperature() - 273) + "°C"));
-        fontRenderer.draw(matrixStack, temp, 0, h * 2, 0x404040);
+        Component temp = xlate("pneumaticcraft.waila.temperature").append(Component.literal((recipe.getTemperature() - 273) + "°C"));
+        graphics.drawString(fontRenderer, temp, 0, h * 2, 0x404040, false);
 
         String res = NumberFormat.getNumberInstance(Locale.getDefault()).format(recipe.getThermalResistance());
-        fontRenderer.draw(matrixStack, I18n.get("pneumaticcraft.gui.jei.thermalResistance") + res, 0, h * 3, 0x404040);
+        graphics.drawString(fontRenderer, xlate("pneumaticcraft.gui.jei.thermalResistance").append(res), 0, h * 3, 0x404040, false);
 
         boolean showCapacity = false;
         if (recipe.getTransformCold() != null) {
-            coldArea.draw(matrixStack, INPUT_AREA.getX() - coldArea.getWidth() - 5, 42);
+            coldArea.draw(graphics, INPUT_AREA.getX() - coldArea.getWidth() - 5, 42);
             showCapacity = true;
         }
         if (recipe.getTransformHot() != null) {
-            hotArea.draw(matrixStack, HOT_AREA.getX() - hotArea.getWidth() - 5, 42);
+            hotArea.draw(graphics, HOT_AREA.getX() - hotArea.getWidth() - 5, 42);
             showCapacity = true;
         }
 
-        renderBlock(recipe.getBlockState(), matrixStack, INPUT_AREA.getX() + 9, INPUT_AREA.getY() + 1);
-        renderBlock(recipe.getTransformCold(), matrixStack, COLD_AREA.getX() + 9, COLD_AREA.getY() + 1);
-        renderBlock(recipe.getTransformHot(), matrixStack, HOT_AREA.getX() + 9, HOT_AREA.getY() + 1);
+        renderBlock(recipe.getBlockState(), graphics, INPUT_AREA.getX() + 9, INPUT_AREA.getY() + 1);
+        renderBlock(recipe.getTransformCold(), graphics, COLD_AREA.getX() + 9, COLD_AREA.getY() + 1);
+        renderBlock(recipe.getTransformHot(), graphics, HOT_AREA.getX() + 9, HOT_AREA.getY() + 1);
 
         if (showCapacity) {
-            fontRenderer.draw(matrixStack, xlate("pneumaticcraft.gui.jei.heatCapacity",
+            graphics.drawString(fontRenderer, xlate("pneumaticcraft.gui.jei.heatCapacity",
                     NumberFormat.getNumberInstance(Locale.getDefault()).format(recipe.getHeatCapacity())),
-                    0, getBackground().getHeight() - h, 0x404040
+                    0, getBackground().getHeight() - h, 0x404040, false
             );
         }
     }
 
     @Override
-    public boolean handleClick(HeatPropertiesRecipe recipe, double mouseX, double mouseY, int mouseButton) {
-        IFocus<?> focus = null;
-        if (INPUT_AREA.contains((int)mouseX, (int)mouseY)) {
-            focus = makeFocus(recipe.getBlock(), mouseButton == 0 ? IFocus.Mode.OUTPUT : IFocus.Mode.INPUT);
-        } else if (recipe.getTransformCold() != null && COLD_AREA.contains((int)mouseX, (int)mouseY)) {
-            focus = makeFocus(recipe.getTransformCold().getBlock(), mouseButton == 0 ? IFocus.Mode.OUTPUT : IFocus.Mode.INPUT);
-        } else if (recipe.getTransformHot() != null && HOT_AREA.contains((int)mouseX, (int)mouseY)) {
-            focus = makeFocus(recipe.getTransformHot().getBlock(), mouseButton == 0 ? IFocus.Mode.OUTPUT : IFocus.Mode.INPUT);
-        }
-        if (focus != null) {
-            JEIPlugin.recipesGui.show(focus);
-            return true;
+    public boolean handleInput(HeatPropertiesRecipe recipe, double mouseX, double mouseY, InputConstants.Key input) {
+        if (input.getType() == InputConstants.Type.MOUSE) {
+            int mouseButton = input.getValue();
+            IFocus<?> focus = null;
+            if (INPUT_AREA.contains((int) mouseX, (int) mouseY)) {
+                focus = makeFocus(recipe.getBlock(), mouseButton == 0 ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT);
+            } else if (recipe.getTransformCold() != null && COLD_AREA.contains((int) mouseX, (int) mouseY)) {
+                focus = makeFocus(recipe.getTransformCold().getBlock(), mouseButton == 0 ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT);
+            } else if (recipe.getTransformHot() != null && HOT_AREA.contains((int) mouseX, (int) mouseY)) {
+                focus = makeFocus(recipe.getTransformHot().getBlock(), mouseButton == 0 ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT);
+            }
+            if (focus != null) {
+                JEIPlugin.recipesGui.show(focus);
+                return true;
+            }
         }
         return false;
     }
 
+//    @Override
+//    public boolean handleClick(HeatPropertiesRecipe recipe, double mouseX, double mouseY, int mouseButton) {
+//        IFocus<?> focus = null;
+//        if (INPUT_AREA.contains((int)mouseX, (int)mouseY)) {
+//            focus = makeFocus(recipe.getBlock(), mouseButton == 0 ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT);
+//        } else if (recipe.getTransformCold() != null && COLD_AREA.contains((int)mouseX, (int)mouseY)) {
+//            focus = makeFocus(recipe.getTransformCold().getBlock(), mouseButton == 0 ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT);
+//        } else if (recipe.getTransformHot() != null && HOT_AREA.contains((int)mouseX, (int)mouseY)) {
+//            focus = makeFocus(recipe.getTransformHot().getBlock(), mouseButton == 0 ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT);
+//        }
+//        if (focus != null) {
+//            JEIPlugin.recipesGui.show(focus);
+//            return true;
+//        }
+//        return false;
+//    }
+
     @Override
-    public List<ITextComponent> getTooltipStrings(HeatPropertiesRecipe recipe, double mouseX, double mouseY) {
-        List<ITextComponent> l = new ArrayList<>();
+    public List<Component> getTooltipStrings(HeatPropertiesRecipe recipe, IRecipeSlotsView recipeSlotsView, double mouseX, double mouseY) {
+        List<Component> l = new ArrayList<>();
         if (INPUT_AREA.contains((int)mouseX, (int)mouseY)) {
             addTooltip(recipe.getBlock(), l);
         } else if (recipe.getTransformCold() != null && COLD_AREA.contains((int)mouseX, (int)mouseY)) {
@@ -219,30 +236,31 @@ public class JEIBlockHeatPropertiesCategory extends AbstractPNCCategory<HeatProp
         return l;
     }
 
-    private IFocus<?> makeFocus(Block block, IFocus.Mode mode) {
-        return block == Blocks.AIR || block instanceof FlowingFluidBlock ?
+    private IFocus<?> makeFocus(Block block, RecipeIngredientRole mode) {
+        return block == Blocks.AIR || block instanceof LiquidBlock ?
                 null :
-                JEIPlugin.recipeManager.createFocus(mode, new ItemStack(block));
+                JEIPlugin.jeiHelpers.getFocusFactory().createFocus(mode, VanillaTypes.ITEM_STACK, new ItemStack(block));
     }
 
-    private void addTooltip(Block block, List<ITextComponent> list) {
+    private void addTooltip(Block block, List<Component> list) {
         ItemStack stack = new ItemStack(block);
         list.add(stack.getHoverName());
-        stack.getItem().appendHoverText(stack, ClientUtils.getClientWorld(), list, ClientUtils.hasShiftDown() ? TooltipFlags.ADVANCED : TooltipFlags.NORMAL);
+        stack.getItem().appendHoverText(stack, ClientUtils.getClientLevel(), list, ClientUtils.hasShiftDown() ? Default.ADVANCED : Default.NORMAL);
         if (Minecraft.getInstance().options.advancedItemTooltips) {
-            list.add(new StringTextComponent(stack.getItem().getRegistryName().toString()).withStyle(TextFormatting.DARK_GRAY));
+            String regName = PneumaticCraftUtils.getRegistryName(stack.getItem()).map(ResourceLocation::toString).orElse("?");
+            list.add(Component.literal(regName).withStyle(ChatFormatting.DARK_GRAY));
         }
-        list.add(new StringTextComponent(ModNameCache.getModName(stack.getItem())).withStyle(TextFormatting.BLUE, TextFormatting.ITALIC));
+        list.add(Component.literal(ModNameCache.getModName(stack.getItem())).withStyle(ChatFormatting.BLUE, ChatFormatting.ITALIC));
     }
 
-    private void renderBlock(BlockState state, MatrixStack matrixStack, int x, int y) {
+    private void renderBlock(BlockState state, GuiGraphics graphics, int x, int y) {
         // note: fluid rendering is done by JEI (fluidstacks are registered in the recipe layout)
         if (state != null) {
             if (state.getBlock() == Blocks.AIR) {
-                air.draw(matrixStack, x - 8, y - 2);
+                air.draw(graphics, x - 8, y - 2);
             } else {
-                float rot = Minecraft.getInstance().level.getGameTime() % 360;
-                GuiUtils.renderBlockInGui(matrixStack, state, x, y, 100, rot, 15f);
+                float rot = ClientUtils.getClientLevel().getGameTime() % 360;
+                GuiUtils.renderBlockInGui(graphics, state, x, y, 100, rot, 15f);
             }
         }
     }

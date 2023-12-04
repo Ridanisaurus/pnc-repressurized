@@ -1,19 +1,21 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "R": {
+      "item": "pneumaticcraft:turbine_rotor"
+    },
+    "S": {
+      "item": "minecraft:iron_sword"
+    }
+  },
   "pattern": [
     " R ",
     "RSR",
     " R "
   ],
-  "key": {
-    "S": {
-      "item": "minecraft:iron_sword"
-    },
-    "R": {
-      "item": "pneumaticcraft:turbine_rotor"
-    }
-  },
   "result": {
     "item": "pneumaticcraft:guard_drone"
-  }
+  },
+  "show_notification": true
 }

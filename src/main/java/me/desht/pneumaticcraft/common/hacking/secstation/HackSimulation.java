@@ -17,13 +17,15 @@
 
 package me.desht.pneumaticcraft.common.hacking.secstation;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import me.desht.pneumaticcraft.common.hacking.secstation.ISimulationController.HackingSide;
-import me.desht.pneumaticcraft.common.item.ItemNetworkComponent;
-import me.desht.pneumaticcraft.common.item.ItemNetworkComponent.NetworkComponentType;
-import me.desht.pneumaticcraft.lib.TileEntityConstants;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.SoundEvents;
+import me.desht.pneumaticcraft.common.item.NetworkComponentItem;
+import me.desht.pneumaticcraft.common.item.NetworkComponentItem.NetworkComponentType;
+import me.desht.pneumaticcraft.lib.BlockEntityConstants;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -37,27 +39,27 @@ public class HackSimulation {
     public static final int GRID_SIZE = GRID_WIDTH * GRID_HEIGHT;
 
     // lookup table which maps a node index to a list of the nodes it can connect to
-    private static final List<List<Integer>> connectionMatrix = new ArrayList<>();
+    private static final List<IntList> connectionMatrix = new ArrayList<>();
     public static final int NODE_FORTIFICATION_TIME = 100;
 
     static {
         for (int i = 0; i < GRID_SIZE; i++) {
             int xPos = i % GRID_WIDTH;
             int yPos = i / GRID_WIDTH;
-            ArrayList<Integer> conns = new ArrayList<>();
+            IntList connections = new IntArrayList();
             if (yPos > 0) {
-                conns.add(i - GRID_WIDTH);  // up
-                if (xPos > 0) conns.add(i - (GRID_WIDTH + 1));  // up-left
-                if (xPos < GRID_WIDTH - 1) conns.add(i - (GRID_WIDTH - 1));  // up-right
+                connections.add(i - GRID_WIDTH);  // up
+                if (xPos > 0) connections.add(i - (GRID_WIDTH + 1));  // up-left
+                if (xPos < GRID_WIDTH - 1) connections.add(i - (GRID_WIDTH - 1));  // up-right
             }
             if (yPos < GRID_HEIGHT - 1) {
-                conns.add(i + GRID_WIDTH);  // down
-                if (xPos > 0) conns.add(i + (GRID_WIDTH - 1));  // down-left
-                if (xPos < GRID_WIDTH - 1) conns.add(i + (GRID_WIDTH + 1));  // down-right
+                connections.add(i + GRID_WIDTH);  // down
+                if (xPos > 0) connections.add(i + (GRID_WIDTH - 1));  // down-left
+                if (xPos < GRID_WIDTH - 1) connections.add(i + (GRID_WIDTH + 1));  // down-right
             }
-            if (xPos > 0) conns.add(i - 1);  // left
-            if (xPos < GRID_WIDTH - 1) conns.add(i + 1);  // right
-            connectionMatrix.add(conns);
+            if (xPos > 0) connections.add(i - 1);  // left
+            if (xPos < GRID_WIDTH - 1) connections.add(i + 1);  // right
+            connectionMatrix.add(connections);
         }
     }
 
@@ -101,17 +103,17 @@ public class HackSimulation {
 
     public static HackSimulation dummySimulation() {
         // used for rendering background connection lines
-        return new HackSimulation(null, -1, TileEntityConstants.NETWORK_AI_BRIDGE_SPEED, HackingSide.AI);
+        return new HackSimulation(null, -1, BlockEntityConstants.NETWORK_AI_BRIDGE_SPEED, HackingSide.AI);
     }
 
-    public static HackSimulation readFromNetwork(PacketBuffer buffer) {
+    public static HackSimulation readFromNetwork(FriendlyByteBuf buffer) {
         float speed = buffer.readFloat();
         HackingSide side = buffer.readBoolean() ? HackingSide.AI : HackingSide.PLAYER;
         int start = buffer.readVarInt();
         return new HackSimulation(null, start, speed, side);
     }
 
-    public void writeToNetwork(PacketBuffer buffer) {
+    public void writeToNetwork(FriendlyByteBuf buffer) {
         buffer.writeFloat(baseBridgeSpeed);
         buffer.writeBoolean(side == HackingSide.AI);
         buffer.writeVarInt(startPosition);
@@ -130,7 +132,7 @@ public class HackSimulation {
     }
 
     public void addNode(int slot, ItemStack stack) {
-        addNode(slot, ItemNetworkComponent.getType(stack), controller == null ? 1 : stack.getCount());
+        NetworkComponentItem.getType(stack).ifPresent(type -> addNode(slot, type, controller == null ? 1 : stack.getCount()));
     }
 
     private boolean isDummy() {
@@ -238,7 +240,7 @@ public class HackSimulation {
         pendingNukePos = -1;
     }
 
-    public List<Integer> getNeighbours(int node) {
+    public IntList getNeighbours(int node) {
         return connectionMatrix.get(node);
     }
 
@@ -372,9 +374,9 @@ public class HackSimulation {
             if (controller != null && isHacked() && !wasHacked) {
                 if (isStarted) {
                     if (side == HackingSide.AI && isAwake()) {
-                        controller.getHacker().playSound(SoundEvents.NOTE_BLOCK_BASEDRUM, 1f, 1f);
+                        controller.getHacker().playSound(SoundEvents.NOTE_BLOCK_BASEDRUM.get(), 1f, 1f);
                     } else if (side == HackingSide.PLAYER) {
-                        controller.getHacker().playSound(SoundEvents.NOTE_BLOCK_FLUTE, 1f, 1f);
+                        controller.getHacker().playSound(SoundEvents.NOTE_BLOCK_FLUTE.get(), 1f, 1f);
                     }
                 }
                 if (notifyController) controller.onNodeHacked(HackSimulation.this, pos);
@@ -394,7 +396,7 @@ public class HackSimulation {
         }
 
         float getProgressPerTick() {
-            return baseBridgeSpeed * (1 / (TileEntityConstants.NETWORK_NODE_RATING_MULTIPLIER * (size + (isFortified() ? 1 : 0))));
+            return baseBridgeSpeed * (1 / (BlockEntityConstants.NETWORK_NODE_RATING_MULTIPLIER * (size + (isFortified() ? 1 : 0))));
         }
 
         public void tick() {
@@ -421,13 +423,13 @@ public class HackSimulation {
             this.progress = progress;
         }
 
-        public void write(PacketBuffer buffer) {
+        public void write(FriendlyByteBuf buffer) {
             buffer.writeVarInt(from);
             buffer.writeVarInt(to);
             buffer.writeFloat(progress);
         }
 
-        public static ConnectionEntry readFromNetwork(PacketBuffer buffer) {
+        public static ConnectionEntry readFromNetwork(FriendlyByteBuf buffer) {
             return new ConnectionEntry(buffer.readVarInt(), buffer.readVarInt(), buffer.readFloat());
         }
     }

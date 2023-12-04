@@ -17,21 +17,14 @@
 
 package me.desht.pneumaticcraft.client.gui.remote.actionwidget;
 
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-
-import java.util.List;
+import net.minecraft.network.chat.Component;
 
 public interface IActionWidgetLabeled {
-    void setText(ITextComponent text);
+    void setText(Component text);
 
-    ITextComponent getText();
+    Component getText();
 
-    void setTooltip(List<ITextComponent> text);
-
-    List<ITextComponent> getTooltip();
-
-    default ITextComponent deserializeTextComponent(String s) {
-        return s.startsWith("{") ? ITextComponent.Serializer.fromJson(s) : new StringTextComponent(s);
+    default Component deserializeTextComponent(String s) {
+        return s.startsWith("{") ? Component.Serializer.fromJson(s) : Component.literal(s);
     }
 }

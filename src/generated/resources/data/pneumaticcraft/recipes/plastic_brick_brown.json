@@ -1,20 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "D": {
+      "tag": "forge:dyes/brown"
+    },
+    "P": {
+      "tag": "pneumaticcraft:plastic_sheets"
+    }
+  },
   "pattern": [
     "PPP",
     "PDP",
     "PPP"
   ],
-  "key": {
-    "P": {
-      "tag": "pneumaticcraft:plastic_sheets"
-    },
-    "D": {
-      "tag": "forge:dyes/brown"
-    }
-  },
   "result": {
-    "item": "pneumaticcraft:plastic_brick_brown",
-    "count": 8
-  }
+    "count": 8,
+    "item": "pneumaticcraft:plastic_brick_brown"
+  },
+  "show_notification": true
 }

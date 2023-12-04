@@ -20,18 +20,21 @@ package me.desht.pneumaticcraft.common.recipes.machine;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.ints.IntCollection;
+import it.unimi.dsi.fastutil.ints.IntList;
 import me.desht.pneumaticcraft.common.config.ConfigHelper;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.core.NonNullList;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraftforge.items.IItemHandler;
 
 import javax.annotation.Nonnull;
@@ -48,7 +51,7 @@ public class PressureDisenchantingRecipe extends PressureChamberRecipeImpl {
     }
 
     @Override
-    public Collection<Integer> findIngredients(@Nonnull IItemHandler chamberHandler) {
+    public IntCollection findIngredients(@Nonnull IItemHandler chamberHandler) {
         int bookSlot = -1;
         int itemSlot = -1;
 
@@ -64,15 +67,15 @@ public class PressureDisenchantingRecipe extends PressureChamberRecipeImpl {
                     itemSlot = i;
                 }
             }
-            if (bookSlot >= 0 && itemSlot >= 0) return ImmutableList.of(bookSlot, itemSlot);
+            if (bookSlot >= 0 && itemSlot >= 0) return IntList.of(bookSlot, itemSlot);
         }
-        return Collections.emptyList();
+        return IntList.of();
     }
 
     @Override
-    public NonNullList<ItemStack> craftRecipe(@Nonnull IItemHandler chamberHandler, List<Integer> ingredientSlots, boolean simulate) {
-        ItemStack book = chamberHandler.extractItem(ingredientSlots.get(0), 1, simulate);
-        ItemStack enchantedStack = chamberHandler.extractItem(ingredientSlots.get(1), 1, simulate);
+    public NonNullList<ItemStack> craftRecipe(@Nonnull IItemHandler chamberHandler, IntList ingredientSlots, boolean simulate) {
+        ItemStack book = chamberHandler.extractItem(ingredientSlots.getInt(0), 1, simulate);
+        ItemStack enchantedStack = chamberHandler.extractItem(ingredientSlots.getInt(1), 1, simulate);
 
         if (book.isEmpty() || enchantedStack.isEmpty()) return NonNullList.create();
 
@@ -131,29 +134,28 @@ public class PressureDisenchantingRecipe extends PressureChamberRecipeImpl {
     }
 
     @Override
-    public String getTooltipKey(boolean input, int slot) {
-        switch (slot) {
-            case 0: return "pneumaticcraft.gui.nei.tooltip.vacuumEnchantItem";
-            case 2: return "pneumaticcraft.gui.nei.tooltip.vacuumEnchantItemOut";
-            case 3: return "pneumaticcraft.gui.nei.tooltip.vacuumEnchantBookOut";
-            default: return "";
-        }
+    public String getTooltipKey(boolean input, String slotName) {
+        return switch (slotName) {
+            case "in0" -> "pneumaticcraft.gui.nei.tooltip.vacuumEnchantItem";
+            case "out0" -> "pneumaticcraft.gui.nei.tooltip.vacuumEnchantItemOut";
+            case "out1" -> "pneumaticcraft.gui.nei.tooltip.vacuumEnchantBookOut";
+            default -> "";
+        };
     }
 
     @Override
-    public void write(PacketBuffer buffer) {
+    public void write(FriendlyByteBuf buffer) {
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        return ModRecipes.PRESSURE_CHAMBER_DISENCHANTING.get();
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeSerializers.PRESSURE_CHAMBER_DISENCHANTING.get();
     }
 
     private boolean blacklisted(ItemStack stack) {
-        if (stack.getItem().getRegistryName() != null) {
-            String name = stack.getItem().getRegistryName().toString();
-            return ConfigHelper.common().machines.disenchantingBlacklist.get().stream().anyMatch(name::startsWith);
-        }
-        return false;
+        List<String> blackList = ConfigHelper.common().machines.disenchantingBlacklist.get();
+        return PneumaticCraftUtils.getRegistryName(stack.getItem())
+                .map(name -> blackList.stream().anyMatch(element -> element.startsWith(name.toString())))
+                .orElse(false);
     }
 }

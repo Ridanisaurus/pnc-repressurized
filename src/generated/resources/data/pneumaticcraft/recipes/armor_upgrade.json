@@ -1,22 +1,24 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "LXL",
-    "XCX",
-    "LXL"
-  ],
+  "category": "misc",
   "key": {
+    "C": {
+      "tag": "forge:ingots/compressed_iron"
+    },
     "L": {
       "tag": "pneumaticcraft:upgrade_components"
     },
     "X": {
       "tag": "forge:gems/diamond"
-    },
-    "C": {
-      "tag": "forge:ingots/compressed_iron"
     }
   },
+  "pattern": [
+    "LXL",
+    "XCX",
+    "LXL"
+  ],
   "result": {
     "item": "pneumaticcraft:armor_upgrade"
-  }
+  },
+  "show_notification": true
 }

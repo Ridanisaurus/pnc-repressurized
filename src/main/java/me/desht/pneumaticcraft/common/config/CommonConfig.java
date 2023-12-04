@@ -26,22 +26,18 @@ import java.util.List;
 
 public class CommonConfig {
     public static class General {
-        public ForgeConfigSpec.BooleanValue droneDebuggerPathParticles;
-        public ForgeConfigSpec.IntValue oilGenerationChance;
-        public ForgeConfigSpec.IntValue surfaceOilGenerationChance;
         public ForgeConfigSpec.BooleanValue enableDungeonLoot;
-        public ForgeConfigSpec.BooleanValue enableDroneSuffocation;
         public ForgeConfigSpec.DoubleValue fuelBucketEfficiency;
         public ForgeConfigSpec.IntValue maxProgrammingArea;
-        public ForgeConfigSpec.ConfigValue<List<String>> oilWorldGenBlacklist;
-        public ForgeConfigSpec.ConfigValue<List<String>> oilWorldGenCategoryBlacklist;
-        public ForgeConfigSpec.ConfigValue<List<String>> oilWorldGenDimensionBlacklist;
-        public ForgeConfigSpec.ConfigValue<List<String>> vacuumTrapBlacklist;
         public ForgeConfigSpec.IntValue minFluidFuelTemperature;
         public ForgeConfigSpec.BooleanValue useUpDyesWhenColoring;
-        public ForgeConfigSpec.BooleanValue dronesRenderHeldItem;
-        public ForgeConfigSpec.BooleanValue dronesCanImportXPOrbs;
-        public ForgeConfigSpec.BooleanValue dronesCanBePickedUp;
+        public ForgeConfigSpec.IntValue bandageCooldown;
+        public ForgeConfigSpec.IntValue bandageUseTime;
+        public ForgeConfigSpec.DoubleValue bandageHealthRestored;
+    }
+    public static class Worldgen {
+        public ForgeConfigSpec.ConfigValue<List<String>> oilWorldGenDimensionWhitelist;
+        public ForgeConfigSpec.ConfigValue<List<String>> oilWorldGenDimensionBlacklist;
     }
     public static class Machines {
         public ForgeConfigSpec.BooleanValue aerialInterfaceArmorCompat;
@@ -50,21 +46,26 @@ public class CommonConfig {
         public ForgeConfigSpec.IntValue electrostaticLightningChance;
         public ForgeConfigSpec.IntValue elevatorBaseBlocksPerBase;
         public ForgeConfigSpec.IntValue fluxCompressorEfficiency;
+        public ForgeConfigSpec.DoubleValue solarCompressorMultiplier;
         public ForgeConfigSpec.BooleanValue keroseneLampCanUseAnyFuel;
         public ForgeConfigSpec.DoubleValue keroseneLampFuelEfficiency;
         public ForgeConfigSpec.IntValue kineticCompressorEfficiency;
         public ForgeConfigSpec.BooleanValue liquidHopperDispenser;
         public ForgeConfigSpec.BooleanValue omniHopperDispenser;
         public ForgeConfigSpec.BooleanValue securityStationCreativePlayersExempt;
+        public ForgeConfigSpec.BooleanValue securityStationAllowHacking;
+        public ForgeConfigSpec.IntValue manualCompressorAirPerCycle;
+        public ForgeConfigSpec.DoubleValue manualCompressorHungerDrainPerCycleStep;
+        public ForgeConfigSpec.BooleanValue manualCompressorAllowFakePlayers;
         public ForgeConfigSpec.IntValue pneumaticDynamoEfficiency;
         public ForgeConfigSpec.IntValue pneumaticEngineEfficiency;
         public ForgeConfigSpec.IntValue pneumaticGeneratorEfficiency;
         public ForgeConfigSpec.IntValue pneumaticPumpEfficiency;
         public ForgeConfigSpec.DoubleValue speedUpgradeSpeedMultiplier;
         public ForgeConfigSpec.DoubleValue speedUpgradeUsageMultiplier;
-        public ForgeConfigSpec.ConfigValue<List<String>> seismicSensorFluids;
-        public ForgeConfigSpec.ConfigValue<List<String>> seismicSensorFluidTags;
         public ForgeConfigSpec.ConfigValue<List<String>> disenchantingBlacklist;
+        public ForgeConfigSpec.ConfigValue<List<String>> aerialInterfaceDimensionBlacklist;
+        public ForgeConfigSpec.IntValue vortexCannonPlayerBoostRate;
     }
     public static class Armor {
         public ForgeConfigSpec.IntValue jetBootsAirUsage;
@@ -77,26 +78,25 @@ public class CommonConfig {
     }
     public static class Integration {
         public ForgeConfigSpec.DoubleValue mekThermalEfficiencyFactor;
-        public ForgeConfigSpec.DoubleValue ieExternalHeaterHeatPerRF;
-        public ForgeConfigSpec.IntValue ieExternalHeaterRFperTick;
         public ForgeConfigSpec.DoubleValue mekThermalResistanceFactor;
+        public ForgeConfigSpec.DoubleValue ieExternalHeaterHeatPerFE;
+        public ForgeConfigSpec.IntValue ieExternalHeaterFEperTick;
         public ForgeConfigSpec.DoubleValue cofhHoldingMultiplier;
     }
     public static class Advanced {
-        public ForgeConfigSpec.IntValue stuckDroneTeleportTicks;
         public ForgeConfigSpec.BooleanValue disableKeroseneLampFakeAirBlock;
         public ForgeConfigSpec.IntValue fluidTankUpdateRate;
         public ForgeConfigSpec.IntValue pressureSyncPrecision;
-        public ForgeConfigSpec.BooleanValue stopDroneAI;
         public ForgeConfigSpec.BooleanValue dontUpdateInfiniteWaterSources;
-        public ForgeConfigSpec.IntValue maxDroneChargingStationSearchRange;
-        public ForgeConfigSpec.IntValue maxDroneTeleportRange;
+        public ForgeConfigSpec.BooleanValue nbtToClientModification;
     }
     public static class Micromissiles {
         public ForgeConfigSpec.DoubleValue baseExplosionDamage;
         public ForgeConfigSpec.BooleanValue damageTerrain;
+        public ForgeConfigSpec.BooleanValue startFires;
         public ForgeConfigSpec.IntValue launchCooldown;
         public ForgeConfigSpec.IntValue lifetime;
+        public ForgeConfigSpec.IntValue maxLifetime;
         public ForgeConfigSpec.IntValue missilePodSize;
     }
     public static class Minigun {
@@ -127,12 +127,9 @@ public class CommonConfig {
         public ForgeConfigSpec.BooleanValue blockHitParticles;
     }
     public static class Recipes {
-        public ForgeConfigSpec.BooleanValue coalToDiamondsRecipe;
-        public ForgeConfigSpec.BooleanValue explosionCrafting;
         public ForgeConfigSpec.BooleanValue inWorldPlasticSolidification;
         public ForgeConfigSpec.BooleanValue inWorldYeastCrafting;
     }
-
     public static class Amadron {
         public ForgeConfigSpec.IntValue numPeriodicOffers;
         public ForgeConfigSpec.IntValue numVillagerOffers;
@@ -141,8 +138,9 @@ public class CommonConfig {
         public ForgeConfigSpec.BooleanValue notifyOfTradeAddition;
         public ForgeConfigSpec.BooleanValue notifyOfTradeRemoval;
         public ForgeConfigSpec.BooleanValue notifyOfDealMade;
+        public ForgeConfigSpec.ConfigValue<List<Integer>> amadroneSpawnLocation;
+        public ForgeConfigSpec.BooleanValue amadroneSpawnLocationRelativeToGroundLevel;
     }
-
     public static class Heat {
         public ForgeConfigSpec.BooleanValue addDefaultFluidEntries;
         public ForgeConfigSpec.DoubleValue blockThermalResistance;
@@ -152,24 +150,36 @@ public class CommonConfig {
         public ForgeConfigSpec.DoubleValue ambientTemperatureHeightModifier;
         public ForgeConfigSpec.DoubleValue airThermalResistance;
     }
-
     public static class Logistics {
         public ForgeConfigSpec.DoubleValue itemTransportCost;
         public ForgeConfigSpec.DoubleValue fluidTransportCost;
         public ForgeConfigSpec.DoubleValue minPressure;
     }
-
     public static class Jackhammer {
         public ForgeConfigSpec.IntValue baseAirUsage;
         public ForgeConfigSpec.IntValue maxVeinMinerRange;
     }
-
     public static class Villagers {
-        public ForgeConfigSpec.BooleanValue addMechanicHouse;
+        public ForgeConfigSpec.IntValue mechanicHouseWeight;
         public ForgeConfigSpec.EnumValue<VillagerTradesRegistration.WhichTrades> whichTrades;
+    }
+    public static class Drones {
+        public ForgeConfigSpec.BooleanValue dronesRenderHeldItem;
+        public ForgeConfigSpec.BooleanValue dronesCanImportXPOrbs;
+        public ForgeConfigSpec.BooleanValue dronesCanBePickedUp;
+        public ForgeConfigSpec.BooleanValue stopDroneAI;
+        public ForgeConfigSpec.IntValue stuckDroneTeleportTicks;
+        public ForgeConfigSpec.IntValue maxDroneChargingStationSearchRange;
+        public ForgeConfigSpec.IntValue maxDroneTeleportRange;
+        public ForgeConfigSpec.BooleanValue allowNavigateToUnloadedChunks;
+        public ForgeConfigSpec.BooleanValue droneDebuggerPathParticles;
+        public ForgeConfigSpec.BooleanValue enableDroneSuffocation;
+        public ForgeConfigSpec.BooleanValue allowAnyPlayerVarQuery;
+        public ForgeConfigSpec.BooleanValue allowTeleportToProtectedArea;
     }
 
     public final General general = new General();
+    public final Worldgen worldgen = new Worldgen();
     public final Machines machines = new Machines();
     public final Armor armor = new Armor();
     public final Advanced advanced = new Advanced();
@@ -182,27 +192,14 @@ public class CommonConfig {
     public final Logistics logistics = new Logistics();
     public final Jackhammer jackhammer = new Jackhammer();
     public final Villagers villagers = new Villagers();
+    public final Drones drones = new Drones();
 
     CommonConfig(final ForgeConfigSpec.Builder builder) {
         builder.push("General");
-        general.oilGenerationChance = builder
-                .worldRestart()
-                .comment("Chance per chunk as a percentage to generate an Oil Lake. Set to 0 for no oil lakes. See also 'surface_oil_generation_chance'.")
-                .translation("pneumaticcraft.config.common.general.oilGenerationChance")
-                .defineInRange("oil_generation_chance", 15, 0, 100);
-        general.surfaceOilGenerationChance = builder
-                .worldRestart()
-                .comment("When an Oil Lake would be generated at the surface (see 'oil_generation_chance'), percentage chance that this will actually generate a lake. Set to 0 for no surface oil lakes, and fewer lakes overall. Higher values don't guarantee surface oil lakes, but make them more likely, as well as making oil lakes more likely overall. It is recommended to adjust this value in conjunction with 'oil_generation_chance'.")
-                .translation("pneumaticcraft.config.common.general.surfaceOilGenerationChance")
-                .defineInRange("surface_oil_generation_chance", 25, 0, 100);
         general.enableDungeonLoot = builder
                 .comment("Enable mod dungeon loot generation")
                 .translation("pneumaticcraft.config.common.general.enable_dungeon_loot")
                 .define("enable_dungeon_loot", true);
-        general.enableDroneSuffocation = builder
-                .comment("Enable Drone Suffocation Damage")
-                .translation("pneumaticcraft.config.common.general.enable_drone_suffocation")
-                .define("enable_drone_suffocation", true);
         general.fuelBucketEfficiency = builder
                 .comment("Efficiency of fuel buckets as furnace fuel (default 0.05 means 1 bucket of LPG smelts 450 items in a vanilla furnace)")
                 .translation("pneumaticcraft.config.common.general.fuel_bucket_efficiency")
@@ -211,21 +208,6 @@ public class CommonConfig {
                 .comment("Maximum number of blocks in the area defined in an Area Programming Puzzle Piece")
                 .translation("pneumaticcraft.config.common.general.max_programming_area")
                 .defineInRange("max_programming_area", 250000, 1, Integer.MAX_VALUE);
-        general.oilWorldGenBlacklist = builder
-                .worldRestart()
-                .comment("Oil worldgen blacklist by biome: add biome IDs to this list if you don't want oil lake worldgen to happen there.  This works in conjunction with 'oil_world_gen_category_blacklist' - if a biome matches either, then no oil lakes will generate there. You can wildcard this; e.g 'modid:*' blacklists ALL biomes of namespace 'modid'.")
-                .translation("pneumaticcraft.config.common.general.oil_world_gen_blacklist")
-                .define("oil_world_gen_blacklist", Lists.newArrayList("minecraft:soul_sand_valley", "minecraft:crimson_forest", "minecraft:warped_forest", "minecraft:nether_wastes", "minecraft:the_void", "minecraft:the_end", "minecraft:small_end_islands", "minecraft:end_midlands", "minecraft:end_highlands", "minecraft:end_barrens"));
-        general.oilWorldGenCategoryBlacklist = builder
-                .worldRestart()
-                .comment("Oil worldgen blacklist by biome category: add biome categories to this list if you don't want oil lake worldgen to happen there. Accepted categories are: beach, desert, extreme_hills, forest, icy, jungle, mesa, mushroom, nether, none, ocean, plains, river, savanna, swamp, taiga, the_end.  This works in conjunction with 'oil_world_gen_blacklist' - if a biome matches either, then no oil lakes will generate there.")
-                .translation("pneumaticcraft.config.common.general.oil_world_gen_category_blacklist")
-                .define("oil_world_gen_category_blacklist", Lists.newArrayList("none"));
-        general.oilWorldGenDimensionBlacklist = builder
-                .worldRestart()
-                .comment("Oil worldgen blacklist by dimension ID: add dimension ID's to this list if you don't want oil lake worldgen to happen there. You can wildcard this; e.g 'modid:*' blacklists ALL dimensions of namespace 'modid'.")
-                .translation("pneumaticcraft.config.common.general.oil_world_gen_dimension_blacklist")
-                .define("oil_world_gen_dimension_blacklist", Lists.newArrayList());
         general.minFluidFuelTemperature = builder
                 .worldRestart()
                 .comment("Fluids at least as hot as this temperature (Kelvin) will be auto-registered as Liquid Compressor fuels, the quality being dependent on fluid temperature.")
@@ -235,26 +217,31 @@ public class CommonConfig {
                 .comment("Should dyes be used up when coloring things (Drones, Logistics Modules, Redstone Modules)?")
                 .translation("pneumaticcraft.config.common.general.use_up_dyes_when_coloring")
                 .define("use_up_dyes_when_coloring", false);
-        general.dronesRenderHeldItem = builder
-                .comment("Drones render their held item (the item in slot 0 of their inventory) ?  Note: this is in common config since if enabled, server needs to sync the item data to the client.")
-                .translation("pneumaticcraft.config.common.general.drones_render_held_item")
-                .define("drones_render_held_item", true);
-        general.dronesCanImportXPOrbs = builder
-                .comment("Are drones allowed to import Experience Orbs and convert them to Memory Essence fluid?")
-                .translation("pneumaticcraft.config.common.general.drones_can_import_xp_orbs")
-                .define("drones_can_import_xp_orbs", true);
-        general.dronesCanBePickedUp = builder
-                .comment("Will Drones automatically get picked up by Boats/Minecarts/etc. if they're close enough?")
-                .translation("pneumaticcraft.config.common.general.drones_can_be_picked_up")
-                .define("drones_can_be_picked_up", false);
-        general.droneDebuggerPathParticles = builder
-                .comment("Show particle trail indicating the currently-debugged drone's planned path")
-                .translation("pneumaticcraft.config.common.general.drone_debugger_path_particles")
-                .define("drone_debugger_path_particles", true);
-        general.vacuumTrapBlacklist = builder
-                .comment("Blacklisted entity type ID's or tags (use '#' prefix), which the Vacuum Trap will not try to absorb. Note that players, tamed entities, boss entities, and PneumaticCraft drones may never be absorbed, regardless of config settings.")
-                .translation("pneumaticcraft.config.common.general.vacuum_trap_blacklist")
-                .define("vacuum_trap_blacklist", Lists.newArrayList());
+        general.bandageCooldown = builder
+                .comment("Cooldown, in ticks, between subsequent uses of Bandages. Set to 0 to disable cooldowns entirely.")
+                .translation("pneumaticcraft.config.common.general.bandage_cooldown")
+                .defineInRange("bandage_cooldown", 160, 0, Integer.MAX_VALUE);
+        general.bandageUseTime = builder
+                .comment("Time, in ticks, it takes to use a bandage.")
+                .translation("pneumaticcraft.config.common.general.bandage_use_time")
+                .defineInRange("bandage_use_time", 40, 1, Integer.MAX_VALUE);
+        general.bandageHealthRestored = builder
+                .comment("Health points restored on bandage use (1 health = half a heart).")
+                .translation("pneumaticcraft.config.common.general.bandage_health_restored")
+                .defineInRange("bandage_health_restored", 6.0, 1.0, Double.MAX_VALUE);
+        builder.pop();
+
+        builder.push("Worldgen");
+        worldgen.oilWorldGenDimensionWhitelist = builder
+                .worldRestart()
+                .comment("Oil worldgen whitelist by dimension ID: add dimension ID's to this list if you want oil lake worldgen to happen ONLY in those dimensions. You can wildcard the path; e.g 'modid:*' whitelists ALL dimensions of namespace 'modid'. If this is empty, it is ignored, and 'oil_world_gen_dimension_blacklist' will be checked instead.")
+                .translation("pneumaticcraft.config.common.general.oil_world_gen_dimension_whitelist")
+                .define("oil_world_gen_dimension_whitelist", Lists.newArrayList());
+        worldgen.oilWorldGenDimensionBlacklist = builder
+                .worldRestart()
+                .comment("Oil worldgen blacklist by dimension ID: add dimension ID's to this list if you don't want oil lake worldgen to happen there. You can wildcard this; e.g 'modid:*' blacklists ALL dimensions of namespace 'modid'.")
+                .translation("pneumaticcraft.config.common.general.oil_world_gen_dimension_blacklist")
+                .define("oil_world_gen_dimension_blacklist", Lists.newArrayList());
         builder.pop();
 
         builder.push("Machine Properties");
@@ -282,6 +269,10 @@ public class CommonConfig {
                 .comment("The amount of air produced by using 100 FE (Forge Energy) in the flux compressor")
                 .translation("pneumaticcraft.config.common.machine_properties.flux_compressor_efficiency")
                 .defineInRange("flux_compressor_efficiency", 40, 0, Integer.MAX_VALUE);
+        machines.solarCompressorMultiplier = builder
+                .comment("The amount to multiply the air production of the solar compressor by.")
+                .translation("pneumaticcraft.config.common.machine_properties.solar_compressor_multiplier")
+                .defineInRange("solar_compressor_multiplier", 1.0, 0, Double.MAX_VALUE);
         machines.keroseneLampCanUseAnyFuel = builder
                 .comment("Can the Kerosene Lamp burn any kind of fuel?  If false, only Kerosene can be burnt")
                 .translation("pneumaticcraft.config.common.machine_properties.kerosene_lamp_can_use_any_fuel")
@@ -306,6 +297,22 @@ public class CommonConfig {
                 .comment("Are players in Creative mode exempt from Security Station block protection? If false, only server ops are exempt (command permission >= 2)")
                 .translation("pneumaticcraft.config.common.machine_properties.security_station_creative_players_exempt")
                 .define("security_station_creative_players_exempt", false);
+        machines.securityStationAllowHacking = builder
+                .comment("Can Security Stations be hacked? If set to false, Security Stations are purely a grief protection feature with no hacking minigame")
+                .translation("pneumaticcraft.config.common.machine_properties.security_station_allow_hacking")
+                .define("security_station_allow_hacking", true);
+        machines.manualCompressorAirPerCycle = builder
+                .comment("The amount of air produced for 1 pump cycle in the manual compressor")
+                .translation("pneumaticcraft.config.common.machine_properties.manual_compressor_air_per_cycle")
+                .defineInRange("manual_compressor_air_per_cycle", 1000, 0, Integer.MAX_VALUE);
+        machines.manualCompressorHungerDrainPerCycleStep = builder
+                .comment("The amount of hunger consumed from the player for 1 pump cycle step in the manual compressor. For comparison, sprinting consumes 0.1 hunger per meter sprinted.")
+                .translation("pneumaticcraft.config.common.machine_properties.manual_compressor_hunger_drain_per_cycle")
+                .defineInRange("manual_compressor_hunger_drain_per_cycle_step", 0.1, 0, 40);
+        machines.manualCompressorAllowFakePlayers = builder
+                .comment("Whether to allow fake players to use the manual compressor")
+                .translation("pneumaticcraft.config.common.machine_properties.manual_compressor_allow_fake_players")
+                .define("manual_compressor_allow_fake_players", false);
         machines.pneumaticDynamoEfficiency = builder
                 .comment("The amount of FE (Forge Energy) produced by using 100mL of air in the Pneumatic Dynamo")
                 .translation("pneumaticcraft.config.common.machine_properties.pneumatic_dynamo_efficiency")
@@ -330,20 +337,18 @@ public class CommonConfig {
                 .comment("Fuel usage / heat gen multiplier per speed upgrade: usage mult = speedUpgradeUsageMultiplier ^ num_of_speed_upgrades")
                 .translation("pneumaticcraft.config.common.machine_properties.speed_upgrade_usage_multiplier")
                 .defineInRange("speed_upgrade_usage_multiplier", PneumaticValues.DEF_SPEED_UPGRADE_USAGE_MULTIPLIER, 1.0, 2.0);
-        machines.seismicSensorFluids = builder
-                .worldRestart()
-                .comment("Fluid registry ID's that the Seismic Sensor will search for. It's recommended to use 'seismicSensorFluidTags' where possible, but this setting can be used if you want to add fluids which don't have any associated fluid tags.")
-                .translation("pneumaticcraft.config.common.machines.seismic_sensor_fluids")
-                .define("seismic_sensor_fluids", Lists.newArrayList());
-        machines.seismicSensorFluidTags = builder
-                .worldRestart()
-                .comment("Fluid tag names that the Seismic Sensor will search for. Known vanilla tags are 'minecraft:water' and 'minecraft:lava'. Other available fluid tags are mod-dependent. By default, 'forge:crude_oil' is matched, allowing PneumaticCraft (and potentially other mods) crude oil.")
-                .translation("pneumaticcraft.config.common.machines.seismic_sensor_fluid_tags")
-                .define("seismic_sensor_fluid_tags", Lists.newArrayList("forge:crude_oil"));
         machines.disenchantingBlacklist = builder
                 .comment("Blacklist items from being allowed in the Pressure Chamber disenchanting system. This is a starts-with string match, so you can match by mod, or individual item names as you need. Blacklisted by default are Quark Ancient Tomes, and all Tetra items; both can lead to enchantment duping as they have special enchantment mechanics.")
                 .translation("pneumaticcraft.config.common.machines.disenchanting_blacklist")
                 .define("disenchanting_blacklist", Lists.newArrayList("quark:ancient_tome", "tetra:"));
+        machines.aerialInterfaceDimensionBlacklist = builder
+                .comment("ID's of dimensions in which the Aerial Interface is not allowed to operate. You can use wildcarded dimensions here, e.g. 'somemod:*'.")
+                .translation("pneumaticcraft.config.common.machines.aerial_interface_dimension_blacklist")
+                .define("aerial_interface_dimension_blacklist", Lists.newArrayList());
+        machines.vortexCannonPlayerBoostRate = builder
+                .comment("Minimum interval in ticks which the player can use the Vortex Cannon to boost their own speed")
+                .translation("pneumaticcraft.config.common.machines.vortex_cannon.player_boost_rate")
+                .defineInRange("vortex_cannon_player_boost_rate", 10, 1, Integer.MAX_VALUE);
         builder.pop();
 
         builder.push("Pneumatic Armor");
@@ -390,26 +395,13 @@ public class CommonConfig {
                 .comment("Precision to which pressurizable item air levels are synced to client. Default of 10 is precise enough to show pressure to 1 decimal place, which is what is display in client tooltips & pneumatic armor HUD. Lower values will sync less precisely, reducing server->client network traffic. Values higher than 10 are not recommended (will cause extra network traffic for no benefit).")
                 .translation("pneumaticcraft.config.common.advanced.pressurizable_sync_precision")
                 .defineInRange("pressurizable_sync_precision", 10, 1, 100);
-        advanced.stopDroneAI = builder
-                .comment("When set to true, Drones will not execute any program. This is useful to set to true when due to a bug Drones are lagging your server or crashing it. Please report any such bugs as a PneumaticCraft: Repressurized issue so it can be investigated.")
-                .translation("pneumaticcraft.config.common.advanced.stop_drone_ai")
-                .define("stop_drone_ai", false);
         advanced.dontUpdateInfiniteWaterSources = builder
                 .comment("Don't remove a water source block when picking up (drones, liquid hoppers, gas lift) if it has at least two water source neighbours. This can reduce lag due to frequent block updates, and can also potentially make water import much faster. Set this to false if you want no-infinite-water rules in a world, or want to limit the speed of water importing to vanilla block update rates.")
                 .translation("pneumaticcraft.config.common.advanced.dont_update_infinite_water_sources")
                 .define("dont_update_infinite_water_sources", true);
-        advanced.maxDroneChargingStationSearchRange = builder
-                .comment("How far will a drone go to find a Charging Station when it's low on air? Note: drones will teleport, possibly across the world to someone else's base, if this range is very large.")
-                .translation("pneumaticcraft.config.common.advanced.max_drone_charging_station_search_range")
-                .defineInRange("max_drone_charging_station_search_range", 80, 16, Integer.MAX_VALUE);
-        advanced.maxDroneTeleportRange = builder
-                .comment("The maximum distance that a Drone may teleport when it can't find a path to its destination. Default value of 0 means no limit. This is primarily intended to limit abuse of teleportation to other players on PvP servers, but may find other uses. Be careful about setting this value very low.")
-                .translation("pneumaticcraft.config.common.advanced.max_drone_charging_station_search_range")
-                .defineInRange("max_drone_teleport_range", 0, 0, Integer.MAX_VALUE);
-        advanced.stuckDroneTeleportTicks = builder
-                .comment("If a Drone has found a path, but gets stuck on a block along that path, it will teleport to its destination after this many ticks of being stuck. Set this to 0 to disable teleporting, which will likely leave the drone waiting there forever (or until it runs out of air). Note that getting stuck on a block is usually the fault of the mod that added the block (especially if the block has a non-full-cube shape), but if you encounter this behaviour, please report it as a PneumaticCraft: Repressurized issue so it can be investigated.")
-                .translation("pneumaticcraft.config.common.advanced.stuck_drone_teleport_ticks")
-                .defineInRange("stuck_drone_teleport_ticks", 20, 0, Integer.MAX_VALUE);
+        advanced.nbtToClientModification = builder
+                .comment("When set to true, server will strip NBT data from pressurizable items (pneumatic armor, drones...) which the client doesn't care about. Good for saving on network chatter, but can cause players to be kicked under some circumstances. If this occurs, set this config value to false.")
+                .define("nbt_to_client_modification", true);
         builder.pop();
 
         builder.push("Micromissile Properties");
@@ -418,17 +410,25 @@ public class CommonConfig {
                 .translation("pneumaticcraft.config.common.micromissile_properties.base_explosion_damage")
                 .defineInRange("base_explosion_damage", 1, 0, Double.MAX_VALUE);
         micromissiles.damageTerrain = builder
-                .comment("Do micromissile explosions cause terrain damage?")
+                .comment("Do micromissile explosions cause terrain damage? Note: when set to true, the 'tntExplosionDropDecay' gamerule is used to determine block drops.")
                 .translation("pneumaticcraft.config.common.micromissile_properties.damage_terrain")
                 .define("damage_terrain", false);
+        micromissiles.startFires = builder
+                .comment("Do micromissile explosions start fires?")
+                .translation("pneumaticcraft.config.common.micromissile_properties.start_fires")
+                .define("start_fires", false);
         micromissiles.launchCooldown = builder
                 .comment("Cooldown for missile firing in ticks")
                 .translation("pneumaticcraft.config.common.micromissile_properties.launch_cooldown")
                 .defineInRange("launch_cooldown", 15, 0, Integer.MAX_VALUE);
         micromissiles.lifetime = builder
-                .comment("Base missile lifetime in ticks (modified by missile setup)")
+                .comment("Base fueled-flight duration in ticks. After this, missiles will drop from the sky.")
                 .translation("pneumaticcraft.config.common.micromissile_properties.lifetime")
                 .defineInRange("lifetime", 300, 0, Integer.MAX_VALUE);
+        micromissiles.maxLifetime = builder
+                .comment("Hard missile lifetime in ticks. After this, missiles will immediately explode. Value must be greater than or equal to the 'lifetime' setting.")
+                .translation("pneumaticcraft.config.common.micromissile_properties.max_lifetime")
+                .defineInRange("max_lifetime", 600, 0, Integer.MAX_VALUE);
         micromissiles.missilePodSize = builder
                 .comment("Number of micromissiles per pod")
                 .translation("pneumaticcraft.config.common.micromissile_properties.missile_pod_size")
@@ -539,14 +539,14 @@ public class CommonConfig {
         builder.pop();
 
         builder.push("Integration");
-        integration.ieExternalHeaterHeatPerRF = builder
-                .comment("Immersive Engineering: External Heater heat/RF.  The amount of PneumaticCraft heat added by 1 RF.")
-                .translation("pneumaticcraft.config.common.integration.ie_external_heater_heat_per_rf")
-                .defineInRange("ie_external_heater_heat_per_rf", 0.01, 0.0, Double.MAX_VALUE);
-        integration.ieExternalHeaterRFperTick = builder
-                .comment("Immersive Engineering: External Heater RF/t. Set to 0 to disable External Heater integration entirely.")
-                .translation("pneumaticcraft.config.common.integration.ie_external_heater_r_fper_tick")
-                .defineInRange("ie_external_heater_r_fper_tick", 100, 0, Integer.MAX_VALUE);
+        integration.ieExternalHeaterHeatPerFE = builder
+                .comment("Immersive Engineering: External Heater heat/FE.  The amount of PneumaticCraft heat added by using 1 FE in the heater.")
+                .translation("pneumaticcraft.config.common.integration.ie_external_heater_heat_per_fe")
+                .defineInRange("ie_external_heater_heat_per_fe", 0.01, 0.0, Double.MAX_VALUE);
+        integration.ieExternalHeaterFEperTick = builder
+                .comment("Immersive Engineering: External Heater FE/t. Set to 0 to disable External Heater integration entirely.")
+                .translation("pneumaticcraft.config.common.integration.ie_external_heater_fe_per_tick")
+                .defineInRange("ie_external_heater_fe_per_tick", 100, 0, Integer.MAX_VALUE);
         integration.mekThermalResistanceFactor = builder
                 .comment("Mekanism thermal resistance multiplier. Larger values mean slower heat transfer between Mekanism and PneumaticCraft blocks.")
                 .translation("pneumaticcraft.config.common.integration.mek_thermal_resistance_factor")
@@ -556,22 +556,14 @@ public class CommonConfig {
                 .translation("pneumaticcraft.config.common.integration.mek_thermal_efficiency_factor")
                 .defineInRange("mek_thermal_conversion_efficiency", 0.01, 0.0, 2.0);
         integration.cofhHoldingMultiplier = builder
-                .comment("Volume boost multiplier for pressurizable items with the CoFH Holding enchantment; air volume is multiplied by (1 + level_of_holding_enchantment) x this value. Set to 0 to disallow pressurizable items by enchanted with the Holding enchantment at all.")
+                .comment("Volume boost multiplier for pressurizable items with the CoFH Holding enchantment; air volume is multiplied by (1 + level_of_holding_enchantment) x this value. Set to 0 to disallow pressurizable items being enchanted with the Holding enchantment at all.")
                 .translation("pneumaticcraft.config.common.integration.cofh_holding_multiplier")
                 .defineInRange("cofh_holding_multiplier", 1.0, 0.0, Double.MAX_VALUE);
         builder.pop();
 
         builder.push("Recipes");
-        recipes.explosionCrafting = builder
-                .comment("Enable/disable explosion crafting (iron->compressed iron).  If you disable this, you'll need another way to get compressed iron initially. NOTE: this should be considered deprecated, and will be removed in a future release. You should control this via data pack recipes (recipe type 'pneumaticcraft:explosion_crafting').")
-                .translation("pneumaticcraft.config.common.general.explosion_crafting")
-                .define("explosion_crafting", true);
-        recipes.coalToDiamondsRecipe = builder
-                .comment("Enable crafting diamonds from coal blocks in the pressure chamber?  NOTE: this should be considered deprecated, and will be removed in a future release. You should control this via datapack recipe (default recipe ID: 'pneumaticcraft:pressure_chamber/coal_to_diamond').")
-                .translation("pneumaticcraft.config.common.recipes.coal_to_diamonds")
-                .define("coal_to_diamonds", true);
         recipes.inWorldPlasticSolidification = builder
-                .comment("Does Molten Plastic solidify to Plastic Sheets when poured into the world? If set to false, then Heat Frame cooling is the only other default way to make Plastic Sheets.")
+                .comment("Does Molten Plastic solidify to Plastic Sheets when poured into the world? If set to false, then Heat Frame cooling is the only other way to make Plastic Sheets (by default).")
                 .translation("pneumaticcraft.config.common.recipes.in_world_plastic_solidification")
                 .define("in_world_plastic_solidification", true);
         recipes.inWorldYeastCrafting = builder
@@ -582,7 +574,7 @@ public class CommonConfig {
 
         builder.push("Amadron");
         amadron.numPeriodicOffers = builder
-                .comment("Number of periodic offers randomly selected for the 'live' offer list. Note: this a maximum, and the actual number chosen each time may be less.")
+                .comment("Number of periodic offers randomly selected for the 'live' offer list. Note: this a maximum, and the actual number chosen each time may be less. Periodic offers are those offers which have a static: false field in their recipe JSON.")
                 .translation("pneumaticcraft.config.common.amadron.num_periodic_offers")
                 .defineInRange("numPeriodicOffers", 10,0, Integer.MAX_VALUE);
         amadron.numVillagerOffers = builder
@@ -594,21 +586,29 @@ public class CommonConfig {
                 .translation("pneumaticcraft.config.common.amadron.reshuffle_interval")
                 .defineInRange("reshuffleInterval", 24000,1000, Integer.MAX_VALUE);
         amadron.maxTradesPerPlayer = builder
-                .comment("Max number of custom trades a player may add")
+                .comment("Max number of custom trades a (non-admin) player may add")
                 .translation("pneumaticcraft.config.common.amadron.max_trades_per_player")
                 .defineInRange("max_trades_per_player", 50, 0, Integer.MAX_VALUE);
         amadron.notifyOfTradeAddition = builder
-                .comment("Broadcast a notification when player adds a custom trade")
+                .comment("Broadcast a notification when any player adds a custom trade")
                 .translation("pneumaticcraft.config.common.amadron.notify_of_trade_addition")
                 .define("notify_of_trade_addition", true);
         amadron.notifyOfTradeRemoval = builder
-                .comment("Broadcast a notification when player removes a custom trade")
+                .comment("Broadcast a notification when any player removes a custom trade")
                 .translation("pneumaticcraft.config.common.amadron.notify_of_trade_removal")
                 .define("notify_of_trade_removal", true);
         amadron.notifyOfDealMade = builder
                 .comment("Broadcast a notification when a custom Amadron trade is made")
                 .translation("pneumaticcraft.config.common.amadron.notify_of_deal_made")
                 .define("notify_of_deal_made", true);
+        amadron.amadroneSpawnLocation = builder
+                .comment("Amadrone spawn location, relative to the delivery/pickup position. This is a X/Y/Z triple. See also 'amadrone_spawn_location_relative_to_ground_level' for how the drone's Y position is calculated.")
+                .translation("pneumaticcraft.config.common.amadron.amadrone_spawn_location")
+                .define("amadrone_spawn_location", Lists.newArrayList(30, 30, 0));
+        amadron.amadroneSpawnLocationRelativeToGroundLevel = builder
+                .comment("Affects Amadrone Y spawning position: when true, the Y position is relative to ground level at the calculated X/Z position. When false, it is relative to the delivery/pickup position.")
+                .translation("pneumaticcraft.config.common.amadron.amadrone_spawn_location_relative_to_ground_level")
+                .define("amadrone_spawn_location_relative_to_ground_level", true);
         builder.pop();
 
         builder.push("Heat");
@@ -669,16 +669,67 @@ public class CommonConfig {
         builder.pop();
 
         builder.push("Villagers");
-        villagers.addMechanicHouse = builder
-                .comment("Add a village house for the Pressure Mechanic? Note: setting this to false won't affect any already-generated houses, only disable new generation.")
-                .translation("pneumaticcraft.config.common.villagers.add_mechanic_house")
+        villagers.mechanicHouseWeight = builder
+                .comment("Frequency of PneumaticCraft village house generation? Default value of 8 tends to give 0-2 houses per village with no other mods present. Set to 0 to disable house generation entirely. May need to raise this value if there are many other mods also adding village houses. Note: changing this value won't affect any already-generated houses, only new generation.")
+                .translation("pneumaticcraft.config.common.villagers.mechanic_house_weight")
                 .worldRestart()
-                .define("addMechanicHouse", true);
+                .defineInRange("addMechanicHouse", 8, 0, Integer.MAX_VALUE);
         villagers.whichTrades = builder
                 .comment("Which trades should the Pressure Mechanic offer? ALL will offer all trades. PCB_BLUEPRINT will offer *only* the PCB Blueprint, an item required for normal progression through the mod. NONE will offer nothing (but the PCB Blueprint is also available via Amadron by default). Note that changing this won't affect any already-spawned Pressure Mechanics.")
                 .translation("pneumaticcraft.config.common.villagers.mechanic_trades")
                 .worldRestart()
                 .defineEnum("mechanicTrades", VillagerTradesRegistration.WhichTrades.ALL);
+        builder.pop();
+
+        builder.push("Drones");
+        drones.enableDroneSuffocation = builder
+                .comment("Enable Drone Suffocation Damage")
+                .translation("pneumaticcraft.config.common.drones.enable_drone_suffocation")
+                .define("enable_drone_suffocation", true);
+        drones.dronesRenderHeldItem = builder
+                .comment("Drones render their held item (the item in slot 0 of their inventory) ?  Note: this is in common config since if enabled, server needs to sync the item data to the client.")
+                .translation("pneumaticcraft.config.common.drones.drones_render_held_item")
+                .define("drones_render_held_item", true);
+        drones.dronesCanImportXPOrbs = builder
+                .comment("Are drones allowed to import Experience Orbs and convert them to Memory Essence fluid?")
+                .translation("pneumaticcraft.config.common.drones.drones_can_import_xp_orbs")
+                .define("drones_can_import_xp_orbs", true);
+        drones.dronesCanBePickedUp = builder
+                .comment("Will Drones automatically get picked up by Boats/Minecarts/etc. if they're close enough?")
+                .translation("pneumaticcraft.config.common.drones.drones_can_be_picked_up")
+                .define("drones_can_be_picked_up", false);
+        drones.droneDebuggerPathParticles = builder
+                .comment("Show particle trail indicating the currently-debugged drone's planned path")
+                .translation("pneumaticcraft.config.common.drones.drone_debugger_path_particles")
+                .define("drone_debugger_path_particles", true);
+        drones.stopDroneAI = builder
+                .comment("When set to true, Drones will not execute any program. This is useful to set to true when due to a bug Drones are lagging your server or crashing it. Please report any such bugs as a PneumaticCraft: Repressurized issue so it can be investigated.")
+                .translation("pneumaticcraft.config.common.drones.stop_drone_ai")
+                .define("stop_drone_ai", false);
+        drones.maxDroneChargingStationSearchRange = builder
+                .comment("How far will a drone go to find a Charging Station when it's low on air? Note: drones will teleport, possibly across the world to someone else's base, if this range is very large.")
+                .translation("pneumaticcraft.config.common.drones.max_drone_charging_station_search_range")
+                .defineInRange("max_drone_charging_station_search_range", 80, 16, Integer.MAX_VALUE);
+        drones.maxDroneTeleportRange = builder
+                .comment("The maximum distance that a Drone may teleport when it can't find a path to its destination. Default value of 0 means no limit. This is primarily intended to limit abuse of teleportation to other players on PvP servers, but may find other uses. Be careful about setting this value very low.")
+                .translation("pneumaticcraft.config.common.drones.max_drone_teleport_range")
+                .defineInRange("max_drone_teleport_range", 0, 0, Integer.MAX_VALUE);
+        drones.allowNavigateToUnloadedChunks = builder
+                .comment("When false, drones may not navigate or teleport into unloaded chunks. Setting this true may lead to server performance and stability issues - beware.")
+                .translation("pneumaticcraft.config.common.drones.allow_navigate_to_unloaded_chunks")
+                .define("allow_navigate_to_unloaded_chunks", false);
+        drones.stuckDroneTeleportTicks = builder
+                .comment("If a Drone has found a path, but gets stuck on a block along that path, it will teleport to its destination after this many ticks of being stuck. Set this to 0 to disable teleporting, which will likely leave the drone waiting there forever (or until it runs out of air). Note that getting stuck on a block is usually the fault of the mod that added the block (especially if the block has a non-full-cube shape), but if you encounter this behaviour, please report it as a PneumaticCraft: Repressurized issue so it can be investigated.")
+                .translation("pneumaticcraft.config.common.drones.stuck_drone_teleport_ticks")
+                .defineInRange("stuck_drone_teleport_ticks", 20, 0, Integer.MAX_VALUE);
+        drones.allowAnyPlayerVarQuery = builder
+                .comment("When true, drones can query the location of any player on the server with the '$player=<name>' variable syntax. Set this to false if you don't want to allow this, e.g. on a PvP server, where this can turn drones into lethal assassins.")
+                .translation("pneumaticcraft.config.common.general.allowAnyPlayerVarQuery")
+                .define("allowAnyPlayerVarQuery", true);
+        drones.allowTeleportToProtectedArea = builder
+                .comment("When true, drones can teleport into areas protected by Security Stations of other player. You may wish to set this to false on PvP servers.")
+                .translation("pneumaticcraft.config.common.general.allowTeleportToProtectedArea")
+                .define("allowTeleportToProtectedArea", true);
         builder.pop();
     }
 }

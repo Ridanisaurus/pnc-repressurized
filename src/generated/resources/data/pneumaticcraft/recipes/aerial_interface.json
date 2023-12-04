@@ -1,13 +1,9 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "WHW",
-    "ESE",
-    "WTW"
-  ],
+  "category": "misc",
   "key": {
-    "W": {
-      "item": "pneumaticcraft:pressure_chamber_wall"
+    "E": {
+      "item": "minecraft:ender_pearl"
     },
     "H": {
       "item": "pneumaticcraft:omnidirectional_hopper"
@@ -18,11 +14,17 @@
     "T": {
       "item": "pneumaticcraft:advanced_pressure_tube"
     },
-    "E": {
-      "item": "minecraft:ender_pearl"
+    "W": {
+      "item": "pneumaticcraft:pressure_chamber_wall"
     }
   },
+  "pattern": [
+    "WHW",
+    "ESE",
+    "WTW"
+  ],
   "result": {
     "item": "pneumaticcraft:aerial_interface"
-  }
+  },
+  "show_notification": true
 }

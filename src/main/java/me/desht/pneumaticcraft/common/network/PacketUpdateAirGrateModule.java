@@ -17,10 +17,12 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.common.block.tubes.ModuleAirGrate;
-import me.desht.pneumaticcraft.common.block.tubes.TubeModule;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
+import me.desht.pneumaticcraft.common.tubemodules.AbstractTubeModule;
+import me.desht.pneumaticcraft.common.tubemodules.AirGrateModule;
+import me.desht.pneumaticcraft.common.util.EntityFilter;
+import me.desht.pneumaticcraft.lib.Log;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Received on: SERVER
@@ -29,26 +31,30 @@ import net.minecraft.network.PacketBuffer;
 public class PacketUpdateAirGrateModule extends PacketUpdateTubeModule {
     private final String entityFilter;
 
-    public PacketUpdateAirGrateModule(TubeModule module, String entityFilter) {
+    public PacketUpdateAirGrateModule(AbstractTubeModule module, String entityFilter) {
         super(module);
         this.entityFilter = entityFilter;
     }
 
-    public PacketUpdateAirGrateModule(PacketBuffer buffer) {
+    public PacketUpdateAirGrateModule(FriendlyByteBuf buffer) {
         super(buffer);
         entityFilter = buffer.readUtf(32767);
     }
 
     @Override
-    public void toBytes(PacketBuffer buffer) {
+    public void toBytes(FriendlyByteBuf buffer) {
         super.toBytes(buffer);
         buffer.writeUtf(entityFilter);
     }
 
     @Override
-    protected void onModuleUpdate(TubeModule module, PlayerEntity player) {
-        if (module instanceof ModuleAirGrate && module.isUpgraded()) {
-            ((ModuleAirGrate) module).setEntityFilter(entityFilter);
+    protected void onModuleUpdate(AbstractTubeModule module, Player player) {
+        if (module instanceof AirGrateModule airGrate && module.isUpgraded()) {
+            try {
+                airGrate.setEntityFilter(new EntityFilter(entityFilter));
+            } catch (IllegalArgumentException e) {
+                Log.warning("ignoring invalid entity filter " + entityFilter + " (" + e.getMessage() + ")");
+            }
         }
     }
 }

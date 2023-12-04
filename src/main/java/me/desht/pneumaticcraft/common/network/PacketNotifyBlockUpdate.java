@@ -18,18 +18,18 @@
 package me.desht.pneumaticcraft.common.network;
 
 import me.desht.pneumaticcraft.client.util.ClientUtils;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
 /**
  * Received on: CLIENT
  *
- * Sent by server when a block is dropped by shift-wrenching it, rotated by wrenching it, or if a pneumatic TE explodes
+ * Sent by server when a block is dropped by shift-wrenching it, rotated by wrenching it, or if a pneumatic BE explodes
  * due to overpressure.
  * This happens server-side (block updates are triggered on the server), but the client needs to know too so that
  * neighbouring cached block shapes (pressure tubes especially, but potentially anything) can be recalculated.
@@ -39,15 +39,15 @@ public class PacketNotifyBlockUpdate extends LocationIntPacket {
         super(pos);
     }
 
-    public PacketNotifyBlockUpdate(PacketBuffer buffer) {
+    public PacketNotifyBlockUpdate(FriendlyByteBuf buffer) {
         super(buffer);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             if (ctx.get().getSender() == null) {
-                World w = ClientUtils.getClientWorld();
-                w.getBlockState(pos).updateNeighbourShapes(w, pos, Constants.BlockFlags.DEFAULT);
+                Level w = ClientUtils.getClientLevel();
+                w.getBlockState(pos).updateNeighbourShapes(w, pos, Block.UPDATE_ALL);
             }
         });
         ctx.get().setPacketHandled(true);

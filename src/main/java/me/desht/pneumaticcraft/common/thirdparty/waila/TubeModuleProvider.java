@@ -17,52 +17,65 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.waila;
 
-import mcp.mobius.waila.api.IComponentProvider;
-import mcp.mobius.waila.api.IDataAccessor;
-import mcp.mobius.waila.api.IPluginConfig;
-import mcp.mobius.waila.api.IServerDataProvider;
-import me.desht.pneumaticcraft.common.block.BlockPressureTube;
-import me.desht.pneumaticcraft.common.block.tubes.TubeModule;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityPressureTube;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.Constants;
+import me.desht.pneumaticcraft.common.block.PressureTubeBlock;
+import me.desht.pneumaticcraft.common.block.entity.PressureTubeBlockEntity;
+import me.desht.pneumaticcraft.common.tubemodules.AbstractTubeModule;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
+import snownee.jade.api.BlockAccessor;
+import snownee.jade.api.IBlockComponentProvider;
+import snownee.jade.api.IServerDataProvider;
+import snownee.jade.api.ITooltip;
+import snownee.jade.api.config.IPluginConfig;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
+
 public class TubeModuleProvider {
-    public static class Data implements IServerDataProvider<TileEntity> {
+    public static final ResourceLocation ID = RL("tube_module");
+
+    public static class DataProvider implements IServerDataProvider<BlockAccessor> {
         @Override
-        public void appendServerData(CompoundNBT compoundNBT, ServerPlayerEntity player, World world, TileEntity te) {
-            if (te instanceof TileEntityPressureTube) {
-                TubeModule module = BlockPressureTube.getFocusedModule(world, te.getBlockPos(), player);
+        public void appendServerData(CompoundTag compoundTag, BlockAccessor blockAccessor) {
+            if (blockAccessor.getBlockEntity() instanceof PressureTubeBlockEntity) {
+                AbstractTubeModule module = PressureTubeBlock.getFocusedModule(blockAccessor.getLevel(), blockAccessor.getPosition(), blockAccessor.getPlayer());
                 if (module != null) {
-                    compoundNBT.put("module", module.writeToNBT(new CompoundNBT()));
-                    compoundNBT.putByte("side", (byte) module.getDirection().get3DDataValue());
+                    compoundTag.put("module", module.writeToNBT(new CompoundTag()));
+                    compoundTag.putByte("side", (byte) module.getDirection().get3DDataValue());
                 }
             }
         }
+
+        @Override
+        public ResourceLocation getUid() {
+            return ID;
+        }
     }
 
-    public static class Component implements IComponentProvider {
+    public static class ComponentProvider implements IBlockComponentProvider {
         @Override
-        public void appendBody(List<ITextComponent> tooltip, IDataAccessor accessor, IPluginConfig config) {
-            if (accessor.getTileEntity() instanceof TileEntityPressureTube) {
-                TileEntityPressureTube tube = (TileEntityPressureTube) accessor.getTileEntity();
-                CompoundNBT tubeTag = accessor.getServerData();
-                if (tubeTag.contains("side", Constants.NBT.TAG_BYTE)) {
-                    int side = tubeTag.getByte("side");
-                    TubeModule module = tube.getModule(Direction.from3DDataValue(side));
-                    if (module != null) {
-                        module.readFromNBT(tubeTag.getCompound("module"));
-                        module.addInfo(tooltip);
-                    }
+        public void appendTooltip(ITooltip iTooltip, BlockAccessor blockAccessor, IPluginConfig iPluginConfig) {
+            PressureTubeBlockEntity tube = (PressureTubeBlockEntity) blockAccessor.getBlockEntity();
+            CompoundTag tubeTag = blockAccessor.getServerData();
+            if (tubeTag.contains("side", Tag.TAG_BYTE)) {
+                int side = tubeTag.getByte("side");
+                AbstractTubeModule module = tube.getModule(Direction.from3DDataValue(side));
+                if (module != null) {
+                    module.readFromNBT(tubeTag.getCompound("module"));
+                    List<net.minecraft.network.chat.Component> l = new ArrayList<>();
+                    module.addInfo(l);
+                    l.forEach(iTooltip::add);
                 }
             }
+        }
+
+        @Override
+        public ResourceLocation getUid() {
+            return ID;
         }
     }
 }

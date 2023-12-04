@@ -1,0 +1,42 @@
+{
+  "parent": "pneumaticcraft:amadron_tablet",
+  "criteria": {
+    "0": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "pneumaticcraft:pcb_blueprint"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "background": "pneumaticcraft:textures/gui/advancement_bg.png",
+    "description": {
+      "translate": "pneumaticcraft.advancement.pcb_blueprint.desc"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "pneumaticcraft:pcb_blueprint"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "pneumaticcraft.advancement.pcb_blueprint"
+    }
+  },
+  "requirements": [
+    [
+      "0"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  },
+  "sends_telemetry_event": true
+}

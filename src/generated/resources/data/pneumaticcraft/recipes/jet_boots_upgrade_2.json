@@ -1,25 +1,27 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": {
+      "item": "pneumaticcraft:pneumatic_cylinder"
+    },
+    "F": {
+      "item": "minecraft:feather"
+    },
+    "U": {
+      "item": "pneumaticcraft:jet_boots_upgrade_1"
+    },
+    "V": {
+      "item": "pneumaticcraft:vortex_cannon"
+    }
+  },
   "pattern": [
     "FFF",
     "VUV",
     "CFC"
   ],
-  "key": {
-    "F": {
-      "item": "minecraft:feather"
-    },
-    "V": {
-      "item": "pneumaticcraft:vortex_cannon"
-    },
-    "C": {
-      "item": "pneumaticcraft:pneumatic_cylinder"
-    },
-    "U": {
-      "item": "pneumaticcraft:jet_boots_upgrade_1"
-    }
-  },
   "result": {
     "item": "pneumaticcraft:jet_boots_upgrade_2"
-  }
+  },
+  "show_notification": true
 }

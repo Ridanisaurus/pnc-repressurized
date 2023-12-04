@@ -1,0 +1,39 @@
+{
+  "parent": "pneumaticcraft:plastic",
+  "criteria": {
+    "0": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "pneumaticcraft:amadron_tablet"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "background": "pneumaticcraft:textures/gui/advancement_bg.png",
+    "description": {
+      "translate": "pneumaticcraft.advancement.amadron_tablet.desc"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "pneumaticcraft:amadron_tablet"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "pneumaticcraft.advancement.amadron_tablet"
+    }
+  },
+  "requirements": [
+    [
+      "0"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

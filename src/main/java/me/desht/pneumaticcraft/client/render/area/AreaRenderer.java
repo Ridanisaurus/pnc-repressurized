@@ -17,20 +17,20 @@
 
 package me.desht.pneumaticcraft.client.render.area;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.vertex.IVertexBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import me.desht.pneumaticcraft.client.render.ModRenderTypes;
+import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.client.util.RenderUtils;
-import me.desht.pneumaticcraft.common.block.BlockPneumaticCraftCamo;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
+import me.desht.pneumaticcraft.common.block.AbstractCamouflageBlock;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.shapes.ISelectionContext;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.util.math.vector.Matrix4f;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.joml.Matrix4f;
 
 import java.util.Collections;
 import java.util.Set;
@@ -58,7 +58,7 @@ public class AreaRenderer {
 //        this(area, color, 0.5f, disableDepthTest, false, disableDepthTest);
 //    }
 
-    public void render(MatrixStack matrixStack, IRenderTypeBuffer buffer) {
+    public void render(PoseStack matrixStack, MultiBufferSource buffer) {
         if (drawFaces) {
             RenderType type = ModRenderTypes.getBlockHilightFace(disableDepthTest, disableWriteMask);
             render(matrixStack, buffer.getBuffer(type));
@@ -70,7 +70,7 @@ public class AreaRenderer {
         RenderUtils.finishBuffer(buffer, type);
     }
 
-    private void render(MatrixStack matrixStack, IVertexBuilder builder) {
+    private void render(PoseStack matrixStack, VertexConsumer builder) {
         int[] cols = RenderUtils.decomposeColor(color);
         for (BlockPos pos : showingPositions) {
             matrixStack.pushPose();
@@ -86,15 +86,15 @@ public class AreaRenderer {
         }
     }
 
-    private void addVertices(IVertexBuilder wr, Matrix4f posMat, BlockPos pos, int[] cols) {
-        World world = Minecraft.getInstance().level;
-        BlockState state = world.getBlockState(pos);
+    private void addVertices(VertexConsumer wr, Matrix4f posMat, BlockPos pos, int[] cols) {
+        Level level = ClientUtils.getClientLevel();
+        BlockState state = level.getBlockState(pos);
         boolean xray = disableDepthTest || disableWriteMask;
-        if (!xray && !state.getMaterial().isReplaceable()) return;
+        if (!xray && !state.canBeReplaced()) return;
         if (drawShapes) {
-            VoxelShape shape = state.getBlock() instanceof BlockPneumaticCraftCamo ?
-                    ((BlockPneumaticCraftCamo) state.getBlock()).getUncamouflagedShape(state, world, pos, ISelectionContext.empty()) :
-                    state.getShape(world, pos, ISelectionContext.empty());
+            VoxelShape shape = state.getBlock() instanceof AbstractCamouflageBlock c ?
+                    c.getUncamouflagedShape(state, level, pos, CollisionContext.empty()) :
+                    state.getShape(level, pos, CollisionContext.empty());
             shape.forAllBoxes((x1d, y1d, z1d, x2d, y2d, z2d) -> {
                 float x1 = (float) x1d;
                 float x2 = (float) x2d;

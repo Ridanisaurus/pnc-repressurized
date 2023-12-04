@@ -19,26 +19,28 @@ package me.desht.pneumaticcraft.client.model.custom;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.renderer.model.*;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.BlockModel;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.IResourceManager;
-import net.minecraft.util.Direction;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.model.IModelConfiguration;
-import net.minecraftforge.client.model.IModelLoader;
-import net.minecraftforge.client.model.data.IDynamicBakedModel;
-import net.minecraftforge.client.model.data.IModelData;
-import net.minecraftforge.client.model.geometry.IModelGeometry;
+import net.minecraft.client.resources.model.*;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.client.model.IDynamicBakedModel;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
+import net.minecraftforge.client.model.geometry.IGeometryLoader;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.List;
-import java.util.Random;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -46,17 +48,17 @@ import java.util.function.Function;
  * otherwise it will use the base model.  And isBuiltinRenderer() is true to allow ISTER drawing to happen.
  */
 public class RenderedItemModel implements IDynamicBakedModel {
-//    private static final TextureAtlasSprite MISSING = MissingTextureSprite.func_217790_a();
-    private final IBakedModel bakedBaseModel;
+    //    private static final TextureAtlasSprite MISSING = MissingTextureSprite.func_217790_a();
+    private final BakedModel bakedBaseModel;
 
-    private RenderedItemModel(IBakedModel bakedBaseModel) {
+    private RenderedItemModel(BakedModel bakedBaseModel) {
         this.bakedBaseModel = bakedBaseModel;
     }
 
     @Nonnull
     @Override
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull Random rand, @Nonnull IModelData extraData) {
-        return bakedBaseModel.getQuads(state, side, rand, extraData);
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand, @Nonnull ModelData extraData, RenderType renderType) {
+        return bakedBaseModel.getQuads(state, side, rand, extraData, renderType);
     }
 
     @Override
@@ -85,51 +87,36 @@ public class RenderedItemModel implements IDynamicBakedModel {
     }
 
     @Override
-    public ItemOverrideList getOverrides() {
-        return ItemOverrideList.EMPTY;
+    public ItemOverrides getOverrides() {
+        return ItemOverrides.EMPTY;
     }
 
     @Override
-    public IBakedModel handlePerspective(ItemCameraTransforms.TransformType cameraTransformType, MatrixStack mat) {
-        switch (cameraTransformType) {
-            case GROUND:
-            case HEAD:
-            case NONE:
-            case GUI:
-            case FIXED:
-                return bakedBaseModel.handlePerspective(cameraTransformType, mat);
-        }
-        return this;
+    public BakedModel applyTransform(ItemDisplayContext displayContext, PoseStack poseStack, boolean applyLeftHandTransform) {
+        return switch (displayContext) {
+            case GROUND, HEAD, NONE, GUI, FIXED -> bakedBaseModel.applyTransform(displayContext, poseStack, applyLeftHandTransform);
+            default -> this;
+        };
     }
 
-    private static class Geometry implements IModelGeometry<Geometry> {
-        private final BlockModel baseModel;
-
-        Geometry(BlockModel baseModel) {
-            this.baseModel = baseModel;
-        }
-
+    private record Geometry(BlockModel baseModel) implements IUnbakedGeometry<Geometry> {
         @Override
-        public IBakedModel bake(IModelConfiguration owner, ModelBakery bakery, Function<RenderMaterial, TextureAtlasSprite> spriteGetter, IModelTransform modelTransform, ItemOverrideList overrides, ResourceLocation modelLocation) {
+        public BakedModel bake(IGeometryBakingContext owner, ModelBaker bakery, Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelTransform, ItemOverrides overrides, ResourceLocation modelLocation) {
             return new RenderedItemModel(baseModel.bake(bakery, baseModel, spriteGetter, modelTransform, modelLocation, true));
         }
 
         @Override
-        public Collection<RenderMaterial> getTextures(IModelConfiguration owner, Function<ResourceLocation, IUnbakedModel> modelGetter, Set<com.mojang.datafixers.util.Pair<String, String>> missingTextureErrors) {
-            return baseModel.getMaterials(modelGetter, missingTextureErrors);
+        public void resolveParents(Function<ResourceLocation, UnbakedModel> modelGetter, IGeometryBakingContext context) {
+            baseModel.resolveParents(modelGetter);
         }
     }
 
-    public enum Loader implements IModelLoader<Geometry> {
+    public enum Loader implements IGeometryLoader<Geometry> {
         INSTANCE;
 
         @Override
-        public void onResourceManagerReload(IResourceManager resourceManager) {
-        }
-
-        @Override
-        public Geometry read(JsonDeserializationContext deserializationContext, JsonObject modelContents) {
-            BlockModel baseModel = deserializationContext.deserialize(JSONUtils.getAsJsonObject(modelContents, "base_model"), BlockModel.class);
+        public Geometry read(JsonObject modelContents, JsonDeserializationContext deserializationContext) {
+            BlockModel baseModel = deserializationContext.deserialize(GsonHelper.getAsJsonObject(modelContents, "base_model"), BlockModel.class);
             return new Geometry(baseModel);
         }
     }

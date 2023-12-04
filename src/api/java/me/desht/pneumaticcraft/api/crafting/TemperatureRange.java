@@ -18,8 +18,8 @@
 package me.desht.pneumaticcraft.api.crafting;
 
 import com.google.gson.JsonObject;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.JSONUtils;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.util.GsonHelper;
 import org.apache.commons.lang3.Validate;
 
 /**
@@ -109,11 +109,11 @@ public class TemperatureRange {
     }
 
     /**
-     * Read a temperature range from packet buffer, as written by {@link #write(PacketBuffer)}
+     * Read a temperature range from packet buffer, as written by {@link #write(FriendlyByteBuf)}
      * @param buffer the buffer
      * @return a new temperature range object
      */
-    public static TemperatureRange read(PacketBuffer buffer) {
+    public static TemperatureRange read(FriendlyByteBuf buffer) {
         return new TemperatureRange(buffer.readVarInt(), buffer.readVarInt());
     }
 
@@ -162,7 +162,7 @@ public class TemperatureRange {
         return max < Integer.MAX_VALUE;
     }
 
-    public void write(PacketBuffer buffer) {
+    public void write(FriendlyByteBuf buffer) {
         buffer.writeVarInt(min);
         buffer.writeVarInt(max);
     }
@@ -178,9 +178,9 @@ public class TemperatureRange {
         if (!json.has("min_temp") && !json.has("max_temp")) {
             return TemperatureRange.any();
         }
-        if (!json.has("min_temp")) return TemperatureRange.max(JSONUtils.getAsInt(json,"max_temp"));
-        if (!json.has("max_temp")) return TemperatureRange.min(JSONUtils.getAsInt(json,"min_temp"));
-        return TemperatureRange.of(JSONUtils.getAsInt(json,"min_temp"), JSONUtils.getAsInt(json,"max_temp"));
+        if (!json.has("min_temp")) return TemperatureRange.max(GsonHelper.getAsInt(json,"max_temp"));
+        if (!json.has("max_temp")) return TemperatureRange.min(GsonHelper.getAsInt(json,"min_temp"));
+        return TemperatureRange.of(GsonHelper.getAsInt(json,"min_temp"), GsonHelper.getAsInt(json,"max_temp"));
     }
 
     public String asString(TemperatureScale scale) {
@@ -214,11 +214,11 @@ public class TemperatureRange {
         }
 
         public float convertFromKelvin(float tempIn) {
-            switch (this) {
-                case CELSIUS: return tempIn - 273;
-                case FAHRENHEIT: return (tempIn - 273) * 1.8f + 32;
-                case KELVIN: default: return tempIn;
-            }
+            return switch (this) {
+                case CELSIUS -> tempIn - 273;
+                case FAHRENHEIT -> (tempIn - 273) * 1.8f + 32;
+                case KELVIN -> tempIn;
+            };
         }
 
         public String symbol() {

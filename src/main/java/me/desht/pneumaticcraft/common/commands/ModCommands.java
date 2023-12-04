@@ -18,87 +18,174 @@
 package me.desht.pneumaticcraft.common.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.datafixers.util.Either;
 import me.desht.pneumaticcraft.api.PneumaticRegistry;
+import me.desht.pneumaticcraft.api.lib.Names;
+import me.desht.pneumaticcraft.api.pneumatic_armor.IArmorUpgradeHandler;
+import me.desht.pneumaticcraft.common.network.NetworkHandler;
+import me.desht.pneumaticcraft.common.network.PacketSetGlobalVariable;
+import me.desht.pneumaticcraft.common.pneumatic_armor.ArmorUpgradeRegistry;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorHandler;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorRegistry;
 import me.desht.pneumaticcraft.common.util.GlobalPosHelper;
 import me.desht.pneumaticcraft.common.util.IOHelper;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import me.desht.pneumaticcraft.common.variables.GlobalVariableHelper;
 import me.desht.pneumaticcraft.common.variables.GlobalVariableManager;
-import net.minecraft.command.CommandSource;
-import net.minecraft.command.Commands;
-import net.minecraft.command.arguments.BlockPosArgument;
-import net.minecraft.command.arguments.EntityArgument;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.GlobalPos;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.item.ItemArgument;
+import net.minecraft.commands.arguments.item.ItemInput;
+import net.minecraft.commands.synchronization.ArgumentTypeInfo;
+import net.minecraft.commands.synchronization.ArgumentTypeInfos;
+import net.minecraft.commands.synchronization.SingletonArgumentInfo;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.RegistryObject;
+import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
+import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
-import static net.minecraft.command.Commands.argument;
-import static net.minecraft.command.arguments.BlockPosArgument.getLoadedBlockPos;
-import static net.minecraft.command.arguments.EntityArgument.getPlayer;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
+import static net.minecraft.commands.arguments.EntityArgument.getPlayer;
+import static net.minecraft.commands.arguments.coordinates.BlockPosArgument.getLoadedBlockPos;
 
 public class ModCommands {
-    public static void register(CommandDispatcher<CommandSource> dispatcher) {
-        dispatcher.register(Commands.literal("dumpNBT")
-                .requires(cs -> cs.hasPermission(2))
-                .executes(ModCommands::dumpNBT)
-        );
+    public static final DeferredRegister<ArgumentTypeInfo<?, ?>> COMMAND_ARGUMENT_TYPES
+            = DeferredRegister.create(Registries.COMMAND_ARGUMENT_TYPE, Names.MOD_ID);
+    private static final RegistryObject<SingletonArgumentInfo<ModCommands.VarnameType>> VARNAME_COMMAND_ARGUMENT_TYPE
+            = COMMAND_ARGUMENT_TYPES.register("varname",
+            () -> ArgumentTypeInfos.registerByClass(ModCommands.VarnameType.class, SingletonArgumentInfo.contextFree(VarnameType::new)));
+    private static final ResourceLocation UNKNOWN_ITEM = RL("unknown");
 
-        dispatcher.register(Commands.literal("amadrone_deliver")
-                .requires(cs -> cs.hasPermission(2))
-                .then(argument("toPos", BlockPosArgument.blockPos())
-                        .then(argument("fromPos", BlockPosArgument.blockPos())
-                                .executes(ctx -> amadroneDeliver(ctx.getSource(), getLoadedBlockPos(ctx, "toPos"), getLoadedBlockPos(ctx, "fromPos")))
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext buildContext) {
+        dispatcher.register(literal("pncr")
+                .then(literal("dump_nbt")
+                        .requires(cs -> cs.hasPermission(2))
+                        .executes(ModCommands::dumpNBT)
+                )
+                .then(literal("global_var")
+                        .then(literal("get")
+                                .then(argument("varname", new VarnameType())
+                                        .suggests(ModCommands::suggestVarNames)
+                                        .executes(c -> getGlobalVar(c, StringArgumentType.getString(c,"varname")))
+                                )
+                        )
+                        .then(literal("set")
+                                .then(argument("varname", new VarnameType())
+                                        .then(argument("pos", BlockPosArgument.blockPos())
+                                                .executes(c -> setGlobalVar(c, StringArgumentType.getString(c,"varname"), Either.left(BlockPosArgument.getLoadedBlockPos(c, "pos"))))
+                                        )
+                                        .then(argument("item", ItemArgument.item(buildContext))
+                                                .executes(c -> setGlobalVar(c, StringArgumentType.getString(c,"varname"), Either.right(ItemArgument.getItem(c, "item"))))
+                                        )
+                                )
+                        )
+                        .then(literal("delete")
+                                .then(argument("varname", StringArgumentType.greedyString())
+                                        .suggests(ModCommands::suggestVarNames)
+                                        .executes(c -> delGlobalVar(c, StringArgumentType.getString(c,"varname")))
+                                )
+                        )
+                        .then(literal("list")
+                                .executes(ModCommands::listGlobalVars)
                         )
                 )
-                .then(argument("player", EntityArgument.player())
-                        .then(argument("fromPos", BlockPosArgument.blockPos())
-                                .executes(ctx -> amadroneDeliver(ctx.getSource(), getPlayer(ctx, "player").blockPosition(), getLoadedBlockPos(ctx, "fromPos")))
+                .then(literal("amadrone_deliver")
+                        .requires(cs -> cs.hasPermission(2))
+                        .then(argument("toPos", BlockPosArgument.blockPos())
+                                .then(argument("fromPos", BlockPosArgument.blockPos())
+                                        .executes(ctx -> amadroneDeliver(ctx.getSource(), getLoadedBlockPos(ctx, "toPos"), getLoadedBlockPos(ctx, "fromPos")))
+                                )
+                        )
+                        .then(argument("player", EntityArgument.player())
+                                .then(argument("fromPos", BlockPosArgument.blockPos())
+                                        .executes(ctx -> amadroneDeliver(ctx.getSource(), getPlayer(ctx, "player").blockPosition(), getLoadedBlockPos(ctx, "fromPos")))
+                                )
                         )
                 )
-        );
-
-        dispatcher.register(Commands.literal("get_global_var")
-                .then(argument("varname", StringArgumentType.string())
-                        .executes(c -> getGlobalVar(c, StringArgumentType.getString(c,"varname")))
-                )
-        );
-
-        dispatcher.register(Commands.literal("set_global_var")
-                .then(argument("varname", StringArgumentType.string())
-                        .then(argument("pos", BlockPosArgument.blockPos())
-                                .executes(c -> setGlobalVar(c, StringArgumentType.getString(c,"varname"), BlockPosArgument.getLoadedBlockPos(c, "pos")))
+                .then(literal("armor_upgrade")
+                        .then(argument("upgrade", ResourceLocationArgument.id())
+                                .suggests((ctx, builder) -> suggestUpgradeIDs(builder))
+                                .then(argument("enabled", BoolArgumentType.bool())
+                                        .executes(ctx -> setArmorUpgrade(ctx.getSource(), ResourceLocationArgument.getId(ctx, "upgrade"), BoolArgumentType.getBool(ctx, "enabled")))
+                                )
                         )
                 )
         );
     }
 
-    private static int dumpNBT(CommandContext<CommandSource> ctx) {
-        CommandSource source = ctx.getSource();
-        if (source.getEntity() instanceof PlayerEntity) {
-            ItemStack held = ((PlayerEntity) source.getEntity()).getMainHandItem();
-            if (held.getTag() == null) {
-                source.sendFailure(new StringTextComponent("No NBT"));
-                return 0;
-            } else if (held.getTag().isEmpty()) {
-                source.sendFailure(new StringTextComponent("Empty NBT"));
+    private static int setArmorUpgrade(CommandSourceStack source, ResourceLocation id, boolean enabled) throws CommandSyntaxException {
+        Optional<IArmorUpgradeHandler<?>> upgrade = CommonArmorRegistry.getInstance().getArmorUpgradeHandler(id);
+
+        if (upgrade.isPresent()) {
+            CommonArmorHandler handler = CommonArmorHandler.getHandlerForPlayer(source.getPlayerOrException());
+            if (handler.upgradeUsable(upgrade.get(), false)) {
+                handler.setUpgradeEnabled(upgrade.get(), enabled);
+                source.sendSuccess(() -> Component.literal(id + " enabled = " + enabled), false);
+                return 1;
+            } else {
+                source.sendFailure(Component.literal("Upgrade " + id + " is not inserted!").withStyle(ChatFormatting.RED));
                 return 0;
             }
-            source.sendSuccess(new StringTextComponent(held.getTag().toString()), false);
+        } else {
+            source.sendFailure(Component.literal("Unknown upgrade ID: " + id).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    private static CompletableFuture<Suggestions> suggestUpgradeIDs(SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(ArmorUpgradeRegistry.getInstance().getKnownUpgradeIds(), builder);
+    }
+
+    private static CompletableFuture<Suggestions> suggestVarNames(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
+        Collection<String> varNames = GlobalVariableManager.getInstance().getAllActiveVariableNames(ctx.getSource().getPlayer());
+        return SharedSuggestionProvider.suggest(varNames, builder);
+    }
+
+    private static int dumpNBT(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        if (source.getEntity() instanceof Player) {
+            ItemStack held = ((Player) source.getEntity()).getMainHandItem();
+            if (held.getTag() == null) {
+                source.sendFailure(Component.literal("No NBT"));
+                return 0;
+            } else if (held.getTag().isEmpty()) {
+                source.sendFailure(Component.literal("Empty NBT"));
+                return 0;
+            }
+            source.sendSuccess(() -> Component.literal(held.getTag().toString()), false);
             return 1;
         }
         return 0;
     }
 
-    private static int amadroneDeliver(CommandSource source, BlockPos toPos, BlockPos fromPos) {
-        TileEntity te = source.getLevel().getBlockEntity(fromPos);
+    private static int amadroneDeliver(CommandSourceStack source, BlockPos toPos, BlockPos fromPos) {
+        BlockEntity te = source.getLevel().getBlockEntity(fromPos);
 
         int status = IOHelper.getInventoryForTE(te).map(inv -> {
             List<ItemStack> deliveredStacks = new ArrayList<>();
@@ -108,7 +195,7 @@ public class ModCommands {
             if (deliveredStacks.size() > 0) {
                 GlobalPos gPos = GlobalPosHelper.makeGlobalPos(source.getLevel(), toPos);
                 PneumaticRegistry.getInstance().getDroneRegistry().deliverItemsAmazonStyle(gPos, deliveredStacks.toArray(new ItemStack[0]));
-                source.sendSuccess(xlate("pneumaticcraft.command.deliverAmazon.success", PneumaticCraftUtils.posToString(fromPos), PneumaticCraftUtils.posToString(toPos)), false);
+                source.sendSuccess(() -> xlate("pneumaticcraft.command.deliverAmazon.success", PneumaticCraftUtils.posToString(fromPos), PneumaticCraftUtils.posToString(toPos)), false);
                 return 1;
             } else {
                 source.sendFailure(xlate("pneumaticcraft.command.deliverAmazon.noItems", PneumaticCraftUtils.posToString(fromPos)));
@@ -120,20 +207,115 @@ public class ModCommands {
         return status;
     }
 
-    private static int getGlobalVar(CommandContext<CommandSource> ctx, String varName) {
-        CommandSource source = ctx.getSource();
-        if (varName.startsWith("#")) varName = varName.substring(1);
-        BlockPos pos = GlobalVariableManager.getInstance().getPos(varName);
-        ItemStack stack = GlobalVariableManager.getInstance().getItem(varName);
-        source.sendSuccess(xlate("pneumaticcraft.command.getGlobalVariable.output", varName, PneumaticCraftUtils.posToString(pos), stack.getHoverName().getString()), false);
+    private static int listGlobalVars(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        Player playerEntity = source.getEntity() instanceof Player ? (Player) source.getEntity() : null;
+        UUID id = playerEntity == null ? null : playerEntity.getUUID();
+        Collection<String> varNames = GlobalVariableManager.getInstance().getAllActiveVariableNames(playerEntity);
+        source.sendSuccess(() -> Component.literal(varNames.size() + " vars").withStyle(ChatFormatting.GREEN, ChatFormatting.UNDERLINE), false);
+        varNames.stream().sorted().forEach(var -> {
+            BlockPos pos = GlobalVariableHelper.getPos(id, var);
+            ItemStack stack = GlobalVariableHelper.getStack(id, var);
+            String val = PneumaticCraftUtils.posToString(pos) + (stack.isEmpty() ? "" : " / " + PneumaticCraftUtils.getRegistryName(stack.getItem()).orElse(UNKNOWN_ITEM));
+            source.sendSuccess(() -> Component.literal(var).append(" = [").append(val).append("]"), false);
+        });
         return 1;
     }
 
-    private static int setGlobalVar(CommandContext<CommandSource> ctx, String varName, BlockPos pos) {
-        CommandSource source = ctx.getSource();
-        if (varName.startsWith("#")) varName = varName.substring(1);
-        GlobalVariableManager.getInstance().set(varName, pos);
-        source.sendSuccess(xlate("pneumaticcraft.command.setGlobalVariable.output", varName, PneumaticCraftUtils.posToString(pos)), false);
+    private static int getGlobalVar(CommandContext<CommandSourceStack> ctx, String varName0) {
+        CommandSourceStack source = ctx.getSource();
+        String varName;
+        if (!GlobalVariableHelper.hasPrefix(varName0)) {
+            source.sendSuccess(() -> xlate("pneumaticcraft.command.globalVariable.prefixReminder", varName0).withStyle(ChatFormatting.GOLD), false);
+            varName = "#" + varName0;
+        } else {
+            varName = varName0;
+        }
+        UUID id = varName.startsWith("%") || !(ctx.getSource().getEntity() instanceof Player player) ? null : player.getUUID();
+        BlockPos pos = GlobalVariableHelper.getPos(id, varName);
+        ItemStack stack = GlobalVariableHelper.getStack(id, varName);
+        String val = PneumaticCraftUtils.posToString(pos) + (stack.isEmpty() ? "" : " / " + PneumaticCraftUtils.getRegistryName(stack.getItem()).orElse(UNKNOWN_ITEM));
+        if (pos == null && stack.isEmpty()) {
+            source.sendFailure(xlate("pneumaticcraft.command.globalVariable.missing", varName));
+        } else {
+            source.sendSuccess(() -> xlate("pneumaticcraft.command.globalVariable.output", varName, val), false);
+        }
+
         return 1;
+    }
+
+    private static int setGlobalVar(CommandContext<CommandSourceStack> ctx, String varName0, Either<BlockPos, ItemInput> posOrItem) {
+        CommandSourceStack source = ctx.getSource();
+
+        String varName;
+        if (!GlobalVariableHelper.hasPrefix(varName0)) {
+            source.sendSuccess(() -> xlate("pneumaticcraft.command.globalVariable.prefixReminder", varName0).withStyle(ChatFormatting.GOLD), false);
+            varName = "#" + varName0;
+        } else {
+            varName = varName0;
+        }
+
+        try {
+            UUID id = varName.startsWith("%") ? null : ctx.getSource().getPlayerOrException().getUUID();
+            final String v = varName;
+            posOrItem.ifLeft(pos -> {
+                GlobalVariableHelper.setPos(id, v, pos);
+                source.sendSuccess(() -> xlate("pneumaticcraft.command.globalVariable.output", v, PneumaticCraftUtils.posToString(pos)), true);
+            }).ifRight(item -> {
+                ItemStack stack = new ItemStack(item.getItem());
+                GlobalVariableHelper.setStack(id, v, stack);
+                source.sendSuccess(() -> xlate("pneumaticcraft.command.globalVariable.output", v, PneumaticCraftUtils.getRegistryName(stack.getItem()).orElse(UNKNOWN_ITEM)), true);
+            });
+        } catch (CommandSyntaxException e) {
+            source.sendFailure(Component.literal("Player-globals require player context!"));
+        }
+
+        return 1;
+    }
+
+    private static int delGlobalVar(CommandContext<CommandSourceStack> ctx, String varName0) {
+        CommandSourceStack source = ctx.getSource();
+
+        String varName;
+        if (!GlobalVariableHelper.hasPrefix(varName0)) {
+            source.sendSuccess(() -> xlate("pneumaticcraft.command.globalVariable.prefixReminder", varName0).withStyle(ChatFormatting.GOLD), false);
+            varName = "#" + varName0;
+        } else {
+            varName = varName0;
+        }
+
+        try {
+            UUID id = varName.startsWith("%") ? null : ctx.getSource().getPlayerOrException().getUUID();
+            if (GlobalVariableHelper.getPos(id, varName) == null && GlobalVariableHelper.getStack(id, varName).isEmpty()) {
+                source.sendFailure(xlate("pneumaticcraft.command.globalVariable.missing", varName));
+            } else {
+                GlobalVariableHelper.setPos(id, varName, null);
+                GlobalVariableHelper.setStack(id, varName, ItemStack.EMPTY);
+                // global var deletions need to get sync'd to players; syncing normally happens when remote/gps tool/etc GUI's
+                // are opened, but deleted vars won't get sync'd there, so could wrongly hang around on the client
+                if (id != null) {
+                    PneumaticRegistry.getInstance().getMiscHelpers().syncGlobalVariable(ctx.getSource().getPlayerOrException(), varName);
+                } else {
+                    NetworkHandler.sendToAll(new PacketSetGlobalVariable(varName, (BlockPos) null));
+                    NetworkHandler.sendToAll(new PacketSetGlobalVariable(varName, ItemStack.EMPTY));
+                }
+                source.sendSuccess(() -> xlate("pneumaticcraft.command.globalVariable.delete", varName), true);
+            }
+        } catch (CommandSyntaxException e) {
+            source.sendFailure(Component.literal("Player-globals require player context!"));
+        }
+        return 1;
+    }
+
+    private static class VarnameType implements ArgumentType<String> {
+        @Override
+        public String parse(StringReader reader) {
+            int start = reader.getCursor();
+            if (reader.peek() == '#' || reader.peek() == '%') reader.skip();
+            while (reader.canRead() && (StringUtils.isAlphanumeric(String.valueOf(reader.peek())) || reader.peek() == '_')) {
+                reader.skip();
+            }
+            return reader.getString().substring(start, reader.getCursor());
+        }
     }
 }

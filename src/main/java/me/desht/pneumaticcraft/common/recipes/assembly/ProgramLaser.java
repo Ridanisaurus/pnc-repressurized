@@ -18,13 +18,13 @@
 package me.desht.pneumaticcraft.common.recipes.assembly;
 
 import me.desht.pneumaticcraft.api.crafting.recipe.AssemblyRecipe;
+import me.desht.pneumaticcraft.common.block.entity.AssemblyControllerBlockEntity;
 import me.desht.pneumaticcraft.common.core.ModItems;
-import me.desht.pneumaticcraft.common.item.ItemAssemblyProgram;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityAssemblyController;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
+import me.desht.pneumaticcraft.common.item.AssemblyProgramItem;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import java.util.Collection;
 
@@ -36,10 +36,10 @@ public class ProgramLaser extends AssemblyProgram {
     }
 
     @Override
-    public boolean executeStep(TileEntityAssemblyController.AssemblySystem system) {
+    public boolean executeStep(AssemblyControllerBlockEntity.AssemblySystem system) {
         boolean useAir = true;
 
-        World world = system.getPlatform().getLevel();
+        Level world = system.getPlatform().getLevel();
 
         if (!system.getPlatform().getHeldStack().isEmpty()) {
             if (canItemBeLasered(world, system.getPlatform().getHeldStack())) {
@@ -60,25 +60,25 @@ public class ProgramLaser extends AssemblyProgram {
         return useAir;
     }
 
-    private boolean canItemBeLasered(World world, ItemStack item) {
-        return PneumaticCraftRecipeType.ASSEMBLY_LASER.findFirst(world, r -> r.matches(item)) != null;
+    private boolean canItemBeLasered(Level world, ItemStack item) {
+        return ModRecipeTypes.ASSEMBLY_LASER.get().findFirst(world, r -> r.matches(item)) != null;
     }
 
     @Override
-    public void writeToNBT(CompoundNBT tag) {
+    public void writeToNBT(CompoundTag tag) {
     }
 
     @Override
-    public void readFromNBT(CompoundNBT tag) {
+    public void readFromNBT(CompoundTag tag) {
     }
 
     @Override
-    public Collection<AssemblyRecipe> getRecipeList(World world) {
-        return PneumaticCraftRecipeType.ASSEMBLY_LASER.getRecipes(world).values();
+    public Collection<AssemblyRecipe> getRecipeList(Level world) {
+        return ModRecipeTypes.getRecipes(world, ModRecipeTypes.ASSEMBLY_LASER);
     }
 
     @Override
-    public ItemAssemblyProgram getItem() {
+    public AssemblyProgramItem getItem() {
         return ModItems.ASSEMBLY_PROGRAM_LASER.get();
     }
 }

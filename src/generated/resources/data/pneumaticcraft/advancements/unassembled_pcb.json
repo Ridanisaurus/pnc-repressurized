@@ -1,0 +1,39 @@
+{
+  "parent": "pneumaticcraft:empty_pcb",
+  "criteria": {
+    "0": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "pneumaticcraft:unassembled_pcb"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "background": "pneumaticcraft:textures/gui/advancement_bg.png",
+    "description": {
+      "translate": "pneumaticcraft.advancement.unassembled_pcb.desc"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "pneumaticcraft:unassembled_pcb"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "pneumaticcraft.advancement.unassembled_pcb"
+    }
+  },
+  "requirements": [
+    [
+      "0"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

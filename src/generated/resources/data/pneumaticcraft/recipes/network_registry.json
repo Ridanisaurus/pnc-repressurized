@@ -1,10 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "CEC",
-    "EXE",
-    "CEC"
-  ],
+  "category": "misc",
   "key": {
     "C": {
       "tag": "forge:dyes/lime"
@@ -16,7 +12,13 @@
       "tag": "forge:chests/wooden"
     }
   },
+  "pattern": [
+    "CEC",
+    "EXE",
+    "CEC"
+  ],
   "result": {
     "item": "pneumaticcraft:network_registry"
-  }
+  },
+  "show_notification": true
 }

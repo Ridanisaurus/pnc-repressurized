@@ -17,16 +17,16 @@
 
 package me.desht.pneumaticcraft.common.hacking.block;
 
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SilverfishBlock;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableBlock;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.InfestedBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 
@@ -34,33 +34,34 @@ import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
 public class HackableSilverfish implements IHackableBlock {
+    private static final ResourceLocation ID = RL("silverfish");
 
     @Override
     public ResourceLocation getHackableId() {
-        return RL("silverfish");
+        return ID;
     }
 
     @Override
-    public void addInfo(IBlockReader world, BlockPos pos, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addInfo(BlockGetter world, BlockPos pos, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.result.neutralize"));
     }
 
     @Override
-    public void addPostHackInfo(IBlockReader world, BlockPos pos, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addPostHackInfo(BlockGetter world, BlockPos pos, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.finished.neutralized"));
     }
 
     @Override
-    public int getHackTime(IBlockReader world, BlockPos pos, PlayerEntity player) {
+    public int getHackTime(BlockGetter world, BlockPos pos, Player player) {
         return 40;
     }
 
     @Override
-    public void onHackComplete(World world, BlockPos pos, PlayerEntity player) {
+    public void onHackComplete(Level world, BlockPos pos, Player player) {
         BlockState state = world.getBlockState(pos);
 
-        if (state.getBlock() instanceof SilverfishBlock) {
-            Block newBlock = ((SilverfishBlock) state.getBlock()).getHostBlock();
+        if (state.getBlock() instanceof InfestedBlock) {
+            Block newBlock = ((InfestedBlock) state.getBlock()).getHostBlock();
             world.setBlock(pos, newBlock.defaultBlockState(), 3);
         }
     }

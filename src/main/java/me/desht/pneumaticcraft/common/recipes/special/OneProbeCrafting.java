@@ -18,41 +18,47 @@
 package me.desht.pneumaticcraft.common.recipes.special;
 
 import me.desht.pneumaticcraft.common.core.ModItems;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapelessRecipe;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
-import net.minecraftforge.registries.ObjectHolder;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
+import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 
 public class OneProbeCrafting extends ShapelessRecipe {
-    @ObjectHolder("theoneprobe:probe")
-    public static final Item ONE_PROBE = null;
+    private static Item theOneProbe = null;
 
     private static final String ONE_PROBE_TAG = "theoneprobe";
 
-    public OneProbeCrafting(ResourceLocation idIn) {
-        super(idIn, "", makeOutputStack(),
-                NonNullList.of(Ingredient.EMPTY, Ingredient.of(ModItems.PNEUMATIC_HELMET.get()), Ingredient.of(ONE_PROBE)));
+    public OneProbeCrafting(ResourceLocation idIn, CraftingBookCategory category) {
+        super(idIn, "", category, makeOutputStack(),
+                NonNullList.of(Ingredient.EMPTY, Ingredient.of(ModItems.PNEUMATIC_HELMET.get()), Ingredient.of(probe())));
+    }
+
+    private static Item probe() {
+        if (theOneProbe == null) {
+            theOneProbe = ForgeRegistries.ITEMS.getValue(new ResourceLocation("theoneprobe:probe"));
+        }
+        return theOneProbe;
     }
 
     @Override
-    public boolean matches(CraftingInventory inv, World worldIn) {
-        if (ONE_PROBE == null) return false;
-
+    public boolean matches(CraftingContainer inv, Level worldIn) {
         boolean probeFound = false, helmetFound = false;
         for (int i = 0; i < inv.getContainerSize(); i++) {
             Item item = inv.getItem(i).getItem();
             if (item == ModItems.PNEUMATIC_HELMET.get()) {
                 if (helmetFound || isOneProbeEnabled(inv.getItem(i))) return false;
                 helmetFound = true;
-            } else if (item == ONE_PROBE) {
+            } else if (item == probe()) {
                 if (probeFound) return false;
                 probeFound = true;
             } else if (item != Items.AIR) {
@@ -63,7 +69,7 @@ public class OneProbeCrafting extends ShapelessRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingInventory inv) {
+    public ItemStack assemble(CraftingContainer inv, RegistryAccess registryAccess) {
         ItemStack helmet = findHelmet(inv);
         if (helmet.isEmpty()) return ItemStack.EMPTY;
         ItemStack output = helmet.copy();
@@ -72,11 +78,11 @@ public class OneProbeCrafting extends ShapelessRecipe {
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        return ModRecipes.ONE_PROBE_HELMET_CRAFTING.get();
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeSerializers.ONE_PROBE_HELMET_CRAFTING.get();
     }
 
-    private ItemStack findHelmet(CraftingInventory inv) {
+    private ItemStack findHelmet(CraftingContainer inv) {
         for (int i = 0; i < inv.getContainerSize(); i++) {
             if (inv.getItem(i).getItem() == ModItems.PNEUMATIC_HELMET.get()) {
                 return inv.getItem(i).copy();

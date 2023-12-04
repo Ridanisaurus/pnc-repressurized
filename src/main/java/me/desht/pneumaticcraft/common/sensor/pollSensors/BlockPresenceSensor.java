@@ -18,10 +18,11 @@
 package me.desht.pneumaticcraft.common.sensor.pollSensors;
 
 import com.google.common.collect.ImmutableSet;
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
 import me.desht.pneumaticcraft.api.universal_sensor.IBlockAndCoordinatePollSensor;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import me.desht.pneumaticcraft.common.upgrades.ModUpgrades;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 
 import java.util.Set;
 
@@ -33,8 +34,8 @@ public class BlockPresenceSensor implements IBlockAndCoordinatePollSensor {
     }
 
     @Override
-    public Set<EnumUpgrade> getRequiredUpgrades() {
-        return ImmutableSet.of(EnumUpgrade.BLOCK_TRACKER);
+    public Set<PNCUpgrade> getRequiredUpgrades() {
+        return ImmutableSet.of(ModUpgrades.BLOCK_TRACKER.get());
     }
 
     @Override
@@ -48,7 +49,7 @@ public class BlockPresenceSensor implements IBlockAndCoordinatePollSensor {
     }
 
     @Override
-    public int getRedstoneValue(World world, BlockPos pos, int sensorRange, String textBoxText, Set<BlockPos> positions) {
+    public int getRedstoneValue(Level world, BlockPos pos, int sensorRange, String textBoxText, Set<BlockPos> positions) {
         for (BlockPos p : positions) {
             if (!world.isEmptyBlock(p)) return 15;
         }

@@ -18,13 +18,13 @@
 package me.desht.pneumaticcraft.common.network;
 
 import me.desht.pneumaticcraft.client.util.ClientUtils;
+import me.desht.pneumaticcraft.common.block.entity.SecurityStationBlockEntity;
 import me.desht.pneumaticcraft.common.hacking.secstation.HackSimulation;
 import me.desht.pneumaticcraft.common.hacking.secstation.ISimulationController;
 import me.desht.pneumaticcraft.common.hacking.secstation.ISimulationController.HackingSide;
-import me.desht.pneumaticcraft.common.tileentity.TileEntitySecurityStation;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.network.NetworkEvent;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ public class PacketSyncHackSimulationUpdate extends LocationIntPacket {
     private final boolean aiWon;
     private final boolean playerWon;
 
-    public PacketSyncHackSimulationUpdate(TileEntitySecurityStation te) {
+    public PacketSyncHackSimulationUpdate(SecurityStationBlockEntity te) {
         super(te.getBlockPos());
 
         HackSimulation aiSim = te.getSimulationController().getSimulation(HackingSide.AI);
@@ -67,7 +67,7 @@ public class PacketSyncHackSimulationUpdate extends LocationIntPacket {
         playerWon = playerSim.isHackComplete();
     }
 
-    public PacketSyncHackSimulationUpdate(PacketBuffer buffer) {
+    public PacketSyncHackSimulationUpdate(FriendlyByteBuf buffer) {
         super(buffer);
 
         playerConns = new ArrayList<>();
@@ -91,7 +91,7 @@ public class PacketSyncHackSimulationUpdate extends LocationIntPacket {
         playerWon = buffer.readBoolean();
     }
 
-    public void toBytes(PacketBuffer buffer) {
+    public void toBytes(FriendlyByteBuf buffer) {
         super.toBytes(buffer);
 
         buffer.writeVarInt(playerConns.size());
@@ -111,9 +111,9 @@ public class PacketSyncHackSimulationUpdate extends LocationIntPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            TileEntity te = ClientUtils.getClientTE(pos);
-            if (te instanceof TileEntitySecurityStation) {
-                ISimulationController controller = ((TileEntitySecurityStation) te).getSimulationController();
+            BlockEntity te = ClientUtils.getBlockEntity(pos);
+            if (te instanceof SecurityStationBlockEntity) {
+                ISimulationController controller = ((SecurityStationBlockEntity) te).getSimulationController();
                 if (controller != null) {
                     HackSimulation aiSim = controller.getSimulation(HackingSide.AI);
                     HackSimulation playerSim = controller.getSimulation(HackingSide.PLAYER);

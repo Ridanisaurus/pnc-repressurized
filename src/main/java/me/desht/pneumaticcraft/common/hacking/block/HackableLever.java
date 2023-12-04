@@ -17,16 +17,16 @@
 
 package me.desht.pneumaticcraft.common.hacking.block;
 
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.LeverBlock;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableBlock;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 
@@ -34,13 +34,15 @@ import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
 public class HackableLever implements IHackableBlock {
+    private static final ResourceLocation ID = RL("lever");
+
     @Override
     public ResourceLocation getHackableId() {
-        return RL("lever");
+        return ID;
     }
 
     @Override
-    public void addInfo(IBlockReader world, BlockPos pos, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addInfo(BlockGetter world, BlockPos pos, List<Component> curInfo, Player player) {
         if (world.getBlockState(pos).getValue(LeverBlock.POWERED)) {
             curInfo.add(xlate("pneumaticcraft.armor.hacking.result.deactivate"));
         } else {
@@ -49,7 +51,7 @@ public class HackableLever implements IHackableBlock {
     }
 
     @Override
-    public void addPostHackInfo(IBlockReader world, BlockPos pos, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addPostHackInfo(BlockGetter world, BlockPos pos, List<Component> curInfo, Player player) {
         if (world.getBlockState(pos).getValue(LeverBlock.POWERED)) {
             curInfo.add(xlate("pneumaticcraft.armor.hacking.finished.activated"));
         } else {
@@ -58,13 +60,13 @@ public class HackableLever implements IHackableBlock {
     }
 
     @Override
-    public int getHackTime(IBlockReader world, BlockPos pos, PlayerEntity player) {
+    public int getHackTime(BlockGetter world, BlockPos pos, Player player) {
         return 20;
     }
 
     @Override
-    public void onHackComplete(World world, BlockPos pos, PlayerEntity player) {
+    public void onHackComplete(Level world, BlockPos pos, Player player) {
         BlockState state = world.getBlockState(pos);
-        fakeRayTrace(player, pos).ifPresent(rtr -> state.use(world, player, Hand.MAIN_HAND, rtr));
+        fakeRayTrace(player, pos).ifPresent(rtr -> state.use(world, player, InteractionHand.MAIN_HAND, rtr));
     }
 }

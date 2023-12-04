@@ -18,38 +18,36 @@
 package me.desht.pneumaticcraft.common.network;
 
 import me.desht.pneumaticcraft.client.util.ClientUtils;
-import me.desht.pneumaticcraft.common.entity.living.EntityDrone;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fml.network.NetworkEvent;
+import me.desht.pneumaticcraft.common.entity.drone.DroneEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
 public class PacketShowWireframe extends LocationIntPacket {
     private final int entityId;
 
-    public PacketShowWireframe(EntityDrone entity, BlockPos pos) {
+    public PacketShowWireframe(DroneEntity entity, BlockPos pos) {
         super(pos);
         entityId = entity.getId();
     }
 
-    public PacketShowWireframe(PacketBuffer buffer) {
+    public PacketShowWireframe(FriendlyByteBuf buffer) {
         super(buffer);
         entityId = buffer.readInt();
     }
 
     @Override
-    public void toBytes(PacketBuffer buffer) {
+    public void toBytes(FriendlyByteBuf buffer) {
         super.toBytes(buffer);
         buffer.writeInt(entityId);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            Entity ent = ctx.get().getSender().level.getEntity(entityId);
-            if (ent instanceof EntityDrone) {
-                ClientUtils.addDroneToHudHandler((EntityDrone) ent, pos);
+            if (ClientUtils.getClientLevel().getEntity(entityId) instanceof DroneEntity drone) {
+                ClientUtils.addDroneToHudHandler(drone, pos);
             }
         });
         ctx.get().setPacketHandled(true);

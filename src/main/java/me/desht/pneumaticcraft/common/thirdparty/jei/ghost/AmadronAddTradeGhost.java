@@ -18,36 +18,38 @@
 package me.desht.pneumaticcraft.common.thirdparty.jei.ghost;
 
 import com.google.common.collect.ImmutableList;
-import me.desht.pneumaticcraft.client.gui.GuiAmadronAddTrade;
-import me.desht.pneumaticcraft.common.inventory.SlotPhantom;
+import me.desht.pneumaticcraft.client.gui.AmadronAddTradeScreen;
+import me.desht.pneumaticcraft.common.inventory.slot.PhantomSlot;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.forge.ForgeTypes;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
-import net.minecraft.client.renderer.Rectangle2d;
-import net.minecraft.inventory.container.Slot;
-import net.minecraft.item.ItemStack;
+import mezz.jei.api.ingredients.ITypedIngredient;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import java.util.Collections;
 import java.util.List;
 
-public class AmadronAddTradeGhost implements IGhostIngredientHandler<GuiAmadronAddTrade> {
-
+public class AmadronAddTradeGhost implements IGhostIngredientHandler<AmadronAddTradeScreen> {
     @Override
-    public <I> List<Target<I>> getTargets(GuiAmadronAddTrade gui, I ingredient, boolean doStart) {
-        if (ingredient instanceof ItemStack) {
+    public <I> List<Target<I>> getTargetsTyped(AmadronAddTradeScreen gui, ITypedIngredient<I> ingredient, boolean doStart) {
+        if (ingredient.getType() == VanillaTypes.ITEM_STACK) {
             ImmutableList.Builder<Target<I>> builder = ImmutableList.builder();
             for (Slot slot : gui.getMenu().slots) {
-                if (slot instanceof SlotPhantom) {
+                if (slot instanceof PhantomSlot) {
                     //noinspection unchecked
-                    builder.add((Target<I>) new ItemStackTarget((SlotPhantom) slot, gui));
+                    builder.add((Target<I>) new ItemStackTarget((PhantomSlot) slot, gui));
                 }
             }
             return builder.build();
-        } else if (ingredient instanceof FluidStack) {
+        } else if (ingredient.getType() == ForgeTypes.FLUID_STACK) {
             ImmutableList.Builder<Target<I>> builder = ImmutableList.builder();
             for (Slot slot : gui.getMenu().slots) {
-                if (slot instanceof SlotPhantom) {
+                if (slot instanceof PhantomSlot) {
                     //noinspection unchecked
-                    builder.add((Target<I>) new FluidStackTarget((SlotPhantom) slot, gui));
+                    builder.add((Target<I>) new FluidStackTarget((PhantomSlot) slot, gui));
                 }
             }
             return builder.build();
@@ -60,22 +62,22 @@ public class AmadronAddTradeGhost implements IGhostIngredientHandler<GuiAmadronA
     }
 
     private static abstract class TargetImpl<I> implements Target<I> {
-        final SlotPhantom slot;
-        final GuiAmadronAddTrade gui;
+        final PhantomSlot slot;
+        final AmadronAddTradeScreen gui;
 
-        TargetImpl(SlotPhantom slot, GuiAmadronAddTrade gui) {
+        TargetImpl(PhantomSlot slot, AmadronAddTradeScreen gui) {
             this.slot = slot;
             this.gui = gui;
         }
 
         @Override
-        public Rectangle2d getArea() {
-            return new Rectangle2d(gui.getGuiLeft() + slot.x, gui.getGuiTop() + slot.y, 16, 16);
+        public Rect2i getArea() {
+            return new Rect2i(gui.getGuiLeft() + slot.x, gui.getGuiTop() + slot.y, 16, 16);
         }
     }
 
     private static class FluidStackTarget extends TargetImpl<FluidStack> {
-        FluidStackTarget(SlotPhantom slot, GuiAmadronAddTrade gui) {
+        FluidStackTarget(PhantomSlot slot, AmadronAddTradeScreen gui) {
             super(slot, gui);
         }
 
@@ -86,7 +88,7 @@ public class AmadronAddTradeGhost implements IGhostIngredientHandler<GuiAmadronA
     }
 
     private static class ItemStackTarget extends TargetImpl<ItemStack> {
-        ItemStackTarget(SlotPhantom slot, GuiAmadronAddTrade gui) {
+        ItemStackTarget(PhantomSlot slot, AmadronAddTradeScreen gui) {
             super(slot, gui);
         }
 

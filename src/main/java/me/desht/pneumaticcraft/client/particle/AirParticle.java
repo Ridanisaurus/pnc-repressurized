@@ -17,25 +17,17 @@
 
 package me.desht.pneumaticcraft.client.particle;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import me.desht.pneumaticcraft.common.particle.AirParticleData;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.*;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.texture.AtlasTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.math.BlockPos;
-import org.lwjgl.opengl.GL11;
+import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;
 
-public class AirParticle extends SpriteTexturedParticle {
-    private final IAnimatedSprite sprite;
+public class AirParticle extends TextureSheetParticle {
+    private final SpriteSet sprite;
 
-    private AirParticle(ClientWorld worldIn, double xCoordIn, double yCoordIn, double zCoordIn, double xSpeedIn, double ySpeedIn, double zSpeedIn, float scale, IAnimatedSprite sprite) {
+    private AirParticle(ClientLevel worldIn, double xCoordIn, double yCoordIn, double zCoordIn, double xSpeedIn, double ySpeedIn, double zSpeedIn, float scale, SpriteSet sprite) {
         super(worldIn, xCoordIn, yCoordIn, zCoordIn, xSpeedIn, ySpeedIn, zSpeedIn);
 
         this.sprite = sprite;
@@ -63,75 +55,78 @@ public class AirParticle extends SpriteTexturedParticle {
     public void tick() {
         super.tick();
 
-        if (!level.isEmptyBlock(new BlockPos(x, y, z)) || onGround) {
+        if (!level.isEmptyBlock(BlockPos.containing(x, y, z)) || onGround) {
             remove();
         }
 
         // fades out and gets bigger as it gets older
         setSpriteFromAge(sprite);
-        scale(1.03f);
+        scale(1.1f);
         alpha *= 0.975;
 
-        if (level.random.nextInt(5) == 0) {
-            xd += level.random.nextDouble() * 0.1 - 0.05;
+        if (level.random.nextInt(10) == 0) {
+            xd += level.random.nextDouble() * 0.08 - 0.04;
         }
-        if (level.random.nextInt(5) == 0) {
-            yd += level.random.nextDouble() * 0.1 - 0.05;
+        if (level.random.nextInt(10) == 0) {
+            yd += level.random.nextDouble() * 0.08 - 0.04;
         }
-        if (level.random.nextInt(5) == 0) {
-            yd += level.random.nextDouble() * 0.1 - 0.05;
+        if (level.random.nextInt(10) == 0) {
+            yd += level.random.nextDouble() * 0.08 - 0.04;
         }
     }
 
     @Override
-    public IParticleRenderType getRenderType() {
-        return AIR_PARTICLE_RENDER;
+    public ParticleRenderType getRenderType() {
+//        return AIR_PARTICLE_RENDER;
+        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }
 
-    public static class Factory implements IParticleFactory<AirParticleData> {
-        private final IAnimatedSprite spriteSet;
+    public static class Factory implements ParticleProvider<AirParticleData> {
+        private final SpriteSet spriteSet;
 
-        public Factory(IAnimatedSprite spriteSet) {
+        public Factory(SpriteSet spriteSet) {
             this.spriteSet = spriteSet;
         }
 
         @Nullable
         @Override
-        public Particle createParticle(AirParticleData airParticleData, ClientWorld world, double x, double y, double z, double dx, double dy, double dz) {
+        public Particle createParticle(AirParticleData airParticleData, ClientLevel world, double x, double y, double z, double dx, double dy, double dz) {
             AirParticle p = new AirParticle(world, x, y, z, dx, dy, dz, 0.2f, spriteSet);
             p.setAlpha(airParticleData.getAlpha());
             return p;
         }
     }
 
-    private static final IParticleRenderType AIR_PARTICLE_RENDER = new IParticleRenderType() {
-        @Override
-        public void begin(BufferBuilder bufferBuilder, TextureManager textureManager) {
-            RenderSystem.depthMask(false);
-            RenderSystem.enableBlend();
-            RenderSystem.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-            RenderSystem.alphaFunc(GL11.GL_GREATER, 0.003921569F);
-            RenderSystem.disableLighting();
-
-            textureManager.bind(AtlasTexture.LOCATION_PARTICLES);
-            textureManager.getTexture(AtlasTexture.LOCATION_PARTICLES).setBlurMipmap(true, false);
-            bufferBuilder.begin(GL11.GL_QUADS, DefaultVertexFormats.PARTICLE);
-        }
-
-        @Override
-        public void end(Tessellator tessellator) {
-            tessellator.end();
-
-            Minecraft.getInstance().textureManager.getTexture(AtlasTexture.LOCATION_PARTICLES).restoreLastBlurMipmap();
-            RenderSystem.alphaFunc(GL11.GL_GREATER, 0.1F);
-            RenderSystem.disableBlend();
-            RenderSystem.depthMask(true);
-        }
-
-        @Override
-        public String toString() {
-            return "pneumaticcraft:air_particle";
-        }
-    };
+//    private static final ParticleRenderType AIR_PARTICLE_RENDER = new ParticleRenderType() {
+//        @Override
+//        public void begin(BufferBuilder bufferBuilder, TextureManager textureManager) {
+//            RenderSystem.depthMask(false);
+//            RenderSystem.enableBlend();
+//            RenderSystem.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+//            // TODO 1.17 how do we do this now?
+////            RenderSystem.alphaFunc(GL11.GL_GREATER, 0.003921569F);
+////            RenderSystem.disableLighting();
+//
+//            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
+//            RenderSystem.setShader(GameRenderer::getParticleShader);
+////            textureManager.getTexture(TextureAtlas.LOCATION_PARTICLES).setBlurMipmap(true, false);
+//            bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+//        }
+//
+//        @Override
+//        public void end(Tesselator tessellator) {
+//            tessellator.end();
+//
+//            Minecraft.getInstance().textureManager.getTexture(TextureAtlas.LOCATION_PARTICLES).restoreLastBlurMipmap();
+////            RenderSystem.alphaFunc(GL11.GL_GREATER, 0.1F);
+//            RenderSystem.disableBlend();
+//            RenderSystem.depthMask(true);
+//        }
+//
+//        @Override
+//        public String toString() {
+//            return "pneumaticcraft:air_particle";
+//        }
+//    };
 
 }

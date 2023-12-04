@@ -1,0 +1,31 @@
+{
+  "parent": "pneumaticcraft:flight",
+  "criteria": {
+    "0": {
+      "conditions": {},
+      "trigger": "pneumaticcraft:fly_into_wall"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "background": "pneumaticcraft:textures/gui/advancement_bg.png",
+    "description": {
+      "translate": "pneumaticcraft.advancement.fly_into_wall.desc"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "minecraft:bricks"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "pneumaticcraft.advancement.fly_into_wall"
+    }
+  },
+  "requirements": [
+    [
+      "0"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

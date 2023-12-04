@@ -17,49 +17,49 @@
 
 package me.desht.pneumaticcraft.api.heat;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.NBTUtil;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.function.Supplier;
 
 /**
- * You can extend this class, and register it via
- * {@link IHeatRegistry#registerHeatBehaviour(ResourceLocation, Supplier)}
- * <p>
- * This can be used to add heat dependent logic to non-TE's or blocks you don't have access to. For example,
+ * This can be used to add heat dependent logic to non-BE's or blocks from outside your own mod. For example,
  * PneumaticCraft uses this to power Furnaces with heat, and to turn Lava into Obsidian when heat is drained.
- * Of course, this requires a ticking heat exchanger block (e.g. a compressed iron block or any heatable machine) to
+ * Of course, this requires a ticking heat exchanger block (e.g. a Compressed Iron Block or any heatable machine) to
  * perform the ticking behaviour; simply adding a heat behaviour to lava won't make lava spontaneously turn into
- * obsidian. A ticking heat exchanger is needed to actually drain the heat.
+ * obsidian. A ticking heat exchanger adjacent to the Lava block is needed to actually drain the heat.
+ * <p>
+ * You can extend this class, and register the extended class via
+ * {@link IHeatRegistry#registerHeatBehaviour(ResourceLocation, Supplier)}
  * <p>
  * For general blockstate transitions, datapack recipes are the preferred way to add custom heat behaviours. See
  * {@code data/pneumaticcraft/recipes/block_heat_properties/*.json}
  */
-public abstract class HeatBehaviour<T extends TileEntity> implements INBTSerializable<CompoundNBT> {
+public abstract class HeatBehaviour implements INBTSerializable<CompoundTag> {
     private IHeatExchangerLogic connectedHeatLogic;
-    private World world;
+    private Level world;
     private BlockPos pos;
-    private T cachedTE;
+    private BlockEntity cachedTE;
     private BlockState blockState;
-    private Direction direction;  // direction of this behaviour, from the tile entity's point of view
+    private Direction direction;  // direction of this behaviour, from the block entity's point of view
 
     /**
      * This method is called by the connected {@link IHeatExchangerLogic} when it initialises itself as a hull
-     * heat exchanger; this happens when the owning tile entity gets a neighbor block update.  You can override
+     * heat exchanger; this happens when the owning block entity gets a neighbor block update.  You can override
      * and extend this method, but <strong>be sure to call the super method</strong>!
      * @param connectedHeatLogic the connected heat exchanger logic
      * @param world the world
-     * @param pos block pos of the owning tile entity
-     * @param direction direction of this behaviour (from the tile entity's point of view)
+     * @param pos block pos of the owning block entity
+     * @param direction direction of this behaviour (from the block entity's point of view)
      */
-    public HeatBehaviour<?> initialize(IHeatExchangerLogic connectedHeatLogic, World world, BlockPos pos, Direction direction) {
+    public HeatBehaviour initialize(IHeatExchangerLogic connectedHeatLogic, Level world, BlockPos pos, Direction direction) {
         this.connectedHeatLogic = connectedHeatLogic;
         this.world = world;
         this.pos = pos;
@@ -73,7 +73,7 @@ public abstract class HeatBehaviour<T extends TileEntity> implements INBTSeriali
         return connectedHeatLogic;
     }
 
-    public World getWorld() {
+    public Level getWorld() {
         return world;
     }
 
@@ -85,9 +85,9 @@ public abstract class HeatBehaviour<T extends TileEntity> implements INBTSeriali
         return direction;
     }
 
-    public T getTileEntity() {
-        if (cachedTE == null || cachedTE.isRemoved()) //noinspection unchecked
-            cachedTE = (T) world.getBlockEntity(pos);
+    public BlockEntity getCachedTileEntity() {
+        if (cachedTE == null || cachedTE.isRemoved())
+            cachedTE = world.getBlockEntity(pos);
         return cachedTE;
     }
 
@@ -117,21 +117,20 @@ public abstract class HeatBehaviour<T extends TileEntity> implements INBTSeriali
     public abstract void tick();
 
     @Override
-    public CompoundNBT serializeNBT() {
-        CompoundNBT tag = new CompoundNBT();
-        tag.put("BlockPos", NBTUtil.writeBlockPos(pos));
+    public CompoundTag serializeNBT() {
+        CompoundTag tag = new CompoundTag();
+        tag.put("BlockPos", NbtUtils.writeBlockPos(pos));
         return tag;
     }
 
     @Override
-    public void deserializeNBT(CompoundNBT nbt) {
-        pos = NBTUtil.readBlockPos(nbt.getCompound("BlockPos"));
+    public void deserializeNBT(CompoundTag nbt) {
+        pos = NbtUtils.readBlockPos(nbt.getCompound("BlockPos"));
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof HeatBehaviour) {
-            HeatBehaviour<?> behaviour = (HeatBehaviour<?>) o;
+        if (o instanceof HeatBehaviour behaviour) {
             return behaviour.getId().equals(getId()) && behaviour.getPos().equals(getPos());
         } else {
             return false;

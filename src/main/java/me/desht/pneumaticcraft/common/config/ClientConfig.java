@@ -17,7 +17,8 @@
 
 package me.desht.pneumaticcraft.common.config;
 
-import me.desht.pneumaticcraft.common.progwidgets.IProgWidget.WidgetDifficulty;
+import me.desht.pneumaticcraft.client.pneumatic_armor.ComponentInit;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IProgWidget.WidgetDifficulty;
 import me.desht.pneumaticcraft.common.util.ITranslatableEnum;
 import net.minecraftforge.common.ForgeConfigSpec;
 
@@ -36,6 +37,7 @@ public class ClientConfig {
         public ForgeConfigSpec.BooleanValue guiRemoteGridSnap;
         public ForgeConfigSpec.BooleanValue programmerGuiPauses;
         public ForgeConfigSpec.BooleanValue notifyAmadronOfferUpdates;
+        public ForgeConfigSpec.BooleanValue pressureChamberParticles;
     }
 
     public static class Armor {
@@ -48,6 +50,8 @@ public class ClientConfig {
         public ForgeConfigSpec.EnumValue<PathUpdateSetting> pathUpdateSetting;
         public ForgeConfigSpec.BooleanValue showPressureNumerically;
         public ForgeConfigSpec.BooleanValue showEnchantGlint;
+        public ForgeConfigSpec.IntValue maxJetBootsFlightRoll;
+        public ForgeConfigSpec.EnumValue<ComponentInit> componentInitMessages;
     }
 
     public static class Sound {
@@ -77,9 +81,9 @@ public class ClientConfig {
                 .translation("pneumaticcraft.config.client.general.fancy_armor_models")
                 .defineEnum("programmer_difficulty", WidgetDifficulty.EASY);
         general.topShowsFluids = builder
-                .comment("Show tank fluids with the The One Probe. Note that TOP also has support for showing tanks, which may or may not be enabled.")
+                .comment("Show tank fluids with the The One Probe when sneaking? Note that TOP has its own support for showing tanks, which by default requires a Probe to be held, or a Probe-enabled helmet to be worn.")
                 .translation("pneumaticcraft.config.client.general.top_shows_fluids")
-                .define("top_shows_fluids", true);
+                .define("top_shows_fluids", false);
         general.logisticsGuiTint = builder
                 .comment("Tint Logistics configuration GUI backgrounds according to the colour of the logistics frame you are configuring.")
                 .translation("pneumaticcraft.config.client.general.logistics_gui_tint")
@@ -108,13 +112,13 @@ public class ClientConfig {
                 .comment("Should players holding an Amadron Tablet get a notification message when offers are shuffled periodically?")
                 .translation("pneumaticcraft.config.client.general.notify_amadron_offer_updates")
                 .define("notify_amadron_offer_updates", true);
+        general.pressureChamberParticles = builder
+                .comment("Should Pressure Chambers show air particle effects inside themselves when pressurized?")
+                .translation("pneumaticcraft.config.client.general.pressure_chamber_particles")
+                .define("pressure_chamber_particles", true);
         builder.pop();
 
         builder.push("armor");
-        armor.fancyArmorModels = builder
-                .comment("Use fancy models for Pneumatic Armor (currently unimplemented)")
-                .translation("pneumaticcraft.config.client.armor.fancy_armor_models")
-                .define("fancy_armor_models", true);
         armor.leggingsFOVFactor = builder
                 .comment("Intensity of the FOV modification when using Pneumatic Leggings speed boost: 0.0 for no FOV modification, higher values zoom out more.  Note: non-zero values may cause FOV clashes with other mods.")
                 .translation("pneumaticcraft.config.client.armor.leggings_fov_factor")
@@ -147,6 +151,14 @@ public class ClientConfig {
                 .comment("Should enchantment glint be shown on Pneumatic Armor pieces? Disable if you don't like the enchantment glint messing up your carefully chosen colour scheme...")
                 .translation("pneumaticcraft.config.client.armor.show_enchant_glint")
                 .define("show_enchant_glint", true);
+        armor.maxJetBootsFlightRoll = builder
+                .comment("Maximum screen roll in degrees when banking left or right during Jet Boots flight - cosmetic only")
+                .translation("pneumaticcraft.config.client.armor.max_jet_boots_roll")
+                .defineInRange("max_jet_boots_roll", 35, 0, 90);
+        armor.componentInitMessages = builder
+                .comment("Which component initialisation messages to display when armor is booting up")
+                .translation("pneumaticcraft.config.client.armor.component_init_messages")
+                .defineEnum("component_init_messages", ComponentInit.ALL);
         builder.pop();
 
         builder.push("sound");
@@ -185,7 +197,7 @@ public class ClientConfig {
         sound.jackhammerVolume = builder
                 .comment("Volume level of the Jackhammer")
                 .translation("pneumaticcraft.config.client.sound.jackhammer_volume")
-                .defineInRange("jackhammer_volume", 1.0d, 0d, 2d);
+                .defineInRange("jackhammer_volume", 0.7d, 0d, 2d);
     }
 
     /**

@@ -1,10 +1,10 @@
 {
   "type": "pneumaticcraft:assembly_drill",
   "input": {
-    "item": "minecraft:netherite_ingot"
+    "item": "pneumaticcraft:unassembled_netherite_drill_bit"
   },
+  "program": "drill",
   "result": {
     "item": "pneumaticcraft:drill_bit_netherite"
-  },
-  "program": "drill"
+  }
 }

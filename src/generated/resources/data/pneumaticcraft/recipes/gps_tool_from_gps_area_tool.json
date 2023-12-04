@@ -1,12 +1,13 @@
 {
   "type": "minecraft:crafting_shapeless",
+  "category": "misc",
   "ingredients": [
     {
       "item": "pneumaticcraft:gps_area_tool"
     }
   ],
   "result": {
-    "item": "pneumaticcraft:gps_tool",
-    "count": 2
+    "count": 2,
+    "item": "pneumaticcraft:gps_tool"
   }
 }

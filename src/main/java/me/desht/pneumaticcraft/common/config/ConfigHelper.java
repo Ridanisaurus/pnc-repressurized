@@ -17,7 +17,8 @@
 
 package me.desht.pneumaticcraft.common.config;
 
-import me.desht.pneumaticcraft.common.progwidgets.IProgWidget.WidgetDifficulty;
+import me.desht.pneumaticcraft.client.pneumatic_armor.ComponentInit;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IProgWidget.WidgetDifficulty;
 
 public class ConfigHelper {
     public static ClientConfig client() {
@@ -51,7 +52,7 @@ public class ConfigHelper {
         ConfigHolder.client.armor.showEnchantGlint.set(show);
     }
 
-    public static int getOilLakeChance() {
-        return ConfigHolder.common.general.oilGenerationChance.get();
+    public static void setComponentInit(ComponentInit when) {
+        ConfigHolder.client.armor.componentInitMessages.set(when);
     }
 }

@@ -22,26 +22,31 @@ import com.google.common.collect.Sets;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntCollection;
+import it.unimi.dsi.fastutil.ints.IntList;
 import me.desht.pneumaticcraft.api.crafting.recipe.PressureChamberRecipe;
 import me.desht.pneumaticcraft.common.core.ModBlocks;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.IRecipeType;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapedRecipe;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
+import net.minecraft.core.NonNullList;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.registries.ForgeRegistryEntry;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 public class PressureChamberRecipeImpl extends PressureChamberRecipe {
     private final float pressureRequired;
@@ -56,7 +61,7 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
     }
 
     @Override
-    public float getCraftingPressure(IItemHandler chamberHandler, List<Integer> ingredientSlots) {
+    public float getCraftingPressure(IItemHandler chamberHandler, IntList ingredientSlots) {
         return pressureRequired;
     }
 
@@ -66,14 +71,14 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
     }
 
     @Override
-    public Collection<Integer> findIngredients(IItemHandler chamberHandler) {
+    public IntCollection findIngredients(IItemHandler chamberHandler) {
         // Ingredient doesn't override equals() and hashCode() but there's always the possibility
         // that some subclass might, so we'll use an identity set here.  We want to always treat
         // two equivalent ingredients in a recipe as different objects.
         Set<Ingredient> inputSet = Sets.newIdentityHashSet();
         inputSet.addAll(inputs);
 
-        List<Integer> slots = new ArrayList<>();
+        IntCollection slots = new IntArrayList();
         for (int i = 0; i < chamberHandler.getSlots(); i++) {
             if (!chamberHandler.getStackInSlot(i).isEmpty()) {
                 Iterator<Ingredient> iter = inputSet.iterator();
@@ -90,7 +95,7 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
                 }
             }
         }
-        return Collections.emptyList();
+        return IntList.of();
     }
 
     @Override
@@ -104,18 +109,18 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
     }
 
     @Override
-    public IRecipeType<?> getType() {
-        return PneumaticCraftRecipeType.PRESSURE_CHAMBER;
+    public RecipeType<?> getType() {
+        return ModRecipeTypes.PRESSURE_CHAMBER.get();
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        return ModRecipes.PRESSURE_CHAMBER.get();
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeSerializers.PRESSURE_CHAMBER.get();
     }
 
     @Override
     public String getGroup() {
-        return ModBlocks.PRESSURE_CHAMBER_WALL.get().getRegistryName().getPath();
+        return "pneumaticcraft:pressure_chamber";
     }
 
     @Override
@@ -131,7 +136,7 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
 
     @Nonnull
     @Override
-    public NonNullList<ItemStack> craftRecipe(@Nonnull IItemHandler chamberHandler, List<Integer> ingredientSlots, boolean simulate) {
+    public NonNullList<ItemStack> craftRecipe(@Nonnull IItemHandler chamberHandler, IntList ingredientSlots, boolean simulate) {
         // remove the recipe's input items from the chamber
         for (Ingredient ingredient : inputs) {
             if (ingredient.isEmpty()) return NonNullList.create(); // sanity check
@@ -149,7 +154,7 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
     }
 
     @Override
-    public void write(PacketBuffer buffer) {
+    public void write(FriendlyByteBuf buffer) {
         buffer.writeFloat(getCraftingPressureForDisplay());
         buffer.writeVarInt(inputs.size());
         inputs.forEach(i -> i.toNetwork(buffer));
@@ -157,10 +162,7 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
         outputs.forEach(buffer::writeItem);
     }
 
-    public static class Serializer<T extends PressureChamberRecipe>
-            extends ForgeRegistryEntry<IRecipeSerializer<?>>
-            implements IRecipeSerializer<T> {
-
+    public static class Serializer<T extends PressureChamberRecipe> implements RecipeSerializer<T> {
         private final IFactory<T> factory;
 
         public Serializer(IFactory<T> factory) {
@@ -174,18 +176,18 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
             for (JsonElement e : inputs) {
                 inputIngredients.add(Ingredient.fromJson(e.getAsJsonObject()));
             }
-            float pressure = JSONUtils.getAsFloat(json, "pressure");
+            float pressure = GsonHelper.getAsFloat(json, "pressure");
             JsonArray outputs = json.get("results").getAsJsonArray();
             NonNullList<ItemStack> results = NonNullList.create();
             for (JsonElement e : outputs) {
-                results.add(ShapedRecipe.itemFromJson(e.getAsJsonObject()));
+                results.add(ShapedRecipe.itemStackFromJson(e.getAsJsonObject()));
             }
             return factory.create(recipeId, inputIngredients, pressure, results.toArray(new ItemStack[0]));
         }
 
         @Nullable
         @Override
-        public T fromNetwork(ResourceLocation recipeId, PacketBuffer buffer) {
+        public T fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
             float pressure = buffer.readFloat();
             int nInputs = buffer.readVarInt();
             List<Ingredient> in = new ArrayList<>();
@@ -201,7 +203,7 @@ public class PressureChamberRecipeImpl extends PressureChamberRecipe {
         }
 
         @Override
-        public void toNetwork(PacketBuffer buffer, T recipe) {
+        public void toNetwork(FriendlyByteBuf buffer, T recipe) {
             recipe.write(buffer);
         }
 

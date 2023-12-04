@@ -20,19 +20,18 @@ package me.desht.pneumaticcraft.common.recipes.machine;
 import com.google.gson.JsonObject;
 import me.desht.pneumaticcraft.api.crafting.ingredient.FluidIngredient;
 import me.desht.pneumaticcraft.api.crafting.recipe.FluidMixerRecipe;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
 import me.desht.pneumaticcraft.common.recipes.ModCraftingHelper;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.IRecipeType;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapedRecipe;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.JSONUtils;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.registries.ForgeRegistryEntry;
 
 import javax.annotation.Nullable;
 
@@ -91,7 +90,7 @@ public class FluidMixerRecipeImpl extends FluidMixerRecipe {
     }
 
     @Override
-    public void write(PacketBuffer buffer) {
+    public void write(FriendlyByteBuf buffer) {
         input1.toNetwork(buffer);
         input2.toNetwork(buffer);
         outputFluid.writeToPacket(buffer);
@@ -101,16 +100,16 @@ public class FluidMixerRecipeImpl extends FluidMixerRecipe {
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        return ModRecipes.FLUID_MIXER.get();
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeSerializers.FLUID_MIXER.get();
     }
 
     @Override
-    public IRecipeType<?> getType() {
-        return PneumaticCraftRecipeType.FLUID_MIXER;
+    public RecipeType<?> getType() {
+        return ModRecipeTypes.FLUID_MIXER.get();
     }
 
-    public static class Serializer<T extends FluidMixerRecipe> extends ForgeRegistryEntry<IRecipeSerializer<?>> implements IRecipeSerializer<T> {
+    public static class Serializer<T extends FluidMixerRecipe> implements RecipeSerializer<T> {
         private final IFactory<T> factory;
 
         public Serializer(FluidMixerRecipeImpl.Serializer.IFactory<T> factory) {
@@ -125,17 +124,17 @@ public class FluidMixerRecipeImpl extends FluidMixerRecipe {
                     ModCraftingHelper.fluidStackFromJson(json.getAsJsonObject("fluid_output")):
                     FluidStack.EMPTY;
             ItemStack outputItem = json.has("item_output") ?
-                    ShapedRecipe.itemFromJson(JSONUtils.getAsJsonObject(json, "item_output")) :
+                    ShapedRecipe.itemStackFromJson(GsonHelper.getAsJsonObject(json, "item_output")) :
                     ItemStack.EMPTY;
-            float pressure = JSONUtils.getAsFloat(json, "pressure");
-            int processingTime = JSONUtils.getAsInt(json, "time", 200);
+            float pressure = GsonHelper.getAsFloat(json, "pressure");
+            int processingTime = GsonHelper.getAsInt(json, "time", 200);
 
             return factory.create(recipeId, (FluidIngredient) input1, (FluidIngredient) input2, outputFluid, outputItem, pressure, processingTime);
         }
 
         @Nullable
         @Override
-        public T fromNetwork(ResourceLocation recipeId, PacketBuffer buffer) {
+        public T fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
             FluidIngredient input1 = (FluidIngredient) Ingredient.fromNetwork(buffer);
             FluidIngredient input2 = (FluidIngredient) Ingredient.fromNetwork(buffer);
             FluidStack outputFluid = FluidStack.readFromPacket(buffer);
@@ -147,7 +146,7 @@ public class FluidMixerRecipeImpl extends FluidMixerRecipe {
         }
 
         @Override
-        public void toNetwork(PacketBuffer buffer, T recipe) {
+        public void toNetwork(FriendlyByteBuf buffer, T recipe) {
             recipe.write(buffer);
         }
 

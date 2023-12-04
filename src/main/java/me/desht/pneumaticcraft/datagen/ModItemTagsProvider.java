@@ -17,36 +17,39 @@
 
 package me.desht.pneumaticcraft.datagen;
 
+import me.desht.pneumaticcraft.api.data.PneumaticCraftTags;
 import me.desht.pneumaticcraft.api.lib.Names;
-import me.desht.pneumaticcraft.common.PneumaticCraftTags;
 import me.desht.pneumaticcraft.common.core.ModItems;
-import net.minecraft.data.BlockTagsProvider;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
-import net.minecraft.data.ItemTagsProvider;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.tags.ITag;
+import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.util.IItemProvider;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.data.ExistingFileHelper;
 
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 public class ModItemTagsProvider extends ItemTagsProvider {
-    public ModItemTagsProvider(DataGenerator generatorIn, BlockTagsProvider blockTagsProvider, ExistingFileHelper existingFileHelper) {
-        super(generatorIn, blockTagsProvider, Names.MOD_ID, existingFileHelper);
+    public ModItemTagsProvider(DataGenerator generatorIn, CompletableFuture<HolderLookup.Provider> lookupProvider, CompletableFuture<TagLookup<Block>> blockTagsProvider, ExistingFileHelper existingFileHelper) {
+        super(generatorIn.getPackOutput(), lookupProvider, blockTagsProvider, Names.MOD_ID, existingFileHelper);
     }
 
     @Override
-    protected void addTags() {
+    protected void addTags(HolderLookup.Provider pProvider) {
         copy(PneumaticCraftTags.Blocks.SLABS, PneumaticCraftTags.Items.SLABS);
         copy(PneumaticCraftTags.Blocks.STAIRS, PneumaticCraftTags.Items.STAIRS);
         copy(PneumaticCraftTags.Blocks.WALLS, PneumaticCraftTags.Items.WALLS);
         copy(PneumaticCraftTags.Blocks.DOORS, PneumaticCraftTags.Items.DOORS);
         copy(PneumaticCraftTags.Blocks.STORAGE_BLOCKS_COMPRESSED_IRON, PneumaticCraftTags.Items.STORAGE_BLOCKS_COMPRESSED_IRON);
         copy(PneumaticCraftTags.Blocks.PLASTIC_BRICKS, PneumaticCraftTags.Items.PLASTIC_BRICKS);
+        copy(PneumaticCraftTags.Blocks.SMOOTH_PLASTIC_BRICKS, PneumaticCraftTags.Items.SMOOTH_PLASTIC_BRICKS);
         copy(PneumaticCraftTags.Blocks.WALL_LAMPS, PneumaticCraftTags.Items.WALL_LAMPS);
         copy(PneumaticCraftTags.Blocks.WALL_LAMPS_INVERTED, PneumaticCraftTags.Items.WALL_LAMPS_INVERTED);
         copy(PneumaticCraftTags.Blocks.FLUID_TANKS, PneumaticCraftTags.Items.FLUID_TANKS);
@@ -69,6 +72,11 @@ public class ModItemTagsProvider extends ItemTagsProvider {
 
         addItemsToTag(PneumaticCraftTags.Items.PLASTIC_SHEETS, ModItems.PLASTIC);
         addItemsToTag(PneumaticCraftTags.Items.FLOUR, ModItems.WHEAT_FLOUR);
+        addItemsToTag(Tags.Items.NUGGETS, ModItems.COPPER_NUGGET);
+        addItemsToTag(PneumaticCraftTags.Items.NUGGETS_COPPER, ModItems.COPPER_NUGGET);
+
+        appendToTag(PneumaticCraftTags.Items.WIRING, Tags.Items.NUGGETS_GOLD);
+        appendToTag(PneumaticCraftTags.Items.WIRING, PneumaticCraftTags.Items.NUGGETS_COPPER);
 
         addItemsToTag(PneumaticCraftTags.Items.UPGRADE_COMPONENTS, ModItems.UPGRADE_MATRIX, () -> Items.LAPIS_LAZULI);
 
@@ -85,15 +93,25 @@ public class ModItemTagsProvider extends ItemTagsProvider {
         addItemsToTag(PneumaticCraftTags.Items.BREAD, ModItems.SOURDOUGH_BREAD);
 
         addItemsToTag(PneumaticCraftTags.Items.WRENCHES, ModItems.PNEUMATIC_WRENCH);
+
+        addItemsToTag(PneumaticCraftTags.Items.GEARS, ModItems.COMPRESSED_IRON_GEAR);
+        addItemsToTag(PneumaticCraftTags.Items.GEARS_COMPRESSED_IRON, ModItems.COMPRESSED_IRON_GEAR);
+
+        addItemsToTag(ItemTags.FREEZE_IMMUNE_WEARABLES,
+                ModItems.COMPRESSED_IRON_HELMET, ModItems.COMPRESSED_IRON_CHESTPLATE,
+                ModItems.COMPRESSED_IRON_LEGGINGS, ModItems.COMPRESSED_IRON_BOOTS,
+                ModItems.PNEUMATIC_HELMET, ModItems.PNEUMATIC_CHESTPLATE,
+                ModItems.PNEUMATIC_LEGGINGS, ModItems.PNEUMATIC_BOOTS
+        );
     }
 
     @SafeVarargs
-    private final void addItemsToTag(ITag.INamedTag<Item> tag, Supplier<? extends IItemProvider>... items) {
-        tag(tag).add(Arrays.stream(items).map(Supplier::get).map(IItemProvider::asItem).toArray(Item[]::new));
+    private void addItemsToTag(TagKey<Item> tag, Supplier<? extends ItemLike>... items) {
+        tag(tag).add(Arrays.stream(items).map(Supplier::get).map(ItemLike::asItem).toArray(Item[]::new));
     }
 
     @SafeVarargs
-    private final void appendToTag(ITag.INamedTag<Item> tag, ITag.INamedTag<Item>... toAppend) {
+    private void appendToTag(TagKey<Item> tag, TagKey<Item>... toAppend) {
         tag(tag).addTags(toAppend);
     }
 
@@ -101,4 +119,5 @@ public class ModItemTagsProvider extends ItemTagsProvider {
     public String getName() {
         return "PneumaticCraft Item Tags";
     }
+
 }

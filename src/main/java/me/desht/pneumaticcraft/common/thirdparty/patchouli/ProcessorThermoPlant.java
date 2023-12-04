@@ -19,11 +19,12 @@ package me.desht.pneumaticcraft.common.thirdparty.patchouli;
 
 import me.desht.pneumaticcraft.api.crafting.TemperatureRange;
 import me.desht.pneumaticcraft.api.crafting.recipe.ThermoPlantRecipe;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import vazkii.patchouli.api.IComponentProcessor;
 import vazkii.patchouli.api.IVariable;
 import vazkii.patchouli.api.IVariableProvider;
@@ -34,23 +35,23 @@ public class ProcessorThermoPlant implements IComponentProcessor {
     private String header = null;
 
     @Override
-    public void setup(IVariableProvider iVariableProvider) {
+    public void setup(Level level, IVariableProvider iVariableProvider) {
         ResourceLocation recipeId = new ResourceLocation(iVariableProvider.get("recipe").asString());
-        this.recipe = PneumaticCraftRecipeType.THERMO_PLANT.getRecipe(Minecraft.getInstance().level, recipeId);
+        this.recipe = ModRecipeTypes.THERMO_PLANT.get().getRecipe(Minecraft.getInstance().level, recipeId);
         this.header = iVariableProvider.has("header") ? iVariableProvider.get("header").asString() : "";
     }
 
     @Override
-    public IVariable process(String s) {
+    public IVariable process(Level level, String s) {
         if (recipe == null) return null;
 
         switch (s) {
             case "header":
                 return IVariable.wrap(header.isEmpty() ? defaultHeader() : header);
             case "item_input":
-                return Patchouli.Util.getStacks(recipe.getInputItem());
+                return PatchouliAccess.getStacks(recipe.getInputItem());
             case "fluid_input":
-                return Patchouli.Util.getFluidStacks(recipe.getInputFluid());
+                return PatchouliAccess.getFluidStacks(recipe.getInputFluid());
             case "item_output":
                 return IVariable.from(recipe.getOutputItem());
             case "fluid_output":

@@ -18,13 +18,13 @@
 package me.desht.pneumaticcraft.common.recipes.assembly;
 
 import me.desht.pneumaticcraft.api.crafting.recipe.AssemblyRecipe;
+import me.desht.pneumaticcraft.common.block.entity.AssemblyControllerBlockEntity;
 import me.desht.pneumaticcraft.common.core.ModItems;
-import me.desht.pneumaticcraft.common.item.ItemAssemblyProgram;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityAssemblyController;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
+import me.desht.pneumaticcraft.common.item.AssemblyProgramItem;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,10 +38,10 @@ public class ProgramDrillLaser extends AssemblyProgram {
     }
 
     @Override
-    public boolean executeStep(TileEntityAssemblyController.AssemblySystem system) {
+    public boolean executeStep(AssemblyControllerBlockEntity.AssemblySystem system) {
         boolean useAir = true;
 
-        World world = system.getPlatform().getLevel();
+        Level world = system.getPlatform().getLevel();
 
         if (!system.getPlatform().getHeldStack().isEmpty()) {
             if (canItemBeDrilled(world, system.getPlatform().getHeldStack())) {
@@ -64,31 +64,31 @@ public class ProgramDrillLaser extends AssemblyProgram {
         return useAir;
     }
 
-    private boolean canItemBeLasered(World world, ItemStack item) {
-        return PneumaticCraftRecipeType.ASSEMBLY_LASER.stream(world).anyMatch(recipe -> recipe.matches(item));
+    private boolean canItemBeLasered(Level world, ItemStack item) {
+        return ModRecipeTypes.ASSEMBLY_LASER.get().stream(world).anyMatch(recipe -> recipe.matches(item));
     }
 
-    private boolean canItemBeDrilled(World world, ItemStack item) {
-        return PneumaticCraftRecipeType.ASSEMBLY_DRILL.stream(world).anyMatch(recipe -> recipe.matches(item));
-    }
-
-    @Override
-    public void writeToNBT(CompoundNBT tag) {
-
+    private boolean canItemBeDrilled(Level world, ItemStack item) {
+        return ModRecipeTypes.ASSEMBLY_DRILL.get().stream(world).anyMatch(recipe -> recipe.matches(item));
     }
 
     @Override
-    public void readFromNBT(CompoundNBT tag) {
+    public void writeToNBT(CompoundTag tag) {
 
     }
 
     @Override
-    public Collection<AssemblyRecipe> getRecipeList(World world) {
-        return PneumaticCraftRecipeType.ASSEMBLY_DRILL_LASER.getRecipes(world).values();
+    public void readFromNBT(CompoundTag tag) {
+
     }
 
     @Override
-    public ItemAssemblyProgram getItem() {
+    public Collection<AssemblyRecipe> getRecipeList(Level world) {
+        return ModRecipeTypes.ASSEMBLY_DRILL_LASER.get().getRecipes(world).values();
+    }
+
+    @Override
+    public AssemblyProgramItem getItem() {
         return ModItems.ASSEMBLY_PROGRAM_DRILL_LASER.get();
     }
 }

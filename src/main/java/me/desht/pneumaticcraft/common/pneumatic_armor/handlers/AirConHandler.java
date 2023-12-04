@@ -17,28 +17,29 @@
 
 package me.desht.pneumaticcraft.common.pneumatic_armor.handlers;
 
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
 import me.desht.pneumaticcraft.api.pneumatic_armor.BaseArmorUpgradeHandler;
+import me.desht.pneumaticcraft.api.pneumatic_armor.BuiltinArmorUpgrades;
 import me.desht.pneumaticcraft.api.pneumatic_armor.IArmorExtensionData;
 import me.desht.pneumaticcraft.api.pneumatic_armor.ICommonArmorHandler;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.util.ResourceLocation;
-
-import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import me.desht.pneumaticcraft.common.upgrades.ModUpgrades;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlot;
 
 public class AirConHandler extends BaseArmorUpgradeHandler<IArmorExtensionData> {
+
     @Override
     public ResourceLocation getID() {
-        return RL("air_conditioning");
+        return BuiltinArmorUpgrades.AIR_CONDITIONING;
     }
 
     @Override
-    public EnumUpgrade[] getRequiredUpgrades() {
-        return new EnumUpgrade[] { EnumUpgrade.AIR_CONDITIONING };
+    public PNCUpgrade[] getRequiredUpgrades() {
+        return new PNCUpgrade[] { ModUpgrades.AIR_CONDITIONING.get() };
     }
 
     @Override
-    public int getMaxInstallableUpgrades(EnumUpgrade upgrade) {
+    public int getMaxInstallableUpgrades(PNCUpgrade upgrade) {
         return 4;
     }
 
@@ -48,7 +49,7 @@ public class AirConHandler extends BaseArmorUpgradeHandler<IArmorExtensionData> 
     }
 
     @Override
-    public EquipmentSlotType getEquipmentSlot() {
-        return EquipmentSlotType.CHEST;
+    public EquipmentSlot getEquipmentSlot() {
+        return EquipmentSlot.CHEST;
     }
 }

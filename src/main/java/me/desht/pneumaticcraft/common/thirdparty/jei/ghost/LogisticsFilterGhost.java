@@ -18,58 +18,56 @@
 package me.desht.pneumaticcraft.common.thirdparty.jei.ghost;
 
 import com.google.common.collect.ImmutableList;
-import me.desht.pneumaticcraft.client.gui.semiblock.GuiLogisticsBase;
+import me.desht.pneumaticcraft.client.gui.semiblock.AbstractLogisticsScreen;
 import me.desht.pneumaticcraft.client.util.PointXY;
-import me.desht.pneumaticcraft.common.entity.semiblock.EntityLogisticsFrame;
-import me.desht.pneumaticcraft.common.inventory.SlotPhantom;
+import me.desht.pneumaticcraft.common.entity.semiblock.AbstractLogisticsFrameEntity;
+import me.desht.pneumaticcraft.common.inventory.slot.PhantomSlot;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.forge.ForgeTypes;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
-import net.minecraft.client.renderer.Rectangle2d;
-import net.minecraft.inventory.container.Slot;
-import net.minecraft.item.ItemStack;
+import mezz.jei.api.ingredients.ITypedIngredient;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidUtil;
 
-import java.util.Collections;
 import java.util.List;
 
-public class LogisticsFilterGhost<T extends EntityLogisticsFrame> implements IGhostIngredientHandler<GuiLogisticsBase<T>> {
+public class LogisticsFilterGhost<S extends AbstractLogisticsScreen<T>, T extends AbstractLogisticsFrameEntity> implements IGhostIngredientHandler<S> {
     @Override
-    public <I> List<Target<I>> getTargets(GuiLogisticsBase<T> gui, I ingredient, boolean doStart) {
-        if (ingredient instanceof ItemStack) {
-            ImmutableList.Builder<Target<I>> builder = ImmutableList.builder();
+    public <I> List<Target<I>> getTargetsTyped(S gui, ITypedIngredient<I> ingredient, boolean doStart) {
+        ImmutableList.Builder<Target<I>> builder = ImmutableList.builder();
+        if (ingredient.getType() == VanillaTypes.ITEM_STACK) {
             for (Slot slot : gui.getMenu().slots) {
-                if (slot instanceof SlotPhantom) {
+                if (slot instanceof PhantomSlot ps) {
                     //noinspection unchecked
-                    builder.add((Target<I>) new ItemStackTarget((SlotPhantom) slot, gui));
+                    builder.add((Target<I>) new ItemStackTarget(ps, gui));
                 }
             }
-            return builder.build();
-        } else if (ingredient instanceof FluidStack) {
-            ImmutableList.Builder<Target<I>> builder = ImmutableList.builder();
-            for (int i = 0; i < EntityLogisticsFrame.FLUID_FILTER_SLOTS; i++) {
+            FluidUtil.getFluidContained(ingredient.getIngredient(VanillaTypes.ITEM_STACK).orElse(ItemStack.EMPTY)).ifPresent(fluidStack -> {
+                for (int i = 0; i < AbstractLogisticsFrameEntity.FLUID_FILTER_SLOTS; i++) {
+                    //noinspection unchecked
+                    builder.add((Target<I>) new FluidStackItemTarget(i, gui));
+                }
+            });
+        } else if (ingredient.getType() == ForgeTypes.FLUID_STACK) {
+            for (int i = 0; i < AbstractLogisticsFrameEntity.FLUID_FILTER_SLOTS; i++) {
                 //noinspection unchecked
                 builder.add((Target<I>) new FluidStackTarget(i, gui));
             }
-            return builder.build();
         }
-        return Collections.emptyList();
+        return builder.build();
     }
 
     @Override
     public void onComplete() {
     }
 
-    private static class ItemStackTarget implements Target<ItemStack> {
-        final SlotPhantom slot;
-        final GuiLogisticsBase<?> gui;
-
-        ItemStackTarget(SlotPhantom slot, GuiLogisticsBase<?> gui) {
-            this.slot = slot;
-            this.gui = gui;
-        }
-
+    private record ItemStackTarget(PhantomSlot slot, AbstractLogisticsScreen<?> gui) implements Target<ItemStack> {
         @Override
-        public Rectangle2d getArea() {
-            return new Rectangle2d(gui.getGuiLeft() + slot.x, gui.getGuiTop() + slot.y, 16, 16);
+        public Rect2i getArea() {
+            return new Rect2i(gui.getGuiLeft() + slot.x, gui.getGuiTop() + slot.y, 16, 16);
         }
 
         @Override
@@ -78,24 +76,30 @@ public class LogisticsFilterGhost<T extends EntityLogisticsFrame> implements IGh
         }
     }
 
-    private static class FluidStackTarget implements Target<FluidStack> {
-        final int slotNumber;
-        final GuiLogisticsBase<?> gui;
-
-        FluidStackTarget(int slotNumber, GuiLogisticsBase<?> gui) {
-            this.slotNumber = slotNumber;
-            this.gui = gui;
-        }
-
+    private record FluidStackTarget(int slotNumber, AbstractLogisticsScreen<?> gui) implements Target<FluidStack> {
         @Override
-        public Rectangle2d getArea() {
+        public Rect2i getArea() {
             PointXY p = gui.getFluidSlotPos(slotNumber);
-            return new Rectangle2d(p.x, p.y, 16, 16);
+            return new Rect2i(p.x(), p.y(), 16, 16);
         }
 
         @Override
         public void accept(FluidStack ingredient) {
             gui.updateFluidFilter(slotNumber, ingredient.copy());
+        }
+    }
+
+    // for items which contain fluids
+    private record FluidStackItemTarget(int slotNumber, AbstractLogisticsScreen<?> gui) implements Target<ItemStack> {
+        @Override
+        public Rect2i getArea() {
+            PointXY p = gui.getFluidSlotPos(slotNumber);
+            return new Rect2i(p.x(), p.y(), 16, 16);
+        }
+
+        @Override
+        public void accept(ItemStack ingredient) {
+            FluidUtil.getFluidContained(ingredient).ifPresent(fluidStack -> gui.updateFluidFilter(slotNumber, fluidStack));
         }
     }
 }

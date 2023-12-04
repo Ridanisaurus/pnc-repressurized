@@ -17,15 +17,15 @@
 
 package me.desht.pneumaticcraft.common.hacking;
 
-import net.minecraft.block.Block;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Block;
 
 public class WorldAndCoord {
-    public final IBlockReader world;
+    public final BlockGetter world;
     public final BlockPos pos;
 
-    public WorldAndCoord(IBlockReader world, BlockPos pos) {
+    public WorldAndCoord(BlockGetter world, BlockPos pos) {
         this.world = world;
         this.pos = pos;
     }
@@ -41,8 +41,7 @@ public class WorldAndCoord {
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof WorldAndCoord) {
-            WorldAndCoord wac = (WorldAndCoord) o;
+        if (o instanceof WorldAndCoord wac) {
             return wac.world == world && wac.pos.equals(pos);
         } else {
             return false;

@@ -17,49 +17,49 @@
 
 package me.desht.pneumaticcraft.datagen.recipe;
 
-import net.minecraft.advancements.ICriterionInstance;
-import net.minecraft.advancements.criterion.EntityPredicate;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
-import net.minecraft.advancements.criterion.ItemPredicate;
-import net.minecraft.advancements.criterion.MinMaxBounds;
-import net.minecraft.item.Item;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.tags.Tag;
-import net.minecraft.util.IItemProvider;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.advancements.CriterionTriggerInstance;
+import net.minecraft.advancements.critereon.ContextAwarePredicate;
+import net.minecraft.advancements.critereon.InventoryChangeTrigger;
+import net.minecraft.advancements.critereon.ItemPredicate;
+import net.minecraft.advancements.critereon.MinMaxBounds;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.ItemLike;
 
 public class Criteria {
-    private static InventoryChangeTrigger.Instance hasItem(net.minecraft.util.IItemProvider itemIn) {
+    private static InventoryChangeTrigger.TriggerInstance hasItem(net.minecraft.world.level.ItemLike itemIn) {
         return hasItem(ItemPredicate.Builder.item().of(itemIn).build());
     }
 
-    private static InventoryChangeTrigger.Instance hasItem(Tag<Item> tagIn) {
-        return hasItem(ItemPredicate.Builder.item().of(tagIn).build());
+//    private static InventoryChangeTrigger.TriggerInstance hasItem(SetTag<Item> tagIn) {
+//        return hasItem(ItemPredicate.Builder.item().of(tagIn).build());
+//    }
+
+    private static InventoryChangeTrigger.TriggerInstance hasItem(ItemPredicate... predicates) {
+        return new InventoryChangeTrigger.TriggerInstance(ContextAwarePredicate.ANY, MinMaxBounds.Ints.ANY, MinMaxBounds.Ints.ANY, MinMaxBounds.Ints.ANY, predicates);
     }
 
-    private static InventoryChangeTrigger.Instance hasItem(ItemPredicate... predicates) {
-        return new InventoryChangeTrigger.Instance(EntityPredicate.AndPredicate.ANY, MinMaxBounds.IntBound.ANY, MinMaxBounds.IntBound.ANY, MinMaxBounds.IntBound.ANY, predicates);
-    }
-
-    public static RecipeCriterion has(IItemProvider provider) {
-        return RecipeCriterion.of(provider.asItem().getRegistryName().getPath(), hasItem(provider.asItem()));
+    public static RecipeCriterion has(ItemLike provider) {
+        return RecipeCriterion.of(PneumaticCraftUtils.getRegistryName(provider.asItem()).orElseThrow().getPath(), hasItem(provider.asItem()));
     }
 
     public static RecipeCriterion has(Ingredient ingredient) {
         Item item = ingredient.getItems()[0].getItem();
-        return RecipeCriterion.of(item.getRegistryName().getPath(), hasItem(item));
+        return RecipeCriterion.of(PneumaticCraftUtils.getRegistryName(item).orElseThrow().getPath(), hasItem(item));
     }
 
     public static class RecipeCriterion {
 
         public final String name;
-        public final ICriterionInstance criterion;
+        public final CriterionTriggerInstance criterion;
 
-        private RecipeCriterion(String name, ICriterionInstance criterion) {
+        private RecipeCriterion(String name, CriterionTriggerInstance criterion) {
             this.name = name;
             this.criterion = criterion;
         }
 
-        public static RecipeCriterion of(String name, ICriterionInstance criterion) {
+        public static RecipeCriterion of(String name, CriterionTriggerInstance criterion) {
             return new RecipeCriterion(name, criterion);
         }
     }

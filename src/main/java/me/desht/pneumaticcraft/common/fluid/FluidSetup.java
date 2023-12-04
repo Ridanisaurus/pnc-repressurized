@@ -21,8 +21,10 @@ import me.desht.pneumaticcraft.common.PneumaticCraftAPIHandler;
 import me.desht.pneumaticcraft.common.config.ConfigHelper;
 import me.desht.pneumaticcraft.common.core.ModFluids;
 import me.desht.pneumaticcraft.common.core.ModItems;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.fluid.Fluid;
+import me.desht.pneumaticcraft.lib.Log;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class FluidSetup {
@@ -36,15 +38,24 @@ public class FluidSetup {
 
         // register hot fluids as (very inefficient) fuels
         for (Fluid fluid : ForgeRegistries.FLUIDS.getValues()) {
-            if (fluid.getAttributes().getTemperature() >= ConfigHelper.common().general.minFluidFuelTemperature.get() && fluid.isSource(fluid.defaultFluidState())) {
-                // non-API usage... register an explicit fluid rather than a tag
-                FuelRegistry.getInstance().registerHotFluid(fluid, (fluid.getAttributes().getTemperature() - 300) * 40, 0.25f);
+            try {
+                int temperature = fluid.getFluidType().getTemperature();
+                if (temperature >= ConfigHelper.common().general.minFluidFuelTemperature.get() && fluid.isSource(fluid.defaultFluidState())) {
+                    // non-API usage... register an explicit fluid rather than a tag
+                    FuelRegistry.getInstance().registerHotFluid(fluid, (temperature - 300) * 40, 0.25f);
+                }
+            } catch (RuntimeException e) {
+                ResourceLocation fluidId = ForgeRegistries.FLUIDS.getKey(fluid);
+                Log.error("Caught exception while checking the fluid type of %s: %s", fluidId, e.getMessage());
+                if (fluidId != null) {
+                    Log.error("Looks like %s isn't setting a fluid type for this fluid, please report to the mod author", fluidId.getNamespace());
+                }
             }
         }
 
         // no magnet'ing PCB's out of etching acid pools
         api.getItemRegistry().registerMagnetSuppressor(
-                e -> e instanceof ItemEntity && ((ItemEntity) e).getItem().getItem() == ModItems.EMPTY_PCB.get()
+                e -> e instanceof ItemEntity ie && ie.getItem().getItem() == ModItems.EMPTY_PCB.get()
                         && e.getCommandSenderWorld().getFluidState(e.blockPosition()).getType() == ModFluids.ETCHING_ACID.get()
         );
 

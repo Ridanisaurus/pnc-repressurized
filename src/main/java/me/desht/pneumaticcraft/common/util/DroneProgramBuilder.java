@@ -18,13 +18,12 @@
 package me.desht.pneumaticcraft.common.util;
 
 import me.desht.pneumaticcraft.api.drone.ProgWidgetType;
-import me.desht.pneumaticcraft.common.progwidgets.IProgWidget;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityProgrammer;
+import me.desht.pneumaticcraft.common.block.entity.ProgrammerBlockEntity;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IProgWidget;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Class to build simple (no jumping) Drone programs, without needing to worry about the X/Y locations of widgets
@@ -32,7 +31,6 @@ import java.util.stream.Collectors;
  * @author MineMaarten
  */
 public class DroneProgramBuilder {
-
     private final List<DroneInstruction> instructions = new ArrayList<>();
 
     public void add(IProgWidget mainInstruction, IProgWidget... whitelist) {
@@ -51,8 +49,7 @@ public class DroneProgramBuilder {
                 for (int paramIdx = 0; paramIdx < instruction.mainInstruction.getParameters().size(); paramIdx++) {
                     ProgWidgetType<?> type = instruction.mainInstruction.getParameters().get(paramIdx);
                     List<IProgWidget> whitelist = instruction.whitelist.stream()
-                            .filter(w -> type == w.getType())
-                            .collect(Collectors.toList());
+                            .filter(w -> type == w.getType()).toList();
                     int curX = instruction.mainInstruction.getWidth() / 2;
                     for (IProgWidget whitelistItem : whitelist) {
                         whitelistItem.setX(curX);
@@ -65,19 +62,11 @@ public class DroneProgramBuilder {
             curY += instruction.mainInstruction.getHeight() / 2;
             instruction.addToWidgets(allWidgets);
         }
-        TileEntityProgrammer.updatePuzzleConnections(allWidgets);
+        ProgrammerBlockEntity.updatePuzzleConnections(allWidgets);
         return allWidgets;
     }
 
-    private static class DroneInstruction {
-        final IProgWidget mainInstruction;
-        final List<IProgWidget> whitelist;
-
-        DroneInstruction(IProgWidget mainInstruction, List<IProgWidget> whitelist) {
-            this.mainInstruction = mainInstruction;
-            this.whitelist = whitelist;
-        }
-
+    private record DroneInstruction(IProgWidget mainInstruction, List<IProgWidget> whitelist) {
         void addToWidgets(List<IProgWidget> widgets) {
             widgets.add(mainInstruction);
             widgets.addAll(whitelist);

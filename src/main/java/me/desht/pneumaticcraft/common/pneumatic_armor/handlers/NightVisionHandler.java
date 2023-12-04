@@ -17,28 +17,29 @@
 
 package me.desht.pneumaticcraft.common.pneumatic_armor.handlers;
 
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
 import me.desht.pneumaticcraft.api.pneumatic_armor.BaseArmorUpgradeHandler;
+import me.desht.pneumaticcraft.api.pneumatic_armor.BuiltinArmorUpgrades;
 import me.desht.pneumaticcraft.api.pneumatic_armor.IArmorExtensionData;
 import me.desht.pneumaticcraft.api.pneumatic_armor.ICommonArmorHandler;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import me.desht.pneumaticcraft.common.upgrades.ModUpgrades;
 import me.desht.pneumaticcraft.lib.PneumaticValues;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
-import net.minecraft.util.ResourceLocation;
-
-import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 
 public class NightVisionHandler extends BaseArmorUpgradeHandler<IArmorExtensionData> {
+
     @Override
     public ResourceLocation getID() {
-        return RL("night_vision");
+        return BuiltinArmorUpgrades.NIGHT_VISION;
     }
 
     @Override
-    public EnumUpgrade[] getRequiredUpgrades() {
-        return new EnumUpgrade[] { EnumUpgrade.NIGHT_VISION };
+    public PNCUpgrade[] getRequiredUpgrades() {
+        return new PNCUpgrade[] { ModUpgrades.NIGHT_VISION.get() };
     }
 
     @Override
@@ -47,26 +48,26 @@ public class NightVisionHandler extends BaseArmorUpgradeHandler<IArmorExtensionD
     }
 
     @Override
-    public EquipmentSlotType getEquipmentSlot() {
-        return EquipmentSlotType.HEAD;
+    public EquipmentSlot getEquipmentSlot() {
+        return EquipmentSlot.HEAD;
     }
 
     @Override
     public void tick(ICommonArmorHandler commonArmorHandler, boolean enabled) {
-        PlayerEntity player = commonArmorHandler.getPlayer();
-        boolean hasPressure = commonArmorHandler.hasMinPressure(EquipmentSlotType.HEAD);
-        if (!player.level.isClientSide) {
-            EffectInstance nvInstance = player.getEffect(Effects.NIGHT_VISION);
+        Player player = commonArmorHandler.getPlayer();
+        boolean hasPressure = commonArmorHandler.hasMinPressure(EquipmentSlot.HEAD);
+        if (!player.level().isClientSide) {
+            MobEffectInstance nvInstance = player.getEffect(MobEffects.NIGHT_VISION);
             if (enabled && hasPressure && (nvInstance == null || nvInstance.getDuration() <= 220)) {
-                player.addEffect(new EffectInstance(Effects.NIGHT_VISION, 500, 0, false, false));
+                player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 500, 0, false, false));
             } else if ((!enabled || !hasPressure) && nvInstance != null) {
-                player.removeEffect(Effects.NIGHT_VISION);
+                player.removeEffect(MobEffects.NIGHT_VISION);
             }
         }
     }
 
     @Override
     public void onShutdown(ICommonArmorHandler commonArmorHandler) {
-        commonArmorHandler.getPlayer().removeEffect(Effects.NIGHT_VISION);
+        commonArmorHandler.getPlayer().removeEffect(MobEffects.NIGHT_VISION);
     }
 }

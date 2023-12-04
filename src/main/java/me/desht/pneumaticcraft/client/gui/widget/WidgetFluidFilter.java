@@ -17,21 +17,21 @@
 
 package me.desht.pneumaticcraft.client.gui.widget;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
 import me.desht.pneumaticcraft.client.util.GuiUtils;
 import me.desht.pneumaticcraft.common.thirdparty.ModNameCache;
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.client.renderer.Rectangle2d;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
-import java.util.List;
 import java.util.function.Consumer;
 
-public class WidgetFluidFilter extends Widget implements ITooltipProvider {
+public class WidgetFluidFilter extends AbstractWidget {
     final Consumer<WidgetFluidFilter> pressable;
     protected FluidStack fluidStack;
 
@@ -44,24 +44,22 @@ public class WidgetFluidFilter extends Widget implements ITooltipProvider {
     }
 
     WidgetFluidFilter(int x, int y, FluidStack fluidStack, Consumer<WidgetFluidFilter> pressable) {
-        super(x, y, 16, 16, StringTextComponent.EMPTY);
+        super(x, y, 16, 16, Component.empty());
         this.pressable = pressable;
         this.fluidStack = fluidStack;
     }
 
     @Override
-    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTick) {
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (!fluidStack.isEmpty()) {
-            GuiUtils.drawFluid(matrixStack, new Rectangle2d(x, y, 16, 16), new FluidStack(fluidStack, 1000), null);
-        }
-    }
-
-    @Override
-    public void addTooltip(double mouseX, double mouseY, List<ITextComponent> curTip, boolean shiftPressed) {
-        if (!fluidStack.isEmpty()) {
-            curTip.add(new FluidStack(fluidStack, 1).getDisplayName());
-            curTip.add(new StringTextComponent(ModNameCache.getModName(fluidStack.getFluid()))
-                    .withStyle(TextFormatting.BLUE, TextFormatting.ITALIC));
+            GuiUtils.drawFluid(graphics, new Rect2i(getX(), getY(), 16, 16), new FluidStack(fluidStack, 1000), null);
+            setTooltip(Tooltip.create(
+                    new FluidStack(fluidStack, 1).getDisplayName().copy().append("\n")
+                            .append(Component.literal(ModNameCache.getModName(fluidStack.getFluid()))
+                                    .withStyle(ChatFormatting.BLUE, ChatFormatting.ITALIC)))
+            );
+        } else {
+            setTooltip(null);
         }
     }
 
@@ -74,11 +72,14 @@ public class WidgetFluidFilter extends Widget implements ITooltipProvider {
         return this;
     }
 
-
     @Override
     public void onClick(double x, double y) {
         super.onClick(x, y);
 
         if (pressable != null) pressable.accept(this);
+    }
+
+    @Override
+    public void updateWidgetNarration(NarrationElementOutput pNarrationElementOutput) {
     }
 }

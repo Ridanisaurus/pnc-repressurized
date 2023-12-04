@@ -18,7 +18,7 @@
 package me.desht.pneumaticcraft.common.thirdparty.botania;
 
 import me.desht.pneumaticcraft.common.core.ModBlocks;
-import net.minecraft.item.DyeColor;
+import net.minecraft.world.item.DyeColor;
 import vazkii.botania.api.BotaniaAPI;
 
 public class PlasticBrickDyeHandler {

@@ -17,54 +17,57 @@
 
 package me.desht.pneumaticcraft.api.client.pneumatic_helmet;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
- * Implement this class and register it with {@link IPneumaticHelmetRegistry#registerBlockTrackEntry(IBlockTrackEntry)}.
- * Your implementation must provide a no-parameter constructor. For every entity that's applicable for this definition,
- * an instance is created.
+ * Implement this interface and register it with {@link IClientArmorRegistry#registerBlockTrackEntry(ResourceLocation, Supplier)}.
+ * Your implementation must provide a no-parameter constructor.
+ * <p>
+ * These trackers are singleton objects, so any instance data is in effect shared amongst all block positions for which
+ * the tracker is applicable (in most cases, instance data should not be necessary).
  */
 public interface IBlockTrackEntry {
     /**
-     * This method should return true if the coordinate checked is one that
-     * should be tracked. Most entries will just return true when the blockID is
-     * the one that they track.
+     * This method should return true if the block at the coordinate checked is one that should be tracked. This is
+     * often as simple as just checking the block type, but could be more complex for some trackers, i.e. checking
+     * if a certain capability exists on the block entity. This gets called a lot when the block tracker is active,
+     * so keep it as simple as possible.
      *
-     * @param world The world that is examined.
-     * @param pos   The position of the block examined.
-     * @param state The block of the current coordinate. This will save you a
-     *              call to World.getBlockState().
-     * @param te    The TileEntity at this x,y,z  (may be null)
-     * @return true if the coordinate should be tracked by this BlockTrackEntry.
+     * @param world the world
+     * @param pos   the blockpos
+     * @param state blockstate at this blockpos
+     * @param te    the block entity at this blockpos (may be null)
+     * @return true if this block should be tracked by this BlockTrackEntry
      */
-    boolean shouldTrackWithThisEntry(IBlockReader world, BlockPos pos, BlockState state, TileEntity te);
+    boolean shouldTrackWithThisEntry(BlockGetter world, BlockPos pos, BlockState state, BlockEntity te);
 
     /**
-     * This method controls whether the block should be updated by the server (at 5
-     * second intervals). This is specifically aimed at Tile Entities, as the server will
-     * send an NBT packet. Return an empty list if no updates are needed, otherwise a
-     * list of the block positions for which updates should be sent (in most cases,
-     * only the TE's own block pos, but potentially others for multiblocks like the
-     * vanilla double chest)
+     * This method controls whether to send server update requests, at 3 second intervals while the player is
+     * looking at the block. This is specifically aimed at Block Entities, as the server will send an NBT
+     * update packet in response. Return an empty list if no updates are needed, otherwise a (possibly immutable)
+     * list of the block positions for which updates should be requested (in most cases, only the BE's own block pos,
+     * but potentially others for multiblocks like the vanilla double chest)
      *
-     * @param te the tile entity at the currently checked location, may be null
+     * @param te the block entity at the currently checked location, may be null
      * @return a list of the block positions for which update request packets should be sent
      */
-    List<BlockPos> getServerUpdatePositions(@Nullable TileEntity te);
+    List<BlockPos> getServerUpdatePositions(@Nullable BlockEntity te);
 
     /**
      * The return of this method defines at how many tracked blocks of this type
@@ -76,17 +79,17 @@ public interface IBlockTrackEntry {
 
     /**
      * This method is called each client tick to retrieve the block's additional
-     * information. The method behaves much the same as {@link net.minecraft.item.Item#appendHoverText(ItemStack, World, List, ITooltipFlag)}.
-     * This method is only called if {@link #shouldTrackWithThisEntry(IBlockReader, BlockPos, BlockState, TileEntity)}
-     * returned true, and the player is curently focused on the block.
+     * information. The method behaves much the same as {@link net.minecraft.world.item.Item#appendHoverText(ItemStack, Level, List, TooltipFlag)}.
+     * This method is only called if {@link #shouldTrackWithThisEntry(BlockGetter, BlockPos, BlockState, BlockEntity)}
+     * returned true, and the player is currently focused on the block.
      *
-     * @param world    The world the block is in.
-     * @param pos      The position the block is at.
-     * @param te       The TileEntity at the x,y,z (may be null)
-     * @param face     The blockface the player is looking at (null if player is not looking directly at the block)
-     * @param infoList The list of lines to display.
+     * @param world    the world
+     * @param pos      the blockpos
+     * @param te       the block entity at this blockpos (may be null)
+     * @param face     the block face the player is looking at (null if player is not looking directly at the block)
+     * @param infoList list of text to add information to
      */
-    void addInformation(World world, BlockPos pos, TileEntity te, Direction face, List<ITextComponent> infoList);
+    void addInformation(Level world, BlockPos pos, BlockEntity te, Direction face, List<Component> infoList);
 
     /**
      * Return a unique identifier for this block track entry. This is also used for translation key and keybind naming
@@ -94,6 +97,7 @@ public interface IBlockTrackEntry {
      *
      * @return the ID of this entry
      */
+    @Nonnull
     ResourceLocation getEntryID();
 
     /**

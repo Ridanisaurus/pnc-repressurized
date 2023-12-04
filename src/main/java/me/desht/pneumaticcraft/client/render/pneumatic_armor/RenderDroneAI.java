@@ -17,20 +17,20 @@
 
 package me.desht.pneumaticcraft.client.render.pneumatic_armor;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import me.desht.pneumaticcraft.client.render.ProgWidgetRenderer;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
-import me.desht.pneumaticcraft.client.util.ProgWidgetRenderer;
-import me.desht.pneumaticcraft.common.entity.EntityProgrammableController;
-import me.desht.pneumaticcraft.common.entity.living.EntityDrone;
-import me.desht.pneumaticcraft.common.entity.living.EntityDroneBase;
-import me.desht.pneumaticcraft.common.item.ItemPneumaticArmor;
-import me.desht.pneumaticcraft.common.progwidgets.IProgWidget;
+import me.desht.pneumaticcraft.common.drone.progwidgets.IProgWidget;
+import me.desht.pneumaticcraft.common.entity.drone.AbstractDroneEntity;
+import me.desht.pneumaticcraft.common.entity.drone.DroneEntity;
+import me.desht.pneumaticcraft.common.entity.drone.ProgrammableControllerEntity;
+import me.desht.pneumaticcraft.common.item.PneumaticArmorItem;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3f;
-import net.minecraft.world.World;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -38,18 +38,21 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Renders the Drone's currently executing widget in-world, above the drone itself. Used when drone debugging is active.
+ */
 public class RenderDroneAI {
-    private final EntityDroneBase drone;
+    private final AbstractDroneEntity drone;
     private final List<Pair<RenderCoordWireframe, Integer>> blackListWireframes = new ArrayList<>();
     private float progress = 0;
     private BlockPos oldPos, pos;
 
-    public RenderDroneAI(EntityDroneBase drone) {
+    public RenderDroneAI(AbstractDroneEntity drone) {
         this.drone = drone;
-        update();
+        tick();
     }
 
-    public void update() {
+    public void tick() {
         BlockPos lastPos = pos;
         pos = drone.getTargetedBlock();
         if (pos != null) {
@@ -75,12 +78,12 @@ public class RenderDroneAI {
         }
     }
 
-    public void render(MatrixStack matrixStack, IRenderTypeBuffer buffer, float partialTicks) {
+    public void render(PoseStack matrixStack, MultiBufferSource buffer, float partialTicks) {
         for (Pair<RenderCoordWireframe, Integer> wireframe : blackListWireframes) {
             wireframe.getKey().render(matrixStack, buffer, partialTicks);
         }
 
-        if (ItemPneumaticArmor.isPlayerDebuggingDrone(ClientUtils.getClientPlayer(), drone)) {
+        if (PneumaticArmorItem.isPlayerDebuggingDrone(ClientUtils.getClientPlayer(), drone)) {
             IProgWidget activeWidget = getActiveWidget(drone);
             if (activeWidget != null) {
                 double x, y, z;
@@ -89,37 +92,37 @@ public class RenderDroneAI {
                     y = getInterpolated(pos.getY(), oldPos.getY(), partialTicks);
                     z = getInterpolated(pos.getZ(), oldPos.getZ(), partialTicks);
                 } else {
-                    x = MathHelper.lerp(partialTicks, drone.xo, drone.getX());
-                    y = MathHelper.lerp(partialTicks, drone.yo, drone.getY()) + 0.5;
-                    z = MathHelper.lerp(partialTicks, drone.zo, drone.getZ());
+                    x = Mth.lerp(partialTicks, drone.xo, drone.getX());
+                    y = Mth.lerp(partialTicks, drone.yo, drone.getY()) + 0.5;
+                    z = Mth.lerp(partialTicks, drone.zo, drone.getZ());
                 }
                 matrixStack.pushPose();
                 matrixStack.translate(x, y + 0.5, z);
                 matrixStack.scale(0.01f, 0.01f, 0.01f);
-                matrixStack.mulPose(Vector3f.XP.rotationDegrees(180));
-                matrixStack.mulPose(Vector3f.YP.rotationDegrees(Minecraft.getInstance().gameRenderer.getMainCamera().getYRot()));
+                matrixStack.mulPose(Axis.XP.rotationDegrees(180));
+                matrixStack.mulPose(Axis.YP.rotationDegrees(Minecraft.getInstance().gameRenderer.getMainCamera().getYRot()));
                 ProgWidgetRenderer.renderProgWidget3d(matrixStack, buffer, activeWidget);
                 matrixStack.popPose();
             }
         }
     }
 
-    private IProgWidget getActiveWidget(EntityDroneBase droneBase) {
-        if (droneBase instanceof EntityDrone) {
-            return ((EntityDrone) droneBase).getActiveWidget();
-        } else if (droneBase instanceof EntityProgrammableController) {
-            return ((EntityProgrammableController) droneBase).getController().getActiveWidget();
+    private IProgWidget getActiveWidget(AbstractDroneEntity droneBase) {
+        if (droneBase instanceof DroneEntity) {
+            return ((DroneEntity) droneBase).getActiveWidget();
+        } else if (droneBase instanceof ProgrammableControllerEntity) {
+            return ((ProgrammableControllerEntity) droneBase).getController().getActiveWidget();
         } else {
             return null;
         }
     }
 
     private double getInterpolated(double newPos, double oldPos, float partialTicks) {
-        double cosProgress = 0.5 - 0.5 * MathHelper.cos((float) Math.min(Math.PI, progress + partialTicks * 0.1F));
+        double cosProgress = 0.5 - 0.5 * Mth.cos((float) Math.min(Math.PI, progress + partialTicks * 0.1F));
         return oldPos + (newPos - oldPos) * cosProgress;
     }
 
-    public void addBlackListEntry(World world, BlockPos pos) {
+    public void addBlackListEntry(Level world, BlockPos pos) {
         blackListWireframes.add(new MutablePair<>(new RenderCoordWireframe(world, pos), 60));
     }
 }

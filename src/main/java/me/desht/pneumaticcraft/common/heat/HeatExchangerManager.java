@@ -24,22 +24,19 @@ import me.desht.pneumaticcraft.api.heat.IHeatExchangerLogic;
 import me.desht.pneumaticcraft.api.heat.IHeatRegistry;
 import me.desht.pneumaticcraft.api.semiblock.ISemiBlock;
 import me.desht.pneumaticcraft.common.heat.behaviour.HeatBehaviourManager;
-import me.desht.pneumaticcraft.common.recipes.other.HeatPropertiesRecipeImpl;
 import me.desht.pneumaticcraft.common.semiblock.SemiblockTracker;
-import net.minecraft.block.Block;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.util.LazyOptional;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public enum HeatExchangerManager implements IHeatRegistry {
     INSTANCE;
@@ -49,14 +46,14 @@ public enum HeatExchangerManager implements IHeatRegistry {
     }
 
     @Nonnull
-    public LazyOptional<IHeatExchangerLogic> getLogic(World world, BlockPos pos, Direction side) {
+    public LazyOptional<IHeatExchangerLogic> getLogic(Level world, BlockPos pos, Direction side) {
         return getLogic(world, pos, side, IHeatExchangerLogic.ALL_BLOCKS);
     }
 
     @Nonnull
-    public LazyOptional<IHeatExchangerLogic> getLogic(World world, BlockPos pos, Direction side, BiPredicate<IWorld,BlockPos> blockFilter) {
-        if (!world.isAreaLoaded(pos, 0)) return LazyOptional.empty();
-        TileEntity te = world.getBlockEntity(pos);
+    public LazyOptional<IHeatExchangerLogic> getLogic(Level world, BlockPos pos, Direction side, BiPredicate<LevelAccessor,BlockPos> blockFilter) {
+        if (!world.isLoaded(pos)) return LazyOptional.empty();
+        BlockEntity te = world.getBlockEntity(pos);
         // important: use cap here, not IHeatExchangingTE interface
         if (te != null && te.getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY, side).isPresent()) {
             return te.getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY, side);
@@ -66,7 +63,7 @@ public enum HeatExchangerManager implements IHeatRegistry {
             }
             List<ISemiBlock> l = SemiblockTracker.getInstance().getAllSemiblocks(world, pos)
                     .filter(s -> s.getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY).isPresent())
-                    .collect(Collectors.toList());
+                    .toList();
             if (!l.isEmpty()) {
                 return l.get(0).getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY);
             }
@@ -79,12 +76,7 @@ public enum HeatExchangerManager implements IHeatRegistry {
     }
 
     @Override
-    public void registerBlockExchanger(Block block, double temperature, double thermalResistance) {
-        BlockHeatProperties.getInstance().register(block, new HeatPropertiesRecipeImpl(block.getRegistryName(), block, (int) temperature, thermalResistance));
-    }
-
-    @Override
-    public void registerHeatBehaviour(ResourceLocation id, Supplier<? extends HeatBehaviour<?>> heatBehaviour) {
+    public void registerHeatBehaviour(ResourceLocation id, Supplier<? extends HeatBehaviour> heatBehaviour) {
         HeatBehaviourManager.getInstance().registerBehaviour(id, heatBehaviour);
     }
 

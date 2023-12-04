@@ -20,14 +20,16 @@ package me.desht.pneumaticcraft.api.crafting;
 import com.google.gson.JsonObject;
 import me.desht.pneumaticcraft.api.PNCCapabilities;
 import me.desht.pneumaticcraft.api.tileentity.IAirHandler;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapedRecipe;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 
 import javax.annotation.Nullable;
 
@@ -38,12 +40,12 @@ public class ShapedPressurizableRecipe extends ShapedRecipe {
     public static final Serializer SERIALIZER = new Serializer();
 
     private ShapedPressurizableRecipe(ResourceLocation idIn, String groupIn, int recipeWidthIn, int recipeHeightIn, NonNullList<Ingredient> recipeItemsIn, ItemStack recipeOutputIn) {
-        super(idIn, groupIn, recipeWidthIn, recipeHeightIn, recipeItemsIn, recipeOutputIn);
+        super(idIn, groupIn, CraftingBookCategory.MISC, recipeWidthIn, recipeHeightIn, recipeItemsIn, recipeOutputIn);
     }
 
     @Override
-    public ItemStack assemble(CraftingInventory inv) {
-        ItemStack newOutput = this.getResultItem().copy();
+    public ItemStack assemble(CraftingContainer inv, RegistryAccess registryAccess) {
+        ItemStack newOutput = this.getResultItem(registryAccess).copy();
 
         newOutput.getCapability(PNCCapabilities.AIR_HANDLER_ITEM_CAPABILITY).ifPresent(outputHandler -> {
             int totalAir = 0;
@@ -58,7 +60,7 @@ public class ShapedPressurizableRecipe extends ShapedRecipe {
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<?> getSerializer() {
         return SERIALIZER;
     }
 
@@ -66,18 +68,18 @@ public class ShapedPressurizableRecipe extends ShapedRecipe {
         @Override
         public ShapedRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
             ShapedRecipe r = super.fromJson(recipeId, json);
-            return new ShapedPressurizableRecipe(r.getId(), r.getGroup(), r.getRecipeWidth(), r.getRecipeHeight(), r.getIngredients(), r.getResultItem());
+            return new ShapedPressurizableRecipe(r.getId(), r.getGroup(), r.getRecipeWidth(), r.getRecipeHeight(), r.getIngredients(), r.getResultItem(DummyRegistryAccess.INSTANCE));
         }
 
         @Nullable
         @Override
-        public ShapedRecipe fromNetwork(ResourceLocation recipeId, PacketBuffer buffer) {
+        public ShapedRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
             ShapedRecipe r = super.fromNetwork(recipeId, buffer);
-            return new ShapedPressurizableRecipe(r.getId(), r.getGroup(), r.getRecipeWidth(), r.getRecipeHeight(), r.getIngredients(), r.getResultItem());
+            return new ShapedPressurizableRecipe(r.getId(), r.getGroup(), r.getRecipeWidth(), r.getRecipeHeight(), r.getIngredients(), r.getResultItem(DummyRegistryAccess.INSTANCE));
         }
 
         @Override
-        public void toNetwork(PacketBuffer buffer, ShapedRecipe recipe) {
+        public void toNetwork(FriendlyByteBuf buffer, ShapedRecipe recipe) {
             super.toNetwork(buffer, recipe);
         }
     }

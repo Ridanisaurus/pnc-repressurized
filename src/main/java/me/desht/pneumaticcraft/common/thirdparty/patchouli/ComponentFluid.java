@@ -17,16 +17,13 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.patchouli;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
 import me.desht.pneumaticcraft.client.gui.widget.WidgetTank;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.fluids.FluidStack;
 import vazkii.patchouli.api.IComponentRenderContext;
 import vazkii.patchouli.api.ICustomComponent;
 import vazkii.patchouli.api.IVariable;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -45,16 +42,14 @@ public class ComponentFluid implements ICustomComponent {
     }
 
     @Override
-    public void render(MatrixStack matrixStack, IComponentRenderContext ctx, float pticks, int mouseX, int mouseY) {
+    public void render(GuiGraphics graphics, IComponentRenderContext ctx, float pticks, int mouseX, int mouseY) {
         if (!fluidStacks.isEmpty()) {
             tankWidget.setFluid(fluidStacks.get(ctx.getTicksInBook() / 20 % fluidStacks.size()));
         }
         if (tankWidget.getTank().getCapacity() > 0 && !tankWidget.getTank().getFluid().isEmpty()) {
-            tankWidget.renderButton(matrixStack, mouseX, mouseY, pticks);
-            if (ctx.isAreaHovered(mouseX, mouseY, tankWidget.x, tankWidget.y, tankWidget.getWidth(), tankWidget.getHeight())) {
-                List<ITextComponent> tooltip = new ArrayList<>();
-                tankWidget.addTooltip(mouseX, mouseY, tooltip, Screen.hasShiftDown());
-                ctx.setHoverTooltipComponents(tooltip);
+            tankWidget.renderWidget(graphics, mouseX, mouseY, pticks);
+            if (ctx.isAreaHovered(mouseX, mouseY, tankWidget.getX(), tankWidget.getY(), tankWidget.getWidth(), tankWidget.getHeight())) {
+                ctx.setHoverTooltipComponents(tankWidget.makeTooltip());
             }
         }
     }
@@ -64,6 +59,11 @@ public class ComponentFluid implements ICustomComponent {
         fluidStacks = lookup.apply(this.fluid).asStreamOrSingleton()
                 .map((x) -> x.as(FluidStack.class))
                 .collect(Collectors.toList());
-        scaleParsed = Integer.parseInt(lookup.apply(scale).asString());
+        String scaleStr = lookup.apply(scale).asString();
+        try {
+            scaleParsed = Integer.parseInt(scaleStr);
+        } catch (NumberFormatException e) {
+            scaleParsed = 0;
+        }
     }
 }

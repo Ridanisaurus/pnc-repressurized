@@ -1,10 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "ILI",
-    "III",
-    "III"
-  ],
+  "category": "misc",
   "key": {
     "I": {
       "tag": "forge:ingots/compressed_iron"
@@ -13,7 +9,13 @@
       "item": "minecraft:leather_chestplate"
     }
   },
+  "pattern": [
+    "ILI",
+    "III",
+    "III"
+  ],
   "result": {
     "item": "pneumaticcraft:compressed_iron_chestplate"
-  }
+  },
+  "show_notification": true
 }

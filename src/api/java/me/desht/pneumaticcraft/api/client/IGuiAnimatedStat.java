@@ -17,13 +17,15 @@
 
 package me.desht.pneumaticcraft.api.client;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.client.gui.IGuiEventListener;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.Rectangle2d;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
@@ -31,21 +33,20 @@ import java.util.List;
  * This interface doesn't have to be implemented. In PneumaticCraft there already is a widget which implements this
  * interface used in many places: GUI side tabs, Pneumatic Helmet 2D and 3D stats. You can get an instance of this
  * class via the various {@link IClientRegistry} getAnimatedStat() methods.
- * <p>
- * Implementing your own version of animated stats is also possible.
  */
-public interface IGuiAnimatedStat extends ITickableWidget, IGuiEventListener {
+public interface IGuiAnimatedStat extends ITickableWidget, GuiEventListener {
     /**
      * Check which direction this expands to when opened.
      *
-     * @return true if the stat expands to the left, false otherwise
+     * @return true if the stat expands to the left (the right edge of the state is anchored to the X position),
+     *         false if the stat expands to the right
      */
     boolean isLeftSided();
 
     /**
      * Set the direction this stat will expand in when opened.
      *
-     * @param leftSided true if the stat should expand to the left, false otherwise
+     * @param leftSided true if the stat should expand to the left, false if the stat should expand to the right
      */
     void setLeftSided(boolean leftSided);
 
@@ -64,7 +65,7 @@ public interface IGuiAnimatedStat extends ITickableWidget, IGuiEventListener {
      * @param text a list of text components
      * @return this, so you can chain calls.
      */
-    IGuiAnimatedStat setText(List<ITextComponent> text);
+    IGuiAnimatedStat setText(List<Component> text);
 
     /**
      * Sets the main text of this stat. Every line should be stored in a separate list element, but lines do not need
@@ -74,15 +75,15 @@ public interface IGuiAnimatedStat extends ITickableWidget, IGuiEventListener {
      * @param text a text component
      * @return this, so you can chain calls.
      */
-    IGuiAnimatedStat setText(ITextComponent text);
+    IGuiAnimatedStat setText(Component text);
 
     /**
      * Appends some more text to the existing text in this stat.  This method will split overlong lines, same as
-     * {@link #setText(ITextComponent)}
+     * {@link #setText(Component)}
      *
      * @param text a list of text components
      */
-    void appendText(List<ITextComponent> text);
+    void appendText(List<Component> text);
 
     /**
      * Defines what dimensions the stat should have when it is not expanded (default 17x17, sufficient to display the
@@ -203,17 +204,17 @@ public interface IGuiAnimatedStat extends ITickableWidget, IGuiEventListener {
      *
      * @return a bounding box
      */
-    Rectangle2d getBounds();
+    Rect2i getBounds();
 
     /**
      * Render the stat in 2D (gui) context.
      *
-     * @param matrixStack the matrix stack
-     * @param mouseX the mouse X position
-     * @param mouseY the mouse Y position
+     * @param graphics     the gui graphics context
+     * @param mouseX       the mouse X position
+     * @param mouseY       the mouse Y position
      * @param partialTicks partial ticks since last client tick
      */
-    void renderStat(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks);
+    void renderStat(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks);
 
     /**
      * Render the stat in 3D (in-world) context.
@@ -222,7 +223,7 @@ public interface IGuiAnimatedStat extends ITickableWidget, IGuiEventListener {
      * @param buffer the render buffer
      * @param partialTicks partial ticks since last client tick
      */
-    void renderStat(MatrixStack matrixStack, IRenderTypeBuffer buffer, float partialTicks);
+    void renderStat(PoseStack matrixStack, MultiBufferSource buffer, float partialTicks);
 
     /**
      * Forces the stat to close.
@@ -255,14 +256,14 @@ public interface IGuiAnimatedStat extends ITickableWidget, IGuiEventListener {
      *
      * @return the title
      */
-    ITextComponent getTitle();
+    Component getTitle();
 
     /**
      * Set the title line for this stat; the text drawn on the top line. This text is never wrapped, so be mindful
      * of the length of this line.
      * @param title the title string
      */
-    void setTitle(ITextComponent title);
+    void setTitle(Component title);
 
     /**
      * This can be used to reserve one or more lines at the top of the stat; text will only drawn below the reserved
@@ -283,4 +284,25 @@ public interface IGuiAnimatedStat extends ITickableWidget, IGuiEventListener {
      * @param itemStack an item to use for the texture
      */
     void setTexture(ItemStack itemStack);
+
+    /**
+     * Set the line spacing, in pixels
+     * @param spacing the line spacing
+     */
+    void setLineSpacing(int spacing);
+
+    /**
+     * Add a subwidget to the panel. Subwidgets are automatically rendered by the panel itself, and don't need to be
+     * added to your GUI separately.
+     * @param widget the subwidget
+     */
+    void addSubWidget(AbstractWidget widget);
+
+    /**
+     * Define X offsets for subwidget rendering. You should not normally need to call this method.
+     *
+     * @param left X offset when widget opens to the left
+     * @param right X offset when widget opens to the right
+     */
+    void setSubwidgetRenderOffsets(int left, int right);
 }

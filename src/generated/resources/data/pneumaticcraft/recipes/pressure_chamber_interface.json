@@ -1,5 +1,6 @@
 {
   "type": "minecraft:crafting_shapeless",
+  "category": "misc",
   "ingredients": [
     {
       "item": "minecraft:hopper"
@@ -12,7 +13,7 @@
     }
   ],
   "result": {
-    "item": "pneumaticcraft:pressure_chamber_interface",
-    "count": 2
+    "count": 2,
+    "item": "pneumaticcraft:pressure_chamber_interface"
   }
 }

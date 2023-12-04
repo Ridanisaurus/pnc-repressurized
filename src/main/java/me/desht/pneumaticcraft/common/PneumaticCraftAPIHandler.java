@@ -19,48 +19,35 @@ package me.desht.pneumaticcraft.common;
 
 import me.desht.pneumaticcraft.api.PneumaticRegistry;
 import me.desht.pneumaticcraft.api.client.IClientRegistry;
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IPneumaticHelmetRegistry;
+import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IClientArmorRegistry;
 import me.desht.pneumaticcraft.api.crafting.IPneumaticRecipeRegistry;
-import me.desht.pneumaticcraft.api.crafting.ingredient.FluidIngredient;
 import me.desht.pneumaticcraft.api.drone.IDroneRegistry;
 import me.desht.pneumaticcraft.api.fuel.IFuelRegistry;
 import me.desht.pneumaticcraft.api.heat.IHeatRegistry;
 import me.desht.pneumaticcraft.api.item.IItemRegistry;
-import me.desht.pneumaticcraft.api.misc.IPlayerMatcher;
+import me.desht.pneumaticcraft.api.misc.DamageSources;
+import me.desht.pneumaticcraft.api.misc.IMiscHelpers;
+import me.desht.pneumaticcraft.api.pneumatic_armor.ICommonArmorRegistry;
 import me.desht.pneumaticcraft.api.tileentity.IAirHandlerMachineFactory;
 import me.desht.pneumaticcraft.api.universal_sensor.ISensorRegistry;
+import me.desht.pneumaticcraft.api.upgrade.IUpgradeRegistry;
 import me.desht.pneumaticcraft.api.wrench.IWrenchRegistry;
-import me.desht.pneumaticcraft.client.GuiRegistry;
-import me.desht.pneumaticcraft.client.render.pneumatic_armor.PneumaticHelmetRegistry;
+import me.desht.pneumaticcraft.client.ClientRegistryImpl;
+import me.desht.pneumaticcraft.client.pneumatic_armor.ClientArmorRegistry;
+import me.desht.pneumaticcraft.common.drone.DroneRegistry;
 import me.desht.pneumaticcraft.common.fluid.FuelRegistry;
 import me.desht.pneumaticcraft.common.heat.HeatExchangerManager;
 import me.desht.pneumaticcraft.common.item.ItemRegistry;
-import me.desht.pneumaticcraft.common.network.NetworkHandler;
-import me.desht.pneumaticcraft.common.network.PacketNotifyBlockUpdate;
-import me.desht.pneumaticcraft.common.network.PacketSetGlobalVariable;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorRegistry;
 import me.desht.pneumaticcraft.common.pressure.AirHandlerMachineFactory;
 import me.desht.pneumaticcraft.common.recipes.PneumaticRecipeRegistry;
 import me.desht.pneumaticcraft.common.sensor.SensorHandler;
 import me.desht.pneumaticcraft.common.thirdparty.ModdedWrenchUtils;
-import me.desht.pneumaticcraft.common.tileentity.TileEntitySecurityStation;
-import me.desht.pneumaticcraft.common.tileentity.TileEntitySmartChest;
-import me.desht.pneumaticcraft.common.util.PlayerFilter;
-import me.desht.pneumaticcraft.common.variables.GlobalVariableManager;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraftforge.items.IItemHandler;
-import org.apache.commons.lang3.Validate;
+import me.desht.pneumaticcraft.common.upgrades.ApplicableUpgradesDB;
 
-/**
- * With this class you can register your entities to give more info in the tooltip of the Entity Tracker.
- */
-public class PneumaticCraftAPIHandler implements PneumaticRegistry.IPneumaticCraftInterface {
-    private final static PneumaticCraftAPIHandler INSTANCE = new PneumaticCraftAPIHandler();
+public enum PneumaticCraftAPIHandler implements PneumaticRegistry.IPneumaticCraftInterface {
+    INSTANCE;
+//    private final static PneumaticCraftAPIHandler INSTANCE = new PneumaticCraftAPIHandler();
 
     public static PneumaticCraftAPIHandler getInstance() {
         return INSTANCE;
@@ -77,8 +64,13 @@ public class PneumaticCraftAPIHandler implements PneumaticRegistry.IPneumaticCra
     }
 
     @Override
-    public IPneumaticHelmetRegistry getHelmetRegistry() {
-        return PneumaticHelmetRegistry.getInstance();
+    public IClientArmorRegistry getClientArmorRegistry() {
+        return ClientArmorRegistry.getInstance();
+    }
+
+    @Override
+    public ICommonArmorRegistry getCommonArmorRegistry() {
+        return CommonArmorRegistry.getInstance();
     }
 
     @Override
@@ -92,41 +84,8 @@ public class PneumaticCraftAPIHandler implements PneumaticRegistry.IPneumaticCra
     }
 
     @Override
-    public int getProtectingSecurityStations(PlayerEntity player, BlockPos pos, boolean showRangeLines) {
-        Validate.isTrue(!player.getCommandSenderWorld().isClientSide, "This method can only be called from the server side!");
-        return TileEntitySecurityStation.getProtectingSecurityStations(player, pos, false);
-    }
-
-    @Override
-    public int getProtectingSecurityStations(PlayerEntity player, BlockPos pos) {
-        Validate.isTrue(!player.getCommandSenderWorld().isClientSide, "This method can only be called from the server side!");
-        return TileEntitySecurityStation.getProtectingSecurityStations(player, pos, false);
-    }
-
-    @Override
-    @Deprecated
-    public void registerXPFluid(Fluid fluid, int liquidToPointRatio) {
-        XPFluidManager.getInstance().registerXPFluid(fluid, liquidToPointRatio);
-    }
-
-    @Override
-    public void registerXPFluid(FluidIngredient tag, int liquidToPointRatio) {
-        XPFluidManager.getInstance().registerXPFluid(tag, liquidToPointRatio);
-    }
-
-    @Override
-    public void syncGlobalVariable(ServerPlayerEntity player, String varName) {
-        NetworkHandler.sendToPlayer(new PacketSetGlobalVariable(varName, GlobalVariableManager.getInstance().getCoordinate(varName)), player);
-    }
-
-    @Override
-    public void registerPlayerMatcher(ResourceLocation id, IPlayerMatcher.MatcherFactory<?> factory) {
-        PlayerFilter.registerMatcher(id.toString(), factory);
-    }
-
-    @Override
-    public IClientRegistry getGuiRegistry() {
-        return GuiRegistry.getInstance();
+    public IClientRegistry getClientRegistry() {
+        return ClientRegistryImpl.getInstance();
     }
 
     @Override
@@ -140,6 +99,11 @@ public class PneumaticCraftAPIHandler implements PneumaticRegistry.IPneumaticCra
     }
 
     @Override
+    public IUpgradeRegistry getUpgradeRegistry() {
+        return ApplicableUpgradesDB.getInstance();
+    }
+
+    @Override
     public IFuelRegistry getFuelRegistry() {
         return FuelRegistry.getInstance();
     }
@@ -150,19 +114,12 @@ public class PneumaticCraftAPIHandler implements PneumaticRegistry.IPneumaticCra
     }
 
     @Override
-    public ResourceLocation RL(String path) {
-        return PneumaticRegistry.RL(path);
+    public IMiscHelpers getMiscHelpers() {
+        return MiscAPIHandler.getInstance();
     }
 
     @Override
-    public IItemHandler deserializeSmartChest(CompoundNBT tag) {
-        return TileEntitySmartChest.deserializeSmartChest(tag);
-    }
-
-    @Override
-    public void forceClientShapeRecalculation(World world, BlockPos pos) {
-        if (!world.isClientSide) {
-            NetworkHandler.sendToAllTracking(new PacketNotifyBlockUpdate(pos), world, pos);
-        }
+    public DamageSources getDamageSources() {
+        return PNCDamageSource.DamageSourcesImpl.INSTANCE;
     }
 }

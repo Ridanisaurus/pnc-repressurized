@@ -18,20 +18,23 @@
 package me.desht.pneumaticcraft.common.recipes.special;
 
 import me.desht.pneumaticcraft.common.core.ModItems;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
-import me.desht.pneumaticcraft.common.entity.living.EntityDrone;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.DyeColor;
-import net.minecraft.item.DyeItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapelessRecipe;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import me.desht.pneumaticcraft.common.entity.drone.DroneEntity;
+import me.desht.pneumaticcraft.common.item.DroneItem;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.DyeItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
+import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Arrays;
@@ -43,18 +46,18 @@ public class DroneColorCrafting extends ShapelessRecipe {
         Arrays.setAll(DYES, i -> DyeItem.byColor(DyeColor.values()[i]));
     }
 
-    public DroneColorCrafting(ResourceLocation idIn) {
-        super(idIn, "", new ItemStack(ModItems.DRONE.get()), NonNullList.of(Ingredient.EMPTY,
+    public DroneColorCrafting(ResourceLocation idIn, CraftingBookCategory category) {
+        super(idIn, "", category, new ItemStack(ModItems.DRONE.get()), NonNullList.of(Ingredient.EMPTY,
                     Ingredient.of(DYES), Ingredient.of(ModItems.DRONE.get()))
         );
     }
 
-    private Pair<ItemStack, DyeColor> findItems(CraftingInventory inv) {
+    private Pair<ItemStack, DyeColor> findItems(CraftingContainer inv) {
         ItemStack drone = ItemStack.EMPTY;
         DyeColor dye = null;
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack stack = inv.getItem(i);
-            if (stack.getItem() == ModItems.DRONE.get()) {
+            if (stack.getItem() instanceof DroneItem) {
                 if (!drone.isEmpty()) return null;
                 drone = stack.copy();
             } else if (dye == null) {
@@ -71,25 +74,25 @@ public class DroneColorCrafting extends ShapelessRecipe {
     }
 
     @Override
-    public boolean matches(CraftingInventory inv, World worldIn) {
+    public boolean matches(CraftingContainer inv, Level worldIn) {
         return findItems(inv) != null;
     }
 
     @Override
-    public ItemStack assemble(CraftingInventory inv) {
+    public ItemStack assemble(CraftingContainer inv, RegistryAccess registryAccess) {
         Pair<ItemStack, DyeColor> data = findItems(inv);
         if (data == null) return ItemStack.EMPTY;
         ItemStack drone = data.getLeft();
         DyeColor dyeColor = data.getRight();
         if (drone.isEmpty() || dyeColor == null) return ItemStack.EMPTY;
 
-        CompoundNBT droneTag = drone.getOrCreateTag();
-        droneTag.putInt(EntityDrone.NBT_DRONE_COLOR, dyeColor.getId());
+        CompoundTag droneTag = drone.getOrCreateTag();
+        droneTag.putInt(DroneEntity.NBT_DRONE_COLOR, dyeColor.getId());
         return drone;
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        return ModRecipes.DRONE_COLOR_CRAFTING.get();
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeSerializers.DRONE_COLOR_CRAFTING.get();
     }
 }

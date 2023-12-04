@@ -18,7 +18,7 @@
 package me.desht.pneumaticcraft.common.util;
 
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
 import java.util.Set;
@@ -36,6 +36,10 @@ public class WildcardedRLMatcher implements Predicate<ResourceLocation> {
                 reslocs.add(new ResourceLocation(s));
             }
         }
+    }
+
+    public boolean isEmpty() {
+        return reslocs.isEmpty() && namespaces.isEmpty();
     }
 
     @Override

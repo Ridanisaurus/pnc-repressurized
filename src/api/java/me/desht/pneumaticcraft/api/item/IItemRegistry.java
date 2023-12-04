@@ -18,15 +18,10 @@
 package me.desht.pneumaticcraft.api.item;
 
 import me.desht.pneumaticcraft.api.tileentity.IAirHandlerItem;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.World;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
 /**
  * Get an instance of this with {@link me.desht.pneumaticcraft.api.PneumaticRegistry.IPneumaticCraftInterface#getItemRegistry()}
@@ -41,24 +36,6 @@ public interface IItemRegistry {
     void registerInventoryItem(IInventoryItem handler);
 
     /**
-     * Register an item or block as being able to accept PneumaticCraft upgrades.
-     *
-     * @param upgradeAcceptor the upgrade acceptor
-     */
-    void registerUpgradeAcceptor(IUpgradeAcceptor upgradeAcceptor);
-
-    /**
-     * Can be used for custom upgrade items to handle tooltips. This will work for implementors registered via
-     * {@link IItemRegistry#registerUpgradeAcceptor(IUpgradeAcceptor)}. This is intended to be called from
-     * {@link Item#appendHoverText(ItemStack, World, List, ITooltipFlag)} method to display
-     * which machines and/or items accept it.
-     *
-     * @param upgrade the upgrade item
-     * @param tooltip the tooltip string list to append to
-     */
-    void addTooltip(EnumUpgrade upgrade, List<ITextComponent> tooltip);
-
-    /**
      * Register a magnet suppressor; an object which can prevent the Magnet Upgrade from pulling in (usually item)
      * entities.
      *
@@ -68,8 +45,8 @@ public interface IItemRegistry {
 
     /**
      * Convenience method to check if an item matches a given filter item. Note that the filtering item (the first
-     * parameter) could be a Tag Filter or other instance of {@link ITagFilteringItem}, so parameter order is important;
-     * provide the filtering item first, and the item to check second.
+     * parameter) could be a Tag Filter, Classify Filter, or other instance of {@link IFilteringItem}, so parameter
+     * order is important; provide the filtering item first, and the item to check second.
      *
      * @param filterStack the item to check against
      * @param stack the item being checked
@@ -109,17 +86,26 @@ public interface IItemRegistry {
 
     /**
      * Create an instance of PneumaticCraft's default item air handler provider, suitable for returning
-     * from {@link Item#initCapabilities(ItemStack, CompoundNBT)}.
+     * from {@link net.minecraft.world.item.Item#initCapabilities(ItemStack, CompoundTag)}.
      * <p>
      * You can use this method for your own air-handling items, <em>provided that</em> your item implements
      * {@link me.desht.pneumaticcraft.api.pressure.IPressurizableItem}. If you want to avoid a hard dependency on
      * PneumaticCraft, then create your own custom implementation of {@link IAirHandlerItem},
      * and attach that implementation to your item via {@link net.minecraftforge.event.AttachCapabilitiesEvent}.
      *
-     * @param stack the ItemStack
-     * @param maxPressure the maximum pressure allowed for the item
+     * @param stack the ItemStack, whose item must implement {@link me.desht.pneumaticcraft.api.pressure.IPressurizableItem}
      * @return an implementation of IAirHandler
      * @implNote this air handler stores the item's air amount in the {@code}pneumaticcraft:air{@code} integer NBT tag
+     * @throws IllegalArgumentException if the stack's item does not implement {@link me.desht.pneumaticcraft.api.pressure.IPressurizableItem}
      */
-    IAirHandlerItem.Provider makeItemAirHandlerProvider(ItemStack stack, float maxPressure);
+    IAirHandlerItem.Provider makeItemAirHandlerProvider(ItemStack stack);
+
+    /**
+     * Register an item launch behaviour for use by the Air Cannon and Pneumatic Chestplate Item Launcher (Dispenser
+     * upgrade). Call this from a {@link net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent} listener; no
+     * {@code enqueueWork()} required.
+     *
+     * @param behaviour the launch behaviour to register
+     */
+    void registerItemLaunchBehaviour(ILaunchBehaviour behaviour);
 }

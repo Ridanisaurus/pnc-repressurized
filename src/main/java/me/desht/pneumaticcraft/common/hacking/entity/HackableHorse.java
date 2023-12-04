@@ -17,39 +17,41 @@
 
 package me.desht.pneumaticcraft.common.hacking.entity;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.horse.HorseEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.animal.horse.Horse;
+import net.minecraft.world.entity.player.Player;
+import org.jetbrains.annotations.NotNull;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
 /**
- * Horses, although tameable, don't extend EntityTameable.  Yay.
+ * Horses, although tameable animals, don't extend TamableAnimal, or even OwnableEntity.  Yay.
  */
-public class HackableHorse extends HackableTameable {
+public class HackableHorse extends AbstractTameableHack<Horse> {
+    private static final ResourceLocation ID = RL("horse");
+
     @Override
     public ResourceLocation getHackableId() {
-        return RL("horse");
+        return ID;
+    }
+
+    @NotNull
+    @Override
+    public Class<Horse> getHackableClass() {
+        return Horse.class;
     }
 
     @Override
-    public boolean canHack(Entity entity, PlayerEntity player) {
-        return !player.getUUID().equals(((HorseEntity) entity).getOwnerUUID());
-    }
-
-    @Override
-    public void onHackFinished(Entity entity, PlayerEntity player) {
-        if (entity.level.isClientSide) {
+    public void onHackFinished(Horse entity, Player player) {
+        if (entity.level().isClientSide) {
             entity.handleEntityEvent((byte) 7);
         } else {
-            HorseEntity horse = (HorseEntity) entity;
-            horse.getNavigation().stop();
-            horse.setTarget(null);
-            horse.setHealth(20.0F);
-            horse.setOwnerUUID(player.getUUID());
-            horse.level.broadcastEntityEvent(entity, (byte) 7);
-            horse.setTamed(true);
+            entity.getNavigation().stop();
+            entity.setTarget(null);
+            entity.setHealth(20.0F);
+            entity.setOwnerUUID(player.getUUID());
+            entity.level().broadcastEntityEvent(entity, (byte) 7);
+            entity.setTamed(true);
         }
     }
 

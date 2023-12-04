@@ -1,19 +1,21 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": {
+      "tag": "minecraft:wool_carpets"
+    },
+    "G": {
+      "item": "pneumaticcraft:glycerol"
+    }
+  },
   "pattern": [
     " G ",
     "GCG",
     " G "
   ],
-  "key": {
-    "G": {
-      "item": "pneumaticcraft:glycerol"
-    },
-    "C": {
-      "tag": "minecraft:carpets"
-    }
-  },
   "result": {
     "item": "pneumaticcraft:bandage"
-  }
+  },
+  "show_notification": true
 }

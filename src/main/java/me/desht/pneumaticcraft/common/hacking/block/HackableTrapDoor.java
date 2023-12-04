@@ -17,16 +17,18 @@
 
 package me.desht.pneumaticcraft.common.hacking.block;
 
-import net.minecraft.block.TrapDoorBlock;
-import net.minecraft.state.BooleanProperty;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
 public class HackableTrapDoor extends HackableDoor {
+    private static final ResourceLocation ID = RL("trapdoor");
+
     @Override
     public ResourceLocation getHackableId() {
-        return RL("trapdoor");
+        return ID;
     }
 
     @Override

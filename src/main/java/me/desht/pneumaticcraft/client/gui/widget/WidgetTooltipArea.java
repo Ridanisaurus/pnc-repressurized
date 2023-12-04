@@ -17,25 +17,37 @@
 
 package me.desht.pneumaticcraft.client.gui.widget;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.network.chat.Component;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Arrays;
+import java.util.function.Supplier;
 
-public class WidgetTooltipArea extends Widget implements ITooltipProvider {
-    public final ITextComponent[] tooltip;
+public class WidgetTooltipArea extends AbstractWidget {
+    private final Supplier<Tooltip> tooltipSupplier;
 
-    public WidgetTooltipArea(int x, int y, int width, int height, ITextComponent... tooltip) {
-        super(x, y, width, height, StringTextComponent.EMPTY);
-        this.tooltip = tooltip;
+    public WidgetTooltipArea(int x, int y, int width, int height, Component... tooltip) {
+        super(x, y, width, height, Component.empty());
+
+        tooltipSupplier = null;
+        setTooltip(Tooltip.create(PneumaticCraftUtils.combineComponents(Arrays.asList(tooltip))));
     }
 
+    public WidgetTooltipArea(int x, int y, int width, int height, Supplier<Tooltip> tooltipSupplier) {
+        super(x, y, width, height, Component.empty());
+        this.tooltipSupplier = tooltipSupplier;
+    }
+
+
     @Override
-    public void renderButton(MatrixStack matrixStack, int p_render_1_, int p_render_2_, float p_render_3_) {
-        // nothing
+    public void renderWidget(GuiGraphics matrixStack, int p_render_1_, int p_render_2_, float p_render_3_) {
+        if (tooltipSupplier != null) {
+            setTooltip(tooltipSupplier.get());
+        }
     }
 
     @Override
@@ -45,12 +57,10 @@ public class WidgetTooltipArea extends Widget implements ITooltipProvider {
     }
 
     @Override
-    public void addTooltip(double mouseX, double mouseY, List<ITextComponent> curTip, boolean shiftPressed) {
-        Collections.addAll(curTip, tooltip);
+    public void setFocused(boolean pFocused) {
     }
 
     @Override
-    public boolean changeFocus(boolean focus) {
-        return false;  // not focusable
+    public void updateWidgetNarration(NarrationElementOutput pNarrationElementOutput) {
     }
 }

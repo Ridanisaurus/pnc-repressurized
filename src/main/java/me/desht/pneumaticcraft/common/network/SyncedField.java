@@ -18,8 +18,8 @@
 package me.desht.pneumaticcraft.common.network;
 
 import me.desht.pneumaticcraft.lib.Log;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
@@ -33,7 +33,6 @@ public abstract class SyncedField<T> {
     private T lastValue;
     private int arrayIndex = -1;
     private boolean isLazy;
-    private Class<?> annotation;
 
     SyncedField(Object te, Field field) {
         this.field = field;
@@ -119,14 +118,6 @@ public abstract class SyncedField<T> {
     public void setValue(Object value) {
         //noinspection unchecked
         setValueInternal((T) value);
-    }
-
-    public void setAnnotation(Class<?> annotation) {
-        this.annotation = annotation;
-    }
-
-    public Class<?> getAnnotation() {
-        return annotation;
     }
 
     public static class SyncedInt extends SyncedField<Integer> {
@@ -291,8 +282,8 @@ public abstract class SyncedField<T> {
 
         @Override
         protected boolean equals(FluidStack oldValue, FluidStack newValue) {
-            // Default FluidStack .equals() implementation only checks the fluid, not the amount
-            return oldValue.isFluidEqual(newValue) && oldValue.getAmount() == newValue.getAmount();
+            // Note: FluidStack#equals() implementation only checks the fluid, not the amount
+            return oldValue.isFluidStackIdentical(newValue);
         }
     }
 
@@ -363,7 +354,7 @@ public abstract class SyncedField<T> {
         }
     }
 
-    static Object fromBytes(PacketBuffer buf, int type) {
+    static Object fromBytes(FriendlyByteBuf buf, int type) {
         switch (type) {
             case 0:
                 return buf.readInt();
@@ -392,40 +383,24 @@ public abstract class SyncedField<T> {
         throw new IllegalArgumentException("Invalid sync type! " + type);
     }
 
-    static void toBytes(PacketBuffer buf, Object value, int type) {
+    static void toBytes(FriendlyByteBuf buf, Object value, int type) {
         switch (type) {
-            case 0:
-                buf.writeInt((Integer) value);
-                break;
-            case 1:
-                buf.writeFloat((Float) value);
-                break;
-            case 2:
-                buf.writeDouble((Double) value);
-                break;
-            case 3:
-                buf.writeBoolean((Boolean) value);
-                break;
-            case 4:
-                buf.writeUtf((String) value);
-                break;
-            case 5:
-                buf.writeByte((Byte) value);
-                break;
-            case 6:
-                buf.writeItem(value == null ? ItemStack.EMPTY : (ItemStack) value);
-                break;
-            case 7:
-                buf.writeFluidStack((FluidStack) value);
-                break;
-            case 8:
+            case 0 -> buf.writeInt((Integer) value);
+            case 1 -> buf.writeFloat((Float) value);
+            case 2 -> buf.writeDouble((Double) value);
+            case 3 -> buf.writeBoolean((Boolean) value);
+            case 4 -> buf.writeUtf((String) value);
+            case 5 -> buf.writeByte((Byte) value);
+            case 6 -> buf.writeItem(value == null ? ItemStack.EMPTY : (ItemStack) value);
+            case 7 -> buf.writeFluidStack((FluidStack) value);
+            case 8 -> {
                 ItemStackHandler h = (ItemStackHandler) value;
                 buf.writeVarInt(h.getSlots());
                 for (int i = 0; i < h.getSlots(); i++) {
                     buf.writeVarInt(i);
                     buf.writeItem(h.getStackInSlot(i));
                 }
-                break;
+            }
         }
     }
 }

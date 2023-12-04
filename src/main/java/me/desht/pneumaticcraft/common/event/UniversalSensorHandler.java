@@ -17,9 +17,9 @@
 
 package me.desht.pneumaticcraft.common.event;
 
-import me.desht.pneumaticcraft.common.tileentity.TileEntityUniversalSensor;
-import me.desht.pneumaticcraft.common.util.GlobalTileEntityCacheManager;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.common.block.entity.UniversalSensorBlockEntity;
+import me.desht.pneumaticcraft.common.util.GlobalBlockEntityCacheManager;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -29,22 +29,22 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 public class UniversalSensorHandler {
     @SubscribeEvent
     public void onInteraction(PlayerInteractEvent event) {
-        sendEventToSensors(event.getEntity().level, event);
+        sendEventToSensors(event.getEntity().level(), event);
     }
 
     @SubscribeEvent
     public void onPlayerAttack(AttackEntityEvent event) {
-        sendEventToSensors(event.getEntity().level, event);
+        sendEventToSensors(event.getEntity().level(), event);
     }
 
     @SubscribeEvent
     public void onItemPickUp(EntityItemPickupEvent event) {
-        sendEventToSensors(event.getEntity().level, event);
+        sendEventToSensors(event.getEntity().level(), event);
     }
 
-    private void sendEventToSensors(World world, Event event) {
-        if (!world.isClientSide) {
-            for (TileEntityUniversalSensor sensor : GlobalTileEntityCacheManager.getInstance().universalSensors) {
+    private void sendEventToSensors(Level level, Event event) {
+        if (!level.isClientSide) {
+            for (UniversalSensorBlockEntity sensor : GlobalBlockEntityCacheManager.getInstance(level).getUniversalSensors()) {
                 sensor.onEvent(event);
             }
         }

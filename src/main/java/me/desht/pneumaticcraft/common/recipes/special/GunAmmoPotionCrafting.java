@@ -18,33 +18,35 @@
 package me.desht.pneumaticcraft.common.recipes.special;
 
 import me.desht.pneumaticcraft.common.core.ModItems;
-import me.desht.pneumaticcraft.common.core.ModRecipes;
-import me.desht.pneumaticcraft.common.item.ItemGunAmmoStandard;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.PotionItem;
-import net.minecraft.item.crafting.IRecipeSerializer;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.item.crafting.ShapelessRecipe;
-import net.minecraft.potion.Potion;
-import net.minecraft.potion.PotionUtils;
-import net.minecraft.potion.Potions;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.common.core.ModRecipeSerializers;
+import me.desht.pneumaticcraft.common.item.minigun.StandardGunAmmoItem;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.PotionItem;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.stream.Stream;
 
 public class GunAmmoPotionCrafting extends ShapelessRecipe {
-    public GunAmmoPotionCrafting(ResourceLocation idIn) {
-        super(idIn, "", new ItemStack(ModItems.GUN_AMMO.get()),
+    public GunAmmoPotionCrafting(ResourceLocation idIn, CraftingBookCategory category) {
+        super(idIn, "", category, new ItemStack(ModItems.GUN_AMMO.get()),
                 NonNullList.of(Ingredient.EMPTY, Ingredient.of(ModItems.GUN_AMMO.get()), new PotionIngredient()));
     }
 
     @Override
-    public ItemStack assemble(CraftingInventory inv) {
+    public ItemStack assemble(CraftingContainer inv, RegistryAccess registryAccess) {
         ItemStack potion = ItemStack.EMPTY;
         ItemStack ammo = ItemStack.EMPTY;
         for (int i = 0; i < inv.getContainerSize(); i++) {
@@ -60,13 +62,13 @@ public class GunAmmoPotionCrafting extends ShapelessRecipe {
         if (ammo.isEmpty() || potion.isEmpty()) return ItemStack.EMPTY;
 
         ammo = ammo.copy();
-        ItemGunAmmoStandard.setPotion(ammo, potion);
+        StandardGunAmmoItem.setPotion(ammo, potion);
         return ammo;
     }
 
     @Override
-    public IRecipeSerializer<?> getSerializer() {
-        return ModRecipes.GUN_AMMO_POTION_CRAFTING.get();
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeSerializers.GUN_AMMO_POTION_CRAFTING.get();
     }
 
     private static class PotionIngredient extends Ingredient {
@@ -77,7 +79,7 @@ public class GunAmmoPotionCrafting extends ShapelessRecipe {
         @Override
         public ItemStack[] getItems() {
             NonNullList<ItemStack> potions = NonNullList.create();
-            for (Potion p : ForgeRegistries.POTION_TYPES.getValues()) {
+            for (Potion p : ForgeRegistries.POTIONS.getValues()) {
                 if (p != Potions.EMPTY) potions.add(PotionUtils.setPotion(new ItemStack(Items.POTION), p));
             }
 

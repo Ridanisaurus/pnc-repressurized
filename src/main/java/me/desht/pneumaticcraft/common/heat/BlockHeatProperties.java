@@ -19,18 +19,17 @@ package me.desht.pneumaticcraft.common.heat;
 
 import com.google.common.collect.ArrayListMultimap;
 import me.desht.pneumaticcraft.api.crafting.recipe.HeatPropertiesRecipe;
-import me.desht.pneumaticcraft.api.heat.HeatRegistrationEvent;
 import me.desht.pneumaticcraft.common.config.ConfigHelper;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
 import me.desht.pneumaticcraft.common.recipes.other.HeatPropertiesRecipeImpl;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.FlowingFluidBlock;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.world.World;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.Collection;
@@ -47,7 +46,7 @@ public enum BlockHeatProperties implements Iterable<HeatPropertiesRecipe> {
         return INSTANCE;
     }
 
-    public HeatPropertiesRecipe getCustomHeatEntry(World world, BlockState state) {
+    public HeatPropertiesRecipe getCustomHeatEntry(Level world, BlockState state) {
         if (customHeatEntries.isEmpty()) {
             populateCustomHeatEntries(world);
         }
@@ -57,7 +56,7 @@ public enum BlockHeatProperties implements Iterable<HeatPropertiesRecipe> {
                 .orElse(null);
     }
 
-    public Collection<HeatPropertiesRecipe> getAllEntries(World world) {
+    public Collection<HeatPropertiesRecipe> getAllEntries(Level world) {
         if (customHeatEntries.isEmpty()) {
             populateCustomHeatEntries(world);
         }
@@ -72,26 +71,24 @@ public enum BlockHeatProperties implements Iterable<HeatPropertiesRecipe> {
         customHeatEntries.put(block, entry);
     }
 
-    private void populateCustomHeatEntries(World world) {
-        PneumaticCraftRecipeType.HEAT_PROPERTIES.getRecipes(world)
-                .forEach((key, recipe) -> customHeatEntries.put(recipe.getBlock(), recipe));
-
-        // give other mods a chance to programmatically add simple heat properties (no transitions, just temperature & resistance)
-        MinecraftForge.EVENT_BUS.post(new HeatRegistrationEvent(HeatExchangerManager.getInstance()));
+    private void populateCustomHeatEntries(Level world) {
+        ModRecipeTypes.getRecipes(world, ModRecipeTypes.BLOCK_HEAT_PROPERTIES)
+                        .forEach(recipe -> customHeatEntries.put(recipe.getBlock(), recipe));
 
         registerDefaultFluidValues();
     }
 
     private void registerDefaultFluidValues() {
         // add defaulted values for all fluids which don't already have a custom entry
-        for (Fluid fluid : ForgeRegistries.FLUIDS.getValues()) {
-            if (fluid == Fluids.EMPTY) {
+        for (ResourceLocation fluidId : ForgeRegistries.FLUIDS.getKeys()) {
+            Fluid fluid = ForgeRegistries.FLUIDS.getValue(fluidId);
+            if (fluid == null || fluid == Fluids.EMPTY) {
                 continue;
-            } else if (!ConfigHelper.common().heat.addDefaultFluidEntries.get() && !fluid.getRegistryName().getNamespace().equals("minecraft")) {
+            } else if (!ConfigHelper.common().heat.addDefaultFluidEntries.get() && !fluidId.getNamespace().equals("minecraft")) {
                 continue;
             }
             Block block = fluid.defaultFluidState().createLegacyBlock().getBlock();
-            if (!(block instanceof FlowingFluidBlock) || customHeatEntries.containsKey(block)) {
+            if (!(block instanceof LiquidBlock) || customHeatEntries.containsKey(block)) {
                 // block must be a fluid block and not already have a custom heat entry
                 continue;
             }
@@ -110,8 +107,8 @@ public enum BlockHeatProperties implements Iterable<HeatPropertiesRecipe> {
      */
     private HeatPropertiesRecipe buildDefaultFluidEntry(Block block, Fluid fluid) {
         BlockState transformHot, transformHotFlowing, transformCold, transformColdFlowing;
-        int temperature = fluid.getAttributes().getTemperature();
-        if (temperature >= Fluids.LAVA.getAttributes().getTemperature()) {
+        int temperature = fluid.getFluidType().getTemperature();
+        if (temperature >= Fluids.LAVA.getFluidType().getTemperature()) {
             transformHot = null;
             transformHotFlowing = null;
             transformCold = Blocks.OBSIDIAN.defaultBlockState();
@@ -127,8 +124,9 @@ public enum BlockHeatProperties implements Iterable<HeatPropertiesRecipe> {
             transformCold = Blocks.ICE.defaultBlockState();
             transformColdFlowing = Blocks.SNOW.defaultBlockState();
         }
+        ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(block);
         return new HeatPropertiesRecipeImpl(
-                block.getRegistryName(),
+                blockId,
                 block,
                 transformHot, transformHotFlowing,
                 transformCold, transformColdFlowing,

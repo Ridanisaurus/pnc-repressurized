@@ -18,11 +18,12 @@
 package me.desht.pneumaticcraft.common.thirdparty.patchouli;
 
 import me.desht.pneumaticcraft.api.crafting.recipe.AssemblyRecipe;
-import me.desht.pneumaticcraft.common.item.ItemAssemblyProgram;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
+import me.desht.pneumaticcraft.common.item.AssemblyProgramItem;
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import vazkii.patchouli.api.IComponentProcessor;
 import vazkii.patchouli.api.IVariable;
 import vazkii.patchouli.api.IVariableProvider;
@@ -34,39 +35,34 @@ public class ProcessorAssemblySystem implements IComponentProcessor {
     private AssemblyRecipe recipe = null;
 
     @Override
-    public void setup(IVariableProvider iVariableProvider) {
+    public void setup(Level level, IVariableProvider iVariableProvider) {
         ResourceLocation recipeId = new ResourceLocation(iVariableProvider.get("recipe").asString());
-        this.recipe = PneumaticCraftRecipeType.ASSEMBLY_DRILL_LASER.getRecipe(Minecraft.getInstance().level, recipeId);
+        this.recipe = ModRecipeTypes.ASSEMBLY_DRILL_LASER.get().getRecipe(Minecraft.getInstance().level, recipeId);
         if (recipe == null) {
-            this.recipe = PneumaticCraftRecipeType.ASSEMBLY_DRILL.getRecipe(Minecraft.getInstance().level, recipeId);
+            this.recipe = ModRecipeTypes.ASSEMBLY_DRILL.get().getRecipe(Minecraft.getInstance().level, recipeId);
             if (recipe == null) {
-                this.recipe = PneumaticCraftRecipeType.ASSEMBLY_LASER.getRecipe(Minecraft.getInstance().level, recipeId);
+                this.recipe = ModRecipeTypes.ASSEMBLY_LASER.get().getRecipe(Minecraft.getInstance().level, recipeId);
             }
         }
     }
 
     @Override
-    public IVariable process(String key) {
+    public IVariable process(Level level, String key) {
         if (recipe == null) return null;
 
-        ItemStack programStack = new ItemStack(ItemAssemblyProgram.fromProgramType(recipe.getProgramType()));
-        switch (key) {
-            case "input":
-                return Patchouli.Util.getStacks(recipe.getInput());
-            case "output":
-                return IVariable.from(recipe.getOutput());
-            case "program":
-                return IVariable.from(programStack);
-            case "name":
-                return IVariable.wrap(recipe.getOutput().getHoverName().getString());
-            case "desc":
-                return IVariable.wrap(xlate("pneumaticcraft.patchouli.processor.assembly.desc",
-                        recipe.getOutput().getHoverName(),
-                        programStack.getHoverName()
-                ).getString());
-        }
+        ItemStack programStack = new ItemStack(AssemblyProgramItem.fromProgramType(recipe.getProgramType()));
+        return switch (key) {
+            case "input" -> PatchouliAccess.getStacks(recipe.getInput());
+            case "output" -> IVariable.from(recipe.getOutput());
+            case "program" -> IVariable.from(programStack);
+            case "name" -> IVariable.wrap(recipe.getOutput().getHoverName().getString());
+            case "desc" -> IVariable.wrap(xlate("pneumaticcraft.patchouli.processor.assembly.desc",
+                    recipe.getOutput().getHoverName(),
+                    programStack.getHoverName()
+            ).getString());
+            default -> null;
+        };
 
-        return null;
     }
 
 }

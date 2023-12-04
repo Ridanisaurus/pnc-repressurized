@@ -1,22 +1,24 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "  T",
-    "PPP",
-    "SSS"
-  ],
+  "category": "misc",
   "key": {
-    "T": {
-      "item": "pneumaticcraft:pressure_tube"
-    },
     "P": {
       "item": "minecraft:brick"
     },
     "S": {
       "item": "pneumaticcraft:reinforced_stone_slab"
+    },
+    "T": {
+      "item": "pneumaticcraft:pressure_tube"
     }
   },
+  "pattern": [
+    "  T",
+    "PPP",
+    "SSS"
+  ],
   "result": {
     "item": "pneumaticcraft:charging_station"
-  }
+  },
+  "show_notification": true
 }

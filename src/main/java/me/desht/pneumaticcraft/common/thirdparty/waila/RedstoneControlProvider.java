@@ -17,46 +17,58 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.waila;
 
-import mcp.mobius.waila.api.IComponentProvider;
-import mcp.mobius.waila.api.IDataAccessor;
-import mcp.mobius.waila.api.IPluginConfig;
-import mcp.mobius.waila.api.IServerDataProvider;
-import me.desht.pneumaticcraft.common.tileentity.IRedstoneControl;
-import me.desht.pneumaticcraft.common.tileentity.RedstoneController;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.World;
+import me.desht.pneumaticcraft.common.block.entity.IRedstoneControl;
+import me.desht.pneumaticcraft.common.block.entity.RedstoneController;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import snownee.jade.api.BlockAccessor;
+import snownee.jade.api.IBlockComponentProvider;
+import snownee.jade.api.IServerDataProvider;
+import snownee.jade.api.ITooltip;
+import snownee.jade.api.config.IPluginConfig;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
+
 public class RedstoneControlProvider {
-    public static class Data implements IServerDataProvider<TileEntity> {
+    public static final ResourceLocation ID = RL("redstone");
+
+    public static class DataProvider implements IServerDataProvider<BlockAccessor> {
         @Override
-        public void appendServerData(CompoundNBT compoundNBT, ServerPlayerEntity serverPlayerEntity, World world, TileEntity te) {
-            if (te instanceof IRedstoneControl) {
-                compoundNBT.putInt("redstoneMode", ((IRedstoneControl) te).getRedstoneMode());
+        public void appendServerData(CompoundTag compoundTag, BlockAccessor blockAccessor) {
+            if (blockAccessor.getBlockEntity() instanceof IRedstoneControl rc) {
+                compoundTag.putInt("redstoneMode", rc.getRedstoneMode());
             }
+        }
+
+        @Override
+        public ResourceLocation getUid() {
+            return ID;
         }
     }
 
-    public static class Component implements IComponentProvider {
+    public static class ComponentProvider implements IBlockComponentProvider {
         @Override
-        public void appendBody(List<ITextComponent> tooltip, IDataAccessor accessor, IPluginConfig config) {
-            CompoundNBT tag = accessor.getServerData();
+        public void appendTooltip(ITooltip iTooltip, BlockAccessor blockAccessor, IPluginConfig iPluginConfig) {
+            CompoundTag tag = blockAccessor.getServerData();
             // This is used so that we can split values later easier and have them all in the same layout.
-            Map<ITextComponent, ITextComponent> values = new HashMap<>();
+            Map<ComponentProvider, ComponentProvider> values = new HashMap<>();
 
             if (tag.contains("redstoneMode")) {
-                TileEntity te = accessor.getTileEntity();
+                BlockEntity te = blockAccessor.getBlockEntity();
                 if (te instanceof IRedstoneControl) {
                     RedstoneController<?> rsController = ((IRedstoneControl<?>) te).getRedstoneController();
-                    tooltip.add(rsController.getDescription());
+                    iTooltip.add(rsController.getDescription());
                 }
             }
+        }
+
+        @Override
+        public ResourceLocation getUid() {
+            return ID;
         }
     }
 }

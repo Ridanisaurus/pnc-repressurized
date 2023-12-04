@@ -1,22 +1,24 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "LXL",
-    "XCX",
-    "LXL"
-  ],
+  "category": "misc",
   "key": {
+    "C": {
+      "tag": "forge:chests/wooden"
+    },
     "L": {
       "tag": "pneumaticcraft:upgrade_components"
     },
     "X": {
       "tag": "minecraft:planks"
-    },
-    "C": {
-      "tag": "forge:chests/wooden"
     }
   },
+  "pattern": [
+    "LXL",
+    "XCX",
+    "LXL"
+  ],
   "result": {
     "item": "pneumaticcraft:inventory_upgrade"
-  }
+  },
+  "show_notification": true
 }

@@ -17,104 +17,58 @@
 
 package me.desht.pneumaticcraft.common.pneumatic_armor;
 
+import com.google.common.collect.ImmutableList;
+import me.desht.pneumaticcraft.api.lib.Names;
+import me.desht.pneumaticcraft.api.pneumatic_armor.BuiltinArmorUpgrades;
 import me.desht.pneumaticcraft.api.pneumatic_armor.IArmorUpgradeHandler;
-import me.desht.pneumaticcraft.common.pneumatic_armor.handlers.*;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlot;
+import org.apache.commons.lang3.Validate;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 public enum ArmorUpgradeRegistry {
     INSTANCE;
 
     private final List<List<IArmorUpgradeHandler<?>>> upgradeHandlers;
-    private final Map<ResourceLocation, IArmorUpgradeHandler<?>> byID = new HashMap<>();
+    private final Map<ResourceLocation, IArmorUpgradeHandler<?>> byID = new ConcurrentHashMap<>();
+    private boolean isFrozen = false;
 
-    public static final EquipmentSlotType[] ARMOR_SLOTS = new EquipmentSlotType[] {
-            EquipmentSlotType.HEAD,
-            EquipmentSlotType.CHEST,
-            EquipmentSlotType.LEGS,
-            EquipmentSlotType.FEET
+    private final List<String> knownUpgradeIds = new ArrayList<>();
+
+    public static final EquipmentSlot[] ARMOR_SLOTS = new EquipmentSlot[] {
+            EquipmentSlot.HEAD,
+            EquipmentSlot.CHEST,
+            EquipmentSlot.LEGS,
+            EquipmentSlot.FEET
     };
-
-    public final CoreComponentsHandler coreComponentsHandler;
-    public final BlockTrackerHandler blockTrackerHandler;
-    public final EntityTrackerHandler entityTrackerHandler;
-    public final SearchHandler searchHandler;
-    public final CoordTrackerHandler coordTrackerHandler;
-    public final DroneDebugHandler droneDebugHandler;
-    public final NightVisionHandler nightVisionHandler;
-    public final ScubaHandler scubaHandler;
-    public final HackHandler hackHandler;
-
-    public final MagnetHandler magnetHandler;
-    public final ChargingHandler chargingHandler;
-    public final ChestplateLauncherHandler chestplateLauncherHandler;
-    public final AirConHandler airConHandler;
-    public final ReachDistanceHandler reachDistanceHandler;
-
-    public final SpeedBoostHandler runSpeedHandler;
-    public final JumpBoostHandler jumpBoostHandler;
-
-    public final JetBootsHandler jetBootsHandler;
-    public final StepAssistHandler stepAssistHandler;
-    public final KickHandler kickHandler;
 
     public static ArmorUpgradeRegistry getInstance() {
         return INSTANCE;
     }
 
     ArmorUpgradeRegistry() {
-        upgradeHandlers = new ArrayList<>(4);
+        ImmutableList.Builder<List<IArmorUpgradeHandler<?>>> b = ImmutableList.builder();
         for (int i = 0; i < 4; i++) {
-            upgradeHandlers.add(new ArrayList<>());
+            b.add(new ArrayList<>());
         }
-
-        coreComponentsHandler = registerUpgradeHandler(new CoreComponentsHandler());
-        blockTrackerHandler = registerUpgradeHandler(new BlockTrackerHandler());
-        entityTrackerHandler = registerUpgradeHandler(new EntityTrackerHandler());
-        searchHandler = registerUpgradeHandler(new SearchHandler());
-        coordTrackerHandler = registerUpgradeHandler(new CoordTrackerHandler());
-        droneDebugHandler = registerUpgradeHandler(new DroneDebugHandler());
-        nightVisionHandler = registerUpgradeHandler(new NightVisionHandler());
-        scubaHandler = registerUpgradeHandler(new ScubaHandler());
-        hackHandler = registerUpgradeHandler(new HackHandler());
-
-        magnetHandler = registerUpgradeHandler(new MagnetHandler());
-        chargingHandler = registerUpgradeHandler(new ChargingHandler());
-        chestplateLauncherHandler = registerUpgradeHandler(new ChestplateLauncherHandler());
-        airConHandler = registerUpgradeHandler(new AirConHandler());
-        reachDistanceHandler = registerUpgradeHandler(new ReachDistanceHandler());
-
-        runSpeedHandler = registerUpgradeHandler(new SpeedBoostHandler());
-        jumpBoostHandler = registerUpgradeHandler(new JumpBoostHandler());
-
-        jetBootsHandler = registerUpgradeHandler(new JetBootsHandler());
-        stepAssistHandler = registerUpgradeHandler(new StepAssistHandler());
-        kickHandler = registerUpgradeHandler(new KickHandler());
+        upgradeHandlers = b.build();
     }
 
-    public static void init() {
-        // poke
-    }
-
-    public static String getStringKey(ResourceLocation id) {
-        return IArmorUpgradeHandler.getStringKey(id);
-    }
-
-    <T extends IArmorUpgradeHandler<?>> T registerUpgradeHandler(T handler) {
-        List<IArmorUpgradeHandler<?>> l = upgradeHandlers.get(handler.getEquipmentSlot().getIndex());
-        handler.setIndex(l.size());
+    public synchronized <T extends IArmorUpgradeHandler<?>> T registerUpgradeHandler(T handler) {
+        if (isFrozen) throw new IllegalStateException("armor upgrade registry is frozen!");
+        Validate.isTrue(!byID.containsKey(handler.getID()), "handler " + handler.getID() + " is already registered!");
         byID.put(handler.getID(), handler);
-        l.add(handler);
         return handler;
     }
 
-    public List<IArmorUpgradeHandler<?>> getHandlersForSlot(EquipmentSlotType slotType) {
+    public List<IArmorUpgradeHandler<?>> getHandlersForSlot(EquipmentSlot slotType) {
+        if (!isFrozen) throw new IllegalStateException("armor upgrade registry is not frozen yet!");
         return upgradeHandlers.get(slotType.getIndex());
     }
 
@@ -125,5 +79,48 @@ public enum ArmorUpgradeRegistry {
 
     public Stream<IArmorUpgradeHandler<?>> entries() {
         return byID.values().stream();
+    }
+
+    public boolean isFrozen() {
+        return isFrozen;
+    }
+
+    public void freeze() {
+        if (isFrozen) throw new IllegalStateException("armor upgrade registry is already frozen!");
+
+        byID.values().stream()
+                .sorted((o1, o2) -> compareHandlerID(o1.getID(), o2.getID()))
+                .forEach(this::addHandlerToList);
+
+        isFrozen = true;
+    }
+
+    public List<String> getKnownUpgradeIds() {
+        if (!isFrozen()) {
+            return List.of();
+        }
+
+        if (knownUpgradeIds.isEmpty()) {
+            for (EquipmentSlot slot : ARMOR_SLOTS) {
+                getInstance().getHandlersForSlot(slot).forEach(u -> knownUpgradeIds.add(u.getID().toString()));
+            }
+            knownUpgradeIds.sort(String::compareTo);
+        }
+
+        return Collections.unmodifiableList(knownUpgradeIds);
+    }
+
+    private int compareHandlerID(ResourceLocation id1, ResourceLocation id2) {
+        // special case: core components always first
+        if (id1.equals(BuiltinArmorUpgrades.CORE_COMPONENTS)) return -1;
+        // special case: PNC handler come before 3rd party handlers
+        if (id1.getNamespace().equals(Names.MOD_ID) && !id2.getNamespace().equals(Names.MOD_ID)) return -1;
+        return id1.compareTo(id2);
+    }
+
+    private void addHandlerToList(IArmorUpgradeHandler<?> handler) {
+        List<IArmorUpgradeHandler<?>> handlerList = upgradeHandlers.get(handler.getEquipmentSlot().getIndex());
+        handler.setIndex(handlerList.size());
+        handlerList.add(handler);
     }
 }

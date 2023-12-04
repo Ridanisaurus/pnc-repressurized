@@ -19,9 +19,9 @@ package me.desht.pneumaticcraft.common.network;
 
 import me.desht.pneumaticcraft.client.render.area.AreaRenderManager;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -29,7 +29,7 @@ import java.util.function.Supplier;
 
 /**
  * Received on: CLIENT
- * Sent by server to make a tile entity render its area of effect
+ * Sent by server to make a block entity render its area of effect
  */
 public class PacketShowArea extends LocationIntPacket {
     private final BlockPos[] area;
@@ -43,7 +43,7 @@ public class PacketShowArea extends LocationIntPacket {
         this(pos, area.toArray(new BlockPos[0]));
     }
 
-    PacketShowArea(PacketBuffer buffer) {
+    PacketShowArea(FriendlyByteBuf buffer) {
         super(buffer);
         area = new BlockPos[buffer.readInt()];
         for (int i = 0; i < area.length; i++) {
@@ -52,14 +52,14 @@ public class PacketShowArea extends LocationIntPacket {
     }
 
     @Override
-    public void toBytes(PacketBuffer buffer) {
+    public void toBytes(FriendlyByteBuf buffer) {
         super.toBytes(buffer);
         buffer.writeInt(area.length);
         Arrays.stream(area).forEach(buffer::writeBlockPos);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> AreaRenderManager.getInstance().showArea(area, 0x9000FFFF, ClientUtils.getClientTE(pos)));
+        ctx.get().enqueueWork(() -> AreaRenderManager.getInstance().showArea(area, 0x9000FFFF, ClientUtils.getBlockEntity(pos)));
         ctx.get().setPacketHandled(true);
     }
 }

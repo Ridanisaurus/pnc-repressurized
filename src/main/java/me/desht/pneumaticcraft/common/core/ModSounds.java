@@ -18,10 +18,10 @@
 package me.desht.pneumaticcraft.common.core;
 
 import me.desht.pneumaticcraft.api.lib.Names;
-import net.minecraft.util.SoundEvent;
-import net.minecraftforge.fml.RegistryObject;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 
@@ -56,6 +56,6 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> JACKHAMMER_STOP = register("jackhammer_stop");
 
     private static RegistryObject<SoundEvent> register(String name) {
-        return SOUNDS.register(name, () -> new SoundEvent(RL(name)));
+        return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(RL(name)));
     }
 }

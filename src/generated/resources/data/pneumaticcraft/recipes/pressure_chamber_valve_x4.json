@@ -1,5 +1,6 @@
 {
   "type": "minecraft:crafting_shapeless",
+  "category": "misc",
   "ingredients": [
     {
       "item": "pneumaticcraft:pressure_tube"
@@ -18,7 +19,7 @@
     }
   ],
   "result": {
-    "item": "pneumaticcraft:pressure_chamber_valve",
-    "count": 4
+    "count": 4,
+    "item": "pneumaticcraft:pressure_chamber_valve"
   }
 }

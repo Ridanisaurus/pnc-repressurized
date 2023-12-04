@@ -17,14 +17,14 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
 /**
  * Received on: SERVER
- * Part of a multipart mesage from client (whole message too big to send at once)
+ * Part of a multipart message from client (whole message too big to send at once)
  */
 public class PacketMultiPart {
     private final byte[] payload;
@@ -33,12 +33,12 @@ public class PacketMultiPart {
         this.payload = payload;
     }
 
-    PacketMultiPart(PacketBuffer buf) {
+    PacketMultiPart(FriendlyByteBuf buf) {
         payload = new byte[buf.readInt()];
         buf.readBytes(payload);
     }
 
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         buf.writeInt(payload.length);
         buf.writeBytes(payload);
     }

@@ -17,24 +17,25 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.jei;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
 import me.desht.pneumaticcraft.api.crafting.recipe.HeatFrameCoolingRecipe;
 import me.desht.pneumaticcraft.common.core.ModItems;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
 import me.desht.pneumaticcraft.lib.Textures;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.drawable.IDrawableAnimated;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.api.ingredients.IIngredients;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
@@ -44,10 +45,10 @@ public class JEIHeatFrameCoolingCategory extends AbstractPNCCategory<HeatFrameCo
     private final IDrawableAnimated progressBar;
 
     JEIHeatFrameCoolingCategory() {
-        super(ModCategoryUid.HEAT_FRAME_COOLING, HeatFrameCoolingRecipe.class,
+        super(RecipeTypes.HEAT_FRAME_COOLING,
                 xlate("pneumaticcraft.gui.nei.title.heatFrameCooling"),
                 guiHelper().createDrawable(Textures.GUI_JEI_MISC_RECIPES, 0, 0, 82, 18),
-                guiHelper().createDrawableIngredient(new ItemStack(ModItems.HEAT_FRAME.get()))
+                guiHelper().createDrawableIngredient(VanillaTypes.ITEM_STACK, new ItemStack(ModItems.HEAT_FRAME.get()))
         );
         IDrawableStatic d = guiHelper().createDrawable(Textures.GUI_JEI_MISC_RECIPES, 82, 0, 38, 17);
         progressBar = guiHelper().createAnimatedDrawable(d, 30, IDrawableAnimated.StartDirection.LEFT, false);
@@ -58,35 +59,33 @@ public class JEIHeatFrameCoolingCategory extends AbstractPNCCategory<HeatFrameCo
     }
 
     @Override
-    public void draw(HeatFrameCoolingRecipe recipe, MatrixStack matrixStack, double mouseX, double mouseY) {
-        progressBar.draw(matrixStack, 22, 0);
+    public void setRecipe(IRecipeLayoutBuilder builder, HeatFrameCoolingRecipe recipe, IFocusGroup focuses) {
+        builder.addSlot(RecipeIngredientRole.INPUT, 1, 1).addIngredients(recipe.getInput());
+        builder.addSlot(RecipeIngredientRole.OUTPUT, 65, 1).addItemStack(recipe.getOutput());
+    }
+
+    @Override
+    public void draw(HeatFrameCoolingRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics graphics, double mouseX, double mouseY) {
+        progressBar.draw(graphics, 22, 0);
         if (recipe.getBonusMultiplier() > 0f) {
-            bonusIcon.draw(matrixStack, 30, 0);
+            bonusIcon.draw(graphics, 30, 0);
         }
     }
 
     @Override
-    public void setIngredients(HeatFrameCoolingRecipe recipe, IIngredients ingredients) {
-        ingredients.setInputIngredients(Collections.singletonList(recipe.getInput()));
-        ingredients.setOutput(VanillaTypes.ITEM, recipe.getOutput());
-    }
-
-    @Override
-    public void setRecipe(IRecipeLayout recipeLayout, HeatFrameCoolingRecipe recipe, IIngredients ingredients) {
-        recipeLayout.getItemStacks().init(0, true, 0, 0);
-        recipeLayout.getItemStacks().set(0, ingredients.getInputs(VanillaTypes.ITEM).get(0));
-
-        recipeLayout.getItemStacks().init(1, false, 64, 0);
-        recipeLayout.getItemStacks().set(1, recipe.getOutput());
-    }
-
-    @Override
-    public List<ITextComponent> getTooltipStrings(HeatFrameCoolingRecipe recipe, double mouseX, double mouseY) {
-        List<ITextComponent> res = new ArrayList<>();
+    public List<Component> getTooltipStrings(HeatFrameCoolingRecipe recipe, IRecipeSlotsView recipeSlotsView, double mouseX, double mouseY) {
+        List<Component> res = new ArrayList<>();
         if (mouseX >= 23 && mouseX <= 60) {
-            res.addAll(PneumaticCraftUtils.splitStringComponent(I18n.get("pneumaticcraft.gui.nei.recipe.heatFrameCooling", recipe.getThresholdTemperature() - 273)));
+            res.addAll(PneumaticCraftUtils.splitStringComponent(I18n.get("pneumaticcraft.gui.nei.recipe.heatFrameCooling",
+                    recipe.getThresholdTemperature() - 273
+            )));
             if (recipe.getBonusMultiplier() > 0f) {
-                String bonus = TextFormatting.YELLOW + I18n.get("pneumaticcraft.gui.nei.recipe.heatFrameCooling.bonus", recipe.getBonusMultiplier() * 100, recipe.getOutput().getHoverName().getString(), recipe.getThresholdTemperature() - 273, recipe.getBonusLimit() + 1);
+                String bonus = ChatFormatting.YELLOW + I18n.get("pneumaticcraft.gui.nei.recipe.heatFrameCooling.bonus",
+                        recipe.getBonusMultiplier() * 100,
+                        recipe.getOutput().getHoverName().getString(),
+                        recipe.getThresholdTemperature() - 273,
+                        recipe.getBonusLimit() + 1
+                );
                 res.addAll(PneumaticCraftUtils.splitStringComponent(bonus));
             }
         }

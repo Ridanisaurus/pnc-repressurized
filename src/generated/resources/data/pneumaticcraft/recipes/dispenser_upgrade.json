@@ -1,22 +1,24 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "LXL",
-    "XCX",
-    "LXL"
-  ],
+  "category": "misc",
   "key": {
+    "C": {
+      "item": "minecraft:dispenser"
+    },
     "L": {
       "tag": "pneumaticcraft:upgrade_components"
     },
     "X": {
       "tag": "forge:gems/quartz"
-    },
-    "C": {
-      "item": "minecraft:dispenser"
     }
   },
+  "pattern": [
+    "LXL",
+    "XCX",
+    "LXL"
+  ],
   "result": {
     "item": "pneumaticcraft:dispenser_upgrade"
-  }
+  },
+  "show_notification": true
 }

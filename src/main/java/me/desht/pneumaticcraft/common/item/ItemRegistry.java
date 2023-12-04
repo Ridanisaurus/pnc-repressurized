@@ -18,29 +18,27 @@
 package me.desht.pneumaticcraft.common.item;
 
 import me.desht.pneumaticcraft.api.item.*;
-import me.desht.pneumaticcraft.api.misc.Symbols;
 import me.desht.pneumaticcraft.api.tileentity.IAirHandlerItem;
 import me.desht.pneumaticcraft.common.capabilities.AirHandlerItemStack;
+import me.desht.pneumaticcraft.common.util.ItemLaunching;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
 import me.desht.pneumaticcraft.lib.Log;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.Validate;
 
 import javax.annotation.Nonnull;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public enum ItemRegistry implements IItemRegistry {
     INSTANCE;
 
     private final List<Item> inventoryItemBlacklist = new ArrayList<>();
     public final List<IInventoryItem> inventoryItems = new ArrayList<>();
-    private final Map<EnumUpgrade, List<IUpgradeAcceptor>> upgradeToAcceptors = new EnumMap<>(EnumUpgrade.class);
     private final List<IMagnetSuppressor> magnetSuppressors = new ArrayList<>();
     private final List<ItemVolumeModifier> volumeModifiers = new ArrayList<>();
 
@@ -52,30 +50,6 @@ public enum ItemRegistry implements IItemRegistry {
     public void registerInventoryItem(@Nonnull IInventoryItem handler) {
         Validate.notNull(handler);
         inventoryItems.add(handler);
-    }
-
-    @Override
-    public void registerUpgradeAcceptor(@Nonnull IUpgradeAcceptor upgradeAcceptor) {
-        Map<EnumUpgrade,Integer> applicableUpgrades = upgradeAcceptor.getApplicableUpgrades();
-        if (applicableUpgrades != null) {
-            for (EnumUpgrade applicableUpgrade : applicableUpgrades.keySet()) {
-                List<IUpgradeAcceptor> acceptors = upgradeToAcceptors.computeIfAbsent(applicableUpgrade, k -> new ArrayList<>());
-                acceptors.add(upgradeAcceptor);
-            }
-        }
-    }
-
-    @Override
-    public void addTooltip(EnumUpgrade upgrade, List<ITextComponent> tooltip) {
-        List<IUpgradeAcceptor> acceptors = upgradeToAcceptors.get(upgrade);
-        if (acceptors != null) {
-            List<String> tempList = new ArrayList<>(acceptors.size());
-            for (IUpgradeAcceptor acceptor : acceptors) {
-                tempList.add(Symbols.BULLET + " " + I18n.get(acceptor.getUpgradeAcceptorTranslationKey()));
-            }
-            Collections.sort(tempList);
-            tooltip.addAll(tempList.stream().map(StringTextComponent::new).collect(Collectors.toList()));
-        }
     }
 
     @Override
@@ -95,13 +69,18 @@ public enum ItemRegistry implements IItemRegistry {
 
     @Override
     public ISpawnerCoreStats getSpawnerCoreStats(ItemStack stack) {
-        Validate.isTrue(stack.getItem() instanceof ItemSpawnerCore, "item is not a Spawner Core!");
-        return ItemSpawnerCore.SpawnerCoreStats.forItemStack(stack);
+        Validate.isTrue(stack.getItem() instanceof SpawnerCoreItem, "item is not a Spawner Core!");
+        return SpawnerCoreItem.SpawnerCoreStats.forItemStack(stack);
     }
 
     @Override
-    public IAirHandlerItem.Provider makeItemAirHandlerProvider(ItemStack stack, float maxPressure) {
-        return new AirHandlerItemStack(stack, maxPressure);
+    public IAirHandlerItem.Provider makeItemAirHandlerProvider(ItemStack stack) {
+        return new AirHandlerItemStack(stack);
+    }
+
+    @Override
+    public void registerItemLaunchBehaviour(ILaunchBehaviour behaviour) {
+        ItemLaunching.registerBehaviour(behaviour);
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -115,6 +94,10 @@ public enum ItemRegistry implements IItemRegistry {
             originalVolume = modifier.getNewVolume(stack, originalVolume);
         }
         return originalVolume;
+    }
+
+    public void addVolumeModifierInfo(ItemStack stack, List<Component> text) {
+        volumeModifiers.forEach(modifier -> modifier.addInfo(stack, text));
     }
 
     /**

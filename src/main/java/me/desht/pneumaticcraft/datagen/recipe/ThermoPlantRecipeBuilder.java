@@ -22,9 +22,9 @@ import me.desht.pneumaticcraft.api.crafting.PneumaticCraftRecipeTypes;
 import me.desht.pneumaticcraft.api.crafting.TemperatureRange;
 import me.desht.pneumaticcraft.api.crafting.ingredient.FluidIngredient;
 import me.desht.pneumaticcraft.common.recipes.ModCraftingHelper;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.fluids.FluidStack;
 
 import javax.annotation.Nullable;
@@ -40,11 +40,12 @@ public class ThermoPlantRecipeBuilder extends PneumaticCraftRecipeBuilder<Thermo
     private final TemperatureRange operatingTemperature;
     private final float requiredPressure;
     private final float recipeSpeed;
+    private final float airUseMultiplier;
     private final boolean exothermic;
 
     public ThermoPlantRecipeBuilder(FluidIngredient inputFluid, @Nullable Ingredient inputItem,
                                     FluidStack outputFluid, ItemStack outputItem, TemperatureRange operatingTemperature, float requiredPressure,
-                                    float recipeSpeed, boolean exothermic) {
+                                    float recipeSpeed, float airUseMultiplier, boolean exothermic) {
         super(RL(PneumaticCraftRecipeTypes.THERMO_PLANT));
 
         this.inputFluid = inputFluid;
@@ -54,6 +55,7 @@ public class ThermoPlantRecipeBuilder extends PneumaticCraftRecipeBuilder<Thermo
         this.operatingTemperature = operatingTemperature;
         this.requiredPressure = requiredPressure;
         this.recipeSpeed = recipeSpeed;
+        this.airUseMultiplier = airUseMultiplier;
         this.exothermic = exothermic;
     }
 
@@ -76,6 +78,7 @@ public class ThermoPlantRecipeBuilder extends PneumaticCraftRecipeBuilder<Thermo
             if (!operatingTemperature.isAny()) json.add("temperature", operatingTemperature.toJson());
             if (requiredPressure != 0f) json.addProperty("pressure", requiredPressure);
             if (recipeSpeed != 1.0f) json.addProperty("speed", recipeSpeed);
+            if (airUseMultiplier != 1.0f) json.addProperty("air_use_multiplier", airUseMultiplier);
             json.addProperty("exothermic", exothermic);
         }
     }

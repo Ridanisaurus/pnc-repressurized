@@ -23,9 +23,9 @@ import me.desht.pneumaticcraft.api.crafting.ingredient.FluidIngredient;
 import me.desht.pneumaticcraft.api.crafting.recipe.*;
 import me.desht.pneumaticcraft.api.crafting.recipe.AssemblyRecipe.AssemblyProgramType;
 import me.desht.pneumaticcraft.common.recipes.machine.*;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.fluids.FluidStack;
 
 import javax.annotation.Nonnull;
@@ -75,12 +75,12 @@ public enum PneumaticRecipeRegistry implements IPneumaticRecipeRegistry {
     }
 
     @Override
-    public ThermoPlantRecipe thermoPlantRecipe(ResourceLocation id, @Nonnull FluidIngredient inputFluid, @Nullable Ingredient inputItem, FluidStack outputFluid, ItemStack outputItem, TemperatureRange operatingTemperature, float requiredPressure, float speed) {
-        return new ThermoPlantRecipeImpl(id, inputFluid, inputItem, outputFluid, outputItem, operatingTemperature, requiredPressure, speed, false);
+    public ThermoPlantRecipe thermoPlantRecipe(ResourceLocation id, @Nonnull FluidIngredient inputFluid, @Nullable Ingredient inputItem, FluidStack outputFluid, ItemStack outputItem, TemperatureRange operatingTemperature, float requiredPressure, float airUseMultiplier, float speed) {
+        return new ThermoPlantRecipeImpl(id, inputFluid, inputItem, outputFluid, outputItem, operatingTemperature, requiredPressure, speed, airUseMultiplier, false);
     }
 
     @Override
-    public ThermoPlantRecipe exothermicThermoPlantRecipe(ResourceLocation id, @Nonnull FluidIngredient inputFluid, @Nullable Ingredient inputItem, FluidStack outputFluid, ItemStack outputItem, TemperatureRange operatingTemperature, float requiredPressure, float speed) {
-        return new ThermoPlantRecipeImpl(id, inputFluid, inputItem, outputFluid, outputItem, operatingTemperature, requiredPressure, speed, true);
+    public ThermoPlantRecipe exothermicThermoPlantRecipe(ResourceLocation id, @Nonnull FluidIngredient inputFluid, @Nullable Ingredient inputItem, FluidStack outputFluid, ItemStack outputItem, TemperatureRange operatingTemperature, float requiredPressure, float speed, float airUseMultiplier) {
+        return new ThermoPlantRecipeImpl(id, inputFluid, inputItem, outputFluid, outputItem, operatingTemperature, requiredPressure, speed, airUseMultiplier, true);
     }
 }

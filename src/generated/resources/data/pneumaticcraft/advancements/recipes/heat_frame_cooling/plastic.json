@@ -1,26 +1,23 @@
 {
   "parent": "minecraft:recipes/root",
-  "rewards": {
-    "recipes": [
-      "pneumaticcraft:heat_frame_cooling/plastic"
-    ]
-  },
   "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "pneumaticcraft:heat_frame_cooling/plastic"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
     "heat_frame": {
-      "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "item": "pneumaticcraft:heat_frame"
+            "items": [
+              "pneumaticcraft:heat_frame"
+            ]
           }
         ]
-      }
-    },
-    "has_the_recipe": {
-      "trigger": "minecraft:recipe_unlocked",
-      "conditions": {
-        "recipe": "pneumaticcraft:heat_frame_cooling/plastic"
-      }
+      },
+      "trigger": "minecraft:inventory_changed"
     }
   },
   "requirements": [
@@ -28,5 +25,11 @@
       "heat_frame",
       "has_the_recipe"
     ]
-  ]
+  ],
+  "rewards": {
+    "recipes": [
+      "pneumaticcraft:heat_frame_cooling/plastic"
+    ]
+  },
+  "sends_telemetry_event": true
 }

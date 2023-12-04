@@ -1,13 +1,14 @@
 buildscript {
-	repositories {
-		maven { url = 'https://files.minecraftforge.net/maven' }
-		maven { url = 'https://maven.parchmentmc.org' }
-		mavenCentral()
-	}
+//	repositories {
+//		maven { url = 'https://files.minecraftforge.net/maven' }
+//		maven { url = 'https://maven.parchmentmc.org' }
+//		mavenCentral()
+//	}
 	dependencies {
-		classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
+//		classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
 		classpath 'org.parchmentmc:librarian:1.+'
 		classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4+"
+		classpath 'org.spongepowered:mixingradle:0.7.+'
 	}
 }
 
@@ -15,29 +16,34 @@ plugins {
 	id 'java'
 	id 'eclipse'
 	id 'idea'
-	id 'com.matthewprenger.cursegradle' version '1.4.0'
-	id 'se.bjurr.gitchangelog.git-changelog-gradle-plugin' version '1.71.4'
 	id 'maven-publish'
+	id "com.modrinth.minotaur" version "2.+"
+	id 'com.matthewprenger.cursegradle' version '1.4.0'
+	id('net.neoforged.gradle') version '[6.0.13, 6.2)'
 }
-apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.parchmentmc.librarian.forgegradle'
 apply plugin: "com.jfrog.artifactory"
+apply plugin: "org.spongepowered.mixin"
 
 //adds the build number to the end of the version string if on a build server
-String build_number = System.getenv().BUILD_NUMBER
+def build_number = System.getenv().BUILD_NUMBER
 if (build_number == null) {
 	build_number = 'CUSTOM'
 }
 
-String semver = "${mod_version_massive}.${mod_version_major}.${mod_version_minor}"
+def semver = "${mod_version_massive}.${mod_version_major}.${mod_version_minor}"
 
 // these two are required for the java plugin to generate jar files with a version
-version = "${project.mc_version}-${semver}-${build_number}"
+version = "${semver}+mc${project.mc_version}"
 group = 'me.desht.pneumaticcraft' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "pneumaticcraft-repressurized"
 
+ext.releaseTag = System.getenv('TAG') ?: ""
+ext.isAlpha = ext.releaseTag.contains("alpha")
+ext.isBeta = ext.releaseTag.contains("beta")
+
 // All jar files from this folder will be added automatically as runtime mod dependencies
-String extraModsDir = "extra-mods-${project.mc_version}"
+def extraModsDir = "extra-mods-${project.mc_version}"
 
 sourceSets {
 	api
@@ -47,6 +53,7 @@ sourceSets {
 		resources {
 			srcDir 'src/generated/resources'
 		}
+		ext.refMap = "mixins.pneumaticcraft.refmap.json"
 	}
 	test {
 		compileClasspath += sourceSets.api.output
@@ -55,45 +62,21 @@ sourceSets {
 }
 
 configurations {
-	apiImplementation.extendsFrom(implementation)
-	apiRuntimeOnly.extendsFrom(runtimeOnly)
+//	apiImplementation.extendsFrom(implementation)
+//	apiRuntimeOnly.extendsFrom(runtimeOnly)
+	apiImplementation.extendsFrom(minecraft)
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 repositories {
 	mavenCentral()
 	flatDir {
 		name "extra-mods"
 		dir file(extraModsDir)
-	}
-	maven {
-		name "JEI"
-		url "https://dvs1.progwml6.com/files/maven"
-	}
-	maven {
-		name 'CC: Tweaked'
-		url 'https://squiddev.cc/maven/'
-	}
-	maven {
-		name "The One Probe"
-		url "https://maven.tterrag.com/"
-	}
-	maven {
-		name 'Crafttweaker/Patchouli/Botania/Immersive Engineering/Gamestages'
-		url 'https://maven.blamejared.com/'
-	}
-	maven {
-		name 'Curios'
-		url "https://maven.theillusivec4.top/"
-	}
-	maven {
-		name 'Gigaherz mappings'
-		url 'https://dogforce-games.com/maven/'
-	}
-	maven {
-		name "K-4u Mod maven"
-		url "https://modmaven.dev/"
+		content {
+			includeGroup "extra-mods"
+		}
 	}
 	maven {
 		url "https://www.cursemaven.com"
@@ -101,51 +84,98 @@ repositories {
 			includeGroup "curse.maven"
 		}
 	}
+	maven {
+		name 'CC: Tweaked'
+		url 'https://squiddev.cc/maven/'
+		content {
+			includeGroup "org.squiddev"
+		}
+	}
+	maven {
+		name 'Crafttweaker/Patchouli/Botania/Immersive Engineering/Gamestages'
+		url 'https://maven.blamejared.com/'
+		content {
+			includeGroup "vazkii.patchouli"
+			includeGroup "vazkii.botania"
+			includeGroup "mezz.jei"
+			includeGroup "blusunrize.immersiveengineering"
+			includeGroup "com.blamejared.crafttweaker"
+			includeGroup "net.darkhax.gamestages"
+			includeGroup "net.darkhax.bookshelf"
+			includeGroup "org.openzen.zencode"
+		}
+	}
+	maven {
+		name 'Curios'
+		url "https://maven.theillusivec4.top/"
+		content {
+			includeGroup "top.theillusivec4.curios"
+		}
+	}
+	maven {
+		name "K-4u Mod maven"
+		url "https://modmaven.dev/"
+		content {
+			includeGroup "com.jozufozu.flywheel"
+			includeGroup "com.simibubi.create"
+			includeGroup "com.tterrag.registrate"
+			includeGroup "mekanism"
+			includeGroup "mcjty.theoneprobe"
+		}
+	}
 }
 
 dependencies {
-	minecraft([
-			group  : "net.minecraftforge",
-			name   : 'forge',
-			version: "${project.mc_version}-${project.forge_version}"
-	])
+	minecraft "net.neoforged:forge:${mc_version}-${forge_version}"
+//	minecraft([
+//			group  : "net.neoforged",
+//			name   : 'forge',
+//			version: "${project.mc_version}-${project.forge_version}"
+//	])
+
+	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
 	testImplementation "org.junit.jupiter:junit-jupiter-api:5.7.2"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.7.2"
 
-	compileOnly fg.deobf ("mcjty.theoneprobe:TheOneProbe-1.16:${top_version}:api")
-	runtimeOnly fg.deobf ("mcjty.theoneprobe:TheOneProbe-1.16:${top_version}")
-	compileOnly fg.deobf("mezz.jei:jei-1.16.5:${jei_version}:api")
-	runtimeOnly fg.deobf("mezz.jei:jei-1.16.5:${jei_version}")
-	compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
-	runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
+	implementation fg.deobf("mcjty.theoneprobe:theoneprobe:${top_version}") {
+		exclude group: "net.minecraftforge", module: "forge"
+	}
+	// compile against the JEI API but do not include it at runtime
+	compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
+	compileOnly fg.deobf("mezz.jei:jei-${mc_version}-forge-api:${jei_version}")
+	// at runtime, use the full JEI
+	runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}-common:${jei_version}")
+	runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}-forge:${jei_version}")
+//	compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
+	implementation fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
 	compileOnly fg.deobf("vazkii.botania:Botania:${botania_version}:api")
-	runtimeOnly fg.deobf("vazkii.botania:Botania:${botania_version}")
+	//runtimeOnly fg.deobf("vazkii.botania:Botania:${botania_version}-FORGE")
 	compileOnly fg.deobf("vazkii.patchouli:Patchouli:${patchouli_version}:api")
 	runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:${patchouli_version}")
-	compileOnly fg.deobf("org.squiddev:cc-tweaked-1.16.4:${cc_tweaked_version}")
-	runtimeOnly fg.deobf("org.squiddev:cc-tweaked-1.16.4:${cc_tweaked_version}")
-	compileOnly fg.deobf("blusunrize.immersiveengineering:ImmersiveEngineering:${immersive_engineering_version}")
-	runtimeOnly fg.deobf("blusunrize.immersiveengineering:ImmersiveEngineering:${immersive_engineering_version}")
-	compileOnly fg.deobf("curse.maven:mekanism-268560:${mekanism_curse_id}")
-	runtimeOnly fg.deobf("curse.maven:mekanism-268560:${mekanism_curse_id}")
-	compileOnly fg.deobf("curse.maven:create-328085:${create_curse_id}")
-	runtimeOnly fg.deobf("curse.maven:create-328085:${create_curse_id}")
-	compileOnly fg.deobf("curse.maven:flywheel-486392:${flywheel_curse_id}")
-	runtimeOnly fg.deobf("curse.maven:flywheel-486392:${flywheel_curse_id}")
-	compileOnly fg.deobf("curse.maven:hwyla-253449:${hwyla_curse_id}")
-	runtimeOnly fg.deobf("curse.maven:hwyla-253449:${hwyla_curse_id}")
+	compileOnly fg.deobf("org.squiddev:cc-tweaked-1.19.2:${cc_tweaked_version}")
+	implementation fg.deobf("blusunrize.immersiveengineering:ImmersiveEngineering:${immersive_engineering_version}")
+	compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:api")
+	//runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}")
+	implementation fg.deobf("com.simibubi.create:create-1.20.1:${create_version}:slim") { transitive = false }
+	implementation fg.deobf("com.jozufozu.flywheel:flywheel-forge-1.20.1:${flywheel_version}")
+	implementation fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}")
+//	implementation fg.deobf("curse.maven:create-328085:${create_curse_id}")
+	implementation fg.deobf("curse.maven:jade-324717:${jade_curse_id}")
 	compileOnly fg.deobf("curse.maven:cofh_core-69162:${cofh_core_curse_id}")
-	runtimeOnly fg.deobf("curse.maven:cofh_core-69162:${cofh_core_curse_id}")
-	compileOnly fg.deobf("appeng:appliedenergistics2:${ae2_version}:api")
-	runtimeOnly fg.deobf("appeng:appliedenergistics2:${ae2_version}")
-	compileOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-1.16.5:${crafttweaker_version}")
-	runtimeOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-1.16.5:${crafttweaker_version}")
-	compileOnly fg.deobf("net.darkhax.gamestages:GameStages-${project.mc_version}:${gamestages_version}")
-	runtimeOnly fg.deobf("net.darkhax.gamestages:GameStages-${project.mc_version}:${gamestages_version}")
-	compileOnly fg.deobf("net.darkhax.bookshelf:Bookshelf-Forge-${project.mc_version}:10.3.29")
-	runtimeOnly fg.deobf("net.darkhax.bookshelf:Bookshelf-Forge-${project.mc_version}:10.3.29")
-	compileOnly fg.deobf("team.chisel.ctm:CTM:MC1.16.1-${ctm_version}")
-	runtimeOnly fg.deobf("team.chisel.ctm:CTM:MC1.16.1-${ctm_version}")
+	compileOnly fg.deobf("curse.maven:thermal_cultivation-271835:${thermal_cultivation_curse_id}")
+	compileOnly fg.deobf("curse.maven:thermal_expansion-69163:${thermal_expansion_curse_id}")
+	compileOnly fg.deobf("curse.maven:thermal_foundation-222880:${thermal_foundation_curse_id}")
+	compileOnly fg.deobf("curse.maven:thermal_innovation-291737:${thermal_innovation_curse_id}")
+	compileOnly fg.deobf("curse.maven:thermal_locomotion-406959:${thermal_locomotion_curse_id}")
+
+	compileOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-1.20.1:${crafttweaker_version}")
+	compileOnly fg.deobf("net.darkhax.gamestages:GameStages-Forge-1.20.1:${gamestages_version}")
+
+	//compileOnly fg.deobf("appeng:appliedenergistics2:${ae2_version}:api")
+	//runtimeOnly fg.deobf("appeng:appliedenergistics2:${ae2_version}")
+	//compileOnly fg.deobf("team.chisel.ctm:CTM:MC1.16.1-${ctm_version}")
+	//runtimeOnly fg.deobf("team.chisel.ctm:CTM:MC1.16.1-${ctm_version}")
 
 	// Locally sourced extra mods for runtime (i.e. testing) - thanks AE2 for this idea
 	for (extraModJar in fileTree(dir: extraModsDir, include: '*.jar')) {
@@ -161,11 +191,11 @@ dependencies {
 //    compileOnly "net.industrial-craft:industrialcraft-2:2.8.27-ex112:api"
 //    compileOnly "thaumcraft:Thaumcraft:${thaumcraft_version}"
 //    compileOnly "team.chisel.ctm:CTM:${ctm_version}:api"
-//    compileOnly "com.github.glitchfiend.biomesoplenty:ToughAsNails:${tan_version}:universal"
 }
 
 minecraft {
 	mappings channel: 'parchment', version: "${project.mappings_version}-${project.mc_version}"
+//	mappings channel: 'official', version: "1.19"
 
 	accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
@@ -197,7 +227,6 @@ minecraft {
 			property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
 			workingDirectory file('run')
 			ideaModule "${project.name}.main"
-			forceExit false
 			args '--mod', 'pneumaticcraft', '--all', '--output', file('src/generated/resources/'), '--existing', sourceSets.main.resources.srcDirs[0]
 			mods {
 				pneumaticcraft.sources((SourceSet[]) [sourceSets.main, sourceSets.api])
@@ -206,12 +235,28 @@ minecraft {
 	}
 }
 
+mixin {
+	// Refmaps for each SourceSet
+	add sourceSets.main, 'mixins.pneumaticcraft.refmap.json'
+
+	// Configs to add to runs and jars
+	config 'mixins.pneumaticcraft.json'
+
+	// Specify options for dev run configs
+	debug.verbose = true
+	debug.export = true
+	dumpTargetOnFailure = true
+
+	// Options for the Annotation Processor
+	quiet
+}
+
 def replaceResources = tasks.register("replaceResources", Copy) {
 	it.outputs.upToDateWhen { false }
 	//Copy it into the build dir
 	it.from(sourceSets.main.resources) {
 		include "META-INF/mods.toml"
-		expand 'version': version, 'mc_version': minecraft_version_range, 'forge_version': forge_version_range
+		expand 'version': version, 'mc_version': mc_version, 'mc_version_range': minecraft_version_range, 'forge_version_range': forge_version_range
 	}
 	it.into "$buildDir/resources/main/"
 }
@@ -234,6 +279,14 @@ javadoc {
 			.tags("apiNote:a:API Note:", "implSpec:a:Implementation Requirements:", "implNote:a:Implementation Note:")
 }
 
+task getChangelogProperty(type: Exec) {
+	standardOutput = new ByteArrayOutputStream()
+	commandLine 'bash', './scripts/extract_changes.sh', "${semver}"
+	doLast {
+		ext.changelog = standardOutput.toString()
+	}
+}
+
 //task makeChangelog(type: GitChangelogTask) {
 //	file = file('changelog.html')
 //	untaggedName = "Current release ${project.version}"
@@ -242,15 +295,15 @@ javadoc {
 //	templateContent = file('changelog.mustache').getText('UTF-8')
 //}
 
-curseforge {
-	apiKey = project.findProperty('curseforge_apikey') ?: '0'
-	project {
-		id = curse_project_id
-		changelog = file('changelog.html')
-		changelogType = 'html'
-		releaseType = 'beta'
-	}
-}
+//curseforge {
+//	apiKey = project.findProperty('curseforge_apikey') ?: '0'
+//	project {
+//		id = curse_project_id
+//		changelog = file('changelog.html')
+//		changelogType = 'html'
+//		releaseType = 'beta'
+//	}
+//}
 
 //afterEvaluate {
 //	tasks.curseforge281849.dependsOn makeChangelog
@@ -268,7 +321,10 @@ jar {
 			"Implementation-Title": project.name,
 			"Implementation-Version": "${project.version}",
 			"Implementation-Vendor" :"desht",
-			"Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+			"Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+			'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
+			'MixinConfigs': 'mixins.pneumaticcraft.json',
+			'FMLCorePluginContainsFMLMod': 'true',
 	])
 
 	finalizedBy 'reobfJar'
@@ -287,7 +343,7 @@ task sourcesJar(type: Jar) {
 	from sourceSets.api.allJava
 }
 
-task apiJar(type: Jar) {
+task apiJar(type: Jar, dependsOn: apiClasses) {
 	duplicatesStrategy(DuplicatesStrategy.FAIL)
 	archiveClassifier.set('api')
 	from sourceSets.api.output
@@ -309,8 +365,8 @@ artifacts {
 }
 
 reobf {
-	apiJar { classpath.from(sourceSets.api.compileClasspath) }
-	jar { classpath.from(sourceSets.main.compileClasspath) }
+	apiJar { libraries.from(sourceSets.api.compileClasspath) }
+	jar { libraries.from(sourceSets.main.compileClasspath) }
 }
 
 task reobf {
@@ -323,13 +379,23 @@ tasks.withType(GenerateModuleMetadata) {
 }
 
 // with thanks to AE2
+def mavenVer = ext.releaseTag == "" ? "${version}-SNAPSHOT" : "${version}"
 publishing {
-	if (System.getenv("artifactory_user") != null) {
+	publications {
+		mavenCommon(MavenPublication) {
+			artifactId = rootProject.archivesBaseName
+			from components.java
+		}
+	}
+	repositories {
+		mavenLocal()
+	}
+	if (System.getenv("MODMAVEN_USER") != null) {
 		publications {
 			maven(MavenPublication) {
 				groupId = project.group
 				artifactId = project.archivesBaseName
-				version = project.version
+				version = mavenVer
 
 				// ForgeGradle will generate wild dependency definitions, see https://github.com/MinecraftForge/ForgeGradle/issues/584
 				// Since we don't actually depend on anything, just remove the entire node.
@@ -347,8 +413,8 @@ publishing {
 			maven {
 				name = "modmaven"
 				credentials {
-					username System.getenv("artifactory_user")
-					password System.getenv("artifactory_password")
+					username System.getenv("MODMAVEN_USER")
+					password System.getenv("MODMAVEN_PASSWORD")
 				}
 				url = "https://modmaven.dev/artifactory/local-releases/"
 			}
@@ -360,6 +426,51 @@ idea {
 	module {
 		for (String exclude in ['run', 'out', 'logs']) {
 			excludeDirs += file(exclude)
+		}
+	}
+}
+
+def relType = "release"
+if (ext.isAlpha) {
+	relType = "alpha"
+} else if (ext.isBeta) {
+	relType = "beta"
+}
+
+modrinth {
+	token = System.getenv("MODRINTH_TOKEN")
+	projectId = "${project.modrinth_project_id}"
+	versionNumber = "${project.version}"
+	versionType = relType
+	uploadFile = jar // With Loom, this MUST be set to `remapJar` instead of `jar`!
+	additionalFiles = [ apiJar ]
+	gameVersions = ["${mc_version}"] // Must be an array, even with only one version
+	changelog = System.getenv("CHANGELOG")
+	dependencies { // A special DSL for creating dependencies
+		// scope.type
+		// The scope can be `required`, `optional`, or `incompatible`
+		// The type can either be `project` or `version`
+		required.project "nU0bVIaL"  // Patchouli
+	}
+}
+
+if (System.getenv("CURSEFORGE_TOKEN")) {
+	curseforge {
+		apiKey = System.getenv("CURSEFORGE_TOKEN")
+		project {
+			id = project.curse_project_id
+			changelogType = "markdown"
+			changelog = System.getenv("CHANGELOG")
+			releaseType = relType
+			addGameVersion project.mc_version
+			addGameVersion "Forge"
+			mainArtifact(jar.archiveFile) {
+				displayName = "${project.archivesBaseName} ${project.version}"
+				relations {
+					requiredDependency "patchouli"
+				}
+			}
+			addArtifact(apiJar.archiveFile)
 		}
 	}
 }

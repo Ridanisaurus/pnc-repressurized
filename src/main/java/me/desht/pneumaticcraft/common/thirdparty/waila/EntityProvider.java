@@ -17,72 +17,66 @@
 
 package me.desht.pneumaticcraft.common.thirdparty.waila;
 
-import mcp.mobius.waila.api.IEntityAccessor;
-import mcp.mobius.waila.api.IEntityComponentProvider;
-import mcp.mobius.waila.api.IPluginConfig;
-import mcp.mobius.waila.api.IServerDataProvider;
 import me.desht.pneumaticcraft.api.PNCCapabilities;
-import me.desht.pneumaticcraft.api.lib.Names;
 import me.desht.pneumaticcraft.api.semiblock.ISemiBlock;
 import me.desht.pneumaticcraft.common.heat.HeatUtil;
-import me.desht.pneumaticcraft.common.thirdparty.ModNameCache;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.state.BlockState;
+import snownee.jade.api.EntityAccessor;
+import snownee.jade.api.IEntityComponentProvider;
+import snownee.jade.api.IServerDataProvider;
+import snownee.jade.api.ITooltip;
+import snownee.jade.api.config.IPluginConfig;
 
-import java.util.List;
+import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
+import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
 public class EntityProvider {
+    private static final ResourceLocation ID = RL("entity");
 
-    public static class Data implements IServerDataProvider<Entity> {
+    public static class DataProvider implements IServerDataProvider<EntityAccessor> {
         @Override
-        public void appendServerData(CompoundNBT compoundNBT, ServerPlayerEntity serverPlayerEntity, World world, Entity entity) {
-            entity.getCapability(PNCCapabilities.AIR_HANDLER_CAPABILITY)
-                    .ifPresent(h -> compoundNBT.putFloat("Pressure", h.getPressure()));
-            entity.getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY)
-                    .ifPresent(h -> compoundNBT.putFloat("Temperature", h.getTemperatureAsInt()));
-            if (entity instanceof ISemiBlock) {
-                ((ISemiBlock) entity).serializeNBT(compoundNBT);
+        public ResourceLocation getUid() {
+            return ID;
+        }
+
+        @Override
+        public void appendServerData(CompoundTag compoundTag, EntityAccessor accessor) {
+            accessor.getEntity().getCapability(PNCCapabilities.AIR_HANDLER_CAPABILITY)
+                    .ifPresent(h -> compoundTag.putFloat("Pressure", h.getPressure()));
+            accessor.getEntity().getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY)
+                    .ifPresent(h -> compoundTag.putFloat("Temperature", h.getTemperatureAsInt()));
+            if (accessor instanceof ISemiBlock s) {
+                s.serializeNBT(compoundTag);
             }
         }
     }
 
-    public static class Component implements IEntityComponentProvider {
+    public static class ComponentProvider implements IEntityComponentProvider {
         @Override
-        public void appendHead(List<ITextComponent> tooltip, IEntityAccessor accessor, IPluginConfig config) {
-            tooltip.add(accessor.getEntity().getDisplayName().copy().withStyle(TextFormatting.WHITE));
-        }
-
-        @Override
-        public void appendBody(List<ITextComponent> tooltip, IEntityAccessor accessor, IPluginConfig config) {
-            if (accessor.getServerData().contains("Pressure")) {
-                float pressure = accessor.getServerData().getFloat("Pressure");
-                tooltip.add(new TranslationTextComponent("pneumaticcraft.gui.tooltip.pressure", PneumaticCraftUtils.roundNumberTo(pressure, 1)));
+        public void appendTooltip(ITooltip iTooltip, EntityAccessor entityAccessor, IPluginConfig iPluginConfig) {
+            if (entityAccessor.getServerData().contains("Pressure")) {
+                float pressure = entityAccessor.getServerData().getFloat("Pressure");
+                iTooltip.add(xlate("pneumaticcraft.gui.tooltip.pressure", PneumaticCraftUtils.roundNumberTo(pressure, 1)));
             }
-            if (accessor.getServerData().contains("Temperature")) {
-                tooltip.add(HeatUtil.formatHeatString(accessor.getServerData().getInt("Temperature")));
+            if (entityAccessor.getServerData().contains("Temperature")) {
+                iTooltip.add(HeatUtil.formatHeatString(entityAccessor.getServerData().getInt("Temperature")));
             }
-            if (accessor.getEntity() instanceof ISemiBlock) {
-                ISemiBlock semiBlock = (ISemiBlock) accessor.getEntity();
-                semiBlock.addTooltip(tooltip, accessor.getPlayer(), accessor.getServerData(), accessor.getPlayer().isShiftKeyDown());
+            if (entityAccessor.getEntity() instanceof ISemiBlock semiBlock) {
+                semiBlock.addTooltip(iTooltip::add, entityAccessor.getPlayer(), entityAccessor.getServerData(), entityAccessor.getPlayer().isShiftKeyDown());
                 BlockPos pos = semiBlock.getBlockPos();
-                BlockState state = accessor.getWorld().getBlockState(pos);
-                tooltip.add(state.getBlock().getName().withStyle(TextFormatting.YELLOW));
+                BlockState state = entityAccessor.getLevel().getBlockState(pos);
+                iTooltip.add(state.getBlock().getName().withStyle(ChatFormatting.YELLOW));
             }
         }
 
         @Override
-        public void appendTail(List<ITextComponent> tooltip, IEntityAccessor accessor, IPluginConfig config) {
-            String modName = ModNameCache.getModName(Names.MOD_ID);
-            tooltip.add(new StringTextComponent(modName).withStyle(TextFormatting.BLUE, TextFormatting.ITALIC));
+        public ResourceLocation getUid() {
+            return ID;
         }
     }
 }

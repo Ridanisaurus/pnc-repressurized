@@ -19,12 +19,13 @@ package me.desht.pneumaticcraft.common.thirdparty.patchouli;
 
 import com.google.common.collect.ImmutableList;
 import me.desht.pneumaticcraft.api.crafting.recipe.PressureChamberRecipe;
-import me.desht.pneumaticcraft.common.recipes.PneumaticCraftRecipeType;
+import me.desht.pneumaticcraft.common.core.ModRecipeTypes;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import vazkii.patchouli.api.IComponentProcessor;
 import vazkii.patchouli.api.IVariable;
 import vazkii.patchouli.api.IVariableProvider;
@@ -37,14 +38,14 @@ public class ProcessorPressureChamber implements IComponentProcessor {
     private String header = null;
 
     @Override
-    public void setup(IVariableProvider iVariableProvider) {
+    public void setup(Level level, IVariableProvider iVariableProvider) {
         ResourceLocation recipeId = new ResourceLocation(iVariableProvider.get("recipe").asString());
-        this.recipe = PneumaticCraftRecipeType.PRESSURE_CHAMBER.getRecipe(Minecraft.getInstance().level, recipeId);
+        this.recipe = ModRecipeTypes.PRESSURE_CHAMBER.get().getRecipe(Minecraft.getInstance().level, recipeId);
         this.header = iVariableProvider.has("header") ? iVariableProvider.get("header").asString() : "";
     }
 
     @Override
-    public IVariable process(String s) {
+    public IVariable process(Level level, String s) {
         if (recipe == null) return null;
 
         if (s.equals("header")) {
@@ -52,7 +53,7 @@ public class ProcessorPressureChamber implements IComponentProcessor {
         } else if (s.startsWith("input")) {
             int index = Integer.parseInt(s.substring(5)) - 1;
             if (index >= 0 && index < recipe.getInputsForDisplay().size()) {
-                return Patchouli.Util.getStacks(recipe.getInputsForDisplay().get(index));
+                return PatchouliAccess.getStacks(recipe.getInputsForDisplay().get(index));
             }
         } else if (s.startsWith("output")) {
             int index = Integer.parseInt(s.substring(6)) - 1;

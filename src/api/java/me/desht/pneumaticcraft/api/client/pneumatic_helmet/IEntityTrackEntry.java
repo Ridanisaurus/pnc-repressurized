@@ -17,17 +17,18 @@
 
 package me.desht.pneumaticcraft.api.client.pneumatic_helmet;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.text.ITextComponent;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 
 /**
- * Implement this class and register it with {@link IPneumaticHelmetRegistry#registerEntityTrackEntry(java.util.function.Supplier)}.
- * Your implementation must provide a no-parameter constructor. For every entity that's applicable for this definition,
- * an instance is created.
+ * Implement this class and register it with {@link IClientArmorRegistry#registerEntityTrackEntry(java.util.function.Supplier)}.
+ * Your implementation must provide a no-parameter constructor.
+ * <p>
+ * An instance of this tracker is created for each entity for which the tracker is applicable.
  */
 public interface IEntityTrackEntry {
     /**
@@ -45,15 +46,15 @@ public interface IEntityTrackEntry {
      * @param curInfo list of text component to append information to
      * @param isLookingAtTarget true if the player is focused on the tracked entity
      */
-    void addInfo(Entity entity, List<ITextComponent> curInfo, boolean isLookingAtTarget);
+    void addInfo(Entity entity, List<Component> curInfo, boolean isLookingAtTarget);
 
     /**
-     * Update is called every (client) tick, and can be used to update something like a timer (e.g. used for the Creeper
+     * Called every client tick; can be used to update something like a timer (e.g. used for the Creeper
      * explosion countdown).
      *
      * @param entity the tracked entity
      */
-    default void update(Entity entity) { }
+    default void tick(Entity entity) { }
 
     /**
      * Called every render tick, this method can be used to render additional info. Used for Drone AI visualisation,
@@ -62,5 +63,5 @@ public interface IEntityTrackEntry {
      * @param entity the tracked entity
      * @param partialTicks partial ticks since last full ticks
      */
-    default void render(MatrixStack matrixStack, IRenderTypeBuffer buffer, Entity entity, float partialTicks) { }
+    default void render(PoseStack matrixStack, MultiBufferSource buffer, Entity entity, float partialTicks) { }
 }

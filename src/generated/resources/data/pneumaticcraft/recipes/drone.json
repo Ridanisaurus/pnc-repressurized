@@ -1,10 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    " B ",
-    "BPB",
-    " B "
-  ],
+  "category": "misc",
   "key": {
     "B": {
       "item": "pneumaticcraft:turbine_rotor"
@@ -13,7 +9,13 @@
       "item": "pneumaticcraft:printed_circuit_board"
     }
   },
+  "pattern": [
+    " B ",
+    "BPB",
+    " B "
+  ],
   "result": {
     "item": "pneumaticcraft:drone"
-  }
+  },
+  "show_notification": true
 }

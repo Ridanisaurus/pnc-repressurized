@@ -22,11 +22,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import me.desht.pneumaticcraft.api.misc.IPlayerMatcher;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
 import java.util.Set;
@@ -42,7 +41,7 @@ public class DimensionMatcher implements IPlayerMatcher {
     }
 
     @Override
-    public void toBytes(PacketBuffer buffer) {
+    public void toBytes(FriendlyByteBuf buffer) {
         buffer.writeVarInt(dimensionIds.size());
         dimensionIds.forEach(buffer::writeResourceLocation);
     }
@@ -55,16 +54,16 @@ public class DimensionMatcher implements IPlayerMatcher {
     }
 
     @Override
-    public void addDescription(PlayerEntity player, List<ITextComponent> tooltip) {
+    public void addDescription(Player player, List<Component> tooltip) {
         if (!dimensionIds.isEmpty()) {
-            List<ITextComponent> items = dimensionIds.stream().map(id -> new StringTextComponent(id.toString())).collect(Collectors.toList());
+            List<Component> items = dimensionIds.stream().map(id -> Component.literal(id.toString())).collect(Collectors.toList());
             standardTooltip(player, tooltip, xlate("pneumaticcraft.playerFilter.dimensions"), items);
         }
     }
 
     @Override
-    public boolean test(PlayerEntity playerEntity) {
-        return dimensionIds.isEmpty() || dimensionIds.contains(playerEntity.level.dimension().location());
+    public boolean test(Player playerEntity) {
+        return dimensionIds.isEmpty() || dimensionIds.contains(playerEntity.level().dimension().location());
     }
 
     public static class Factory implements MatcherFactory<DimensionMatcher> {
@@ -76,7 +75,7 @@ public class DimensionMatcher implements IPlayerMatcher {
         }
 
         @Override
-        public DimensionMatcher fromBytes(PacketBuffer buffer) {
+        public DimensionMatcher fromBytes(FriendlyByteBuf buffer) {
             int n = buffer.readVarInt();
             Set<ResourceLocation> dimensionIds = new ObjectOpenHashSet<>();
             for (int i = 0; i < n; i++) {

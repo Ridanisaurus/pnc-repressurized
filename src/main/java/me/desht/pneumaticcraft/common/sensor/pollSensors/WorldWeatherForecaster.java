@@ -18,13 +18,14 @@
 package me.desht.pneumaticcraft.common.sensor.pollSensors;
 
 import com.google.common.collect.ImmutableSet;
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
 import me.desht.pneumaticcraft.api.universal_sensor.IPollSensorSetting;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.storage.IServerWorldInfo;
-import net.minecraft.world.storage.IWorldInfo;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import me.desht.pneumaticcraft.common.upgrades.ModUpgrades;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.storage.LevelData;
+import net.minecraft.world.level.storage.ServerLevelData;
 
 import java.util.Set;
 
@@ -36,8 +37,8 @@ public class WorldWeatherForecaster implements IPollSensorSetting {
     }
 
     @Override
-    public Set<EnumUpgrade> getRequiredUpgrades() {
-        return ImmutableSet.of(EnumUpgrade.DISPENSER);
+    public Set<PNCUpgrade> getRequiredUpgrades() {
+        return ImmutableSet.of(ModUpgrades.DISPENSER.get());
     }
 
     @Override
@@ -46,15 +47,15 @@ public class WorldWeatherForecaster implements IPollSensorSetting {
     }
 
     @Override
-    public int getPollFrequency(TileEntity te) {
+    public int getPollFrequency(BlockEntity te) {
         return 40;
     }
 
     @Override
-    public int getRedstoneValue(World world, BlockPos pos, int sensorRange, String textBoxText) {
-        IWorldInfo info = world.getLevelData();
-        if (info instanceof IServerWorldInfo) {
-            return Math.max(0, 15 - ((IServerWorldInfo) info).getRainTime() / 1200);
+    public int getRedstoneValue(Level level, BlockPos pos, int sensorRange, String textBoxText) {
+        LevelData info = level.getLevelData();
+        if (info instanceof ServerLevelData) {
+            return Math.max(0, 15 - ((ServerLevelData) info).getRainTime() / 1200);
         } else {
             return 0;
         }

@@ -17,15 +17,14 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.common.block.tubes.ModuleRedstone;
-import me.desht.pneumaticcraft.common.block.tubes.ModuleRedstone.EnumRedstoneDirection;
-import me.desht.pneumaticcraft.common.block.tubes.TubeModule;
-import me.desht.pneumaticcraft.common.tileentity.TileEntityPressureTube;
+import me.desht.pneumaticcraft.common.block.entity.PressureTubeBlockEntity;
+import me.desht.pneumaticcraft.common.tubemodules.RedstoneModule;
+import me.desht.pneumaticcraft.common.tubemodules.RedstoneModule.EnumRedstoneDirection;
 import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.Direction;
-import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraft.core.Direction;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
@@ -34,7 +33,7 @@ import java.util.function.Supplier;
  * Sent by client to update server-side settings when redstone module GUI is closed
  */
 public class PacketSyncRedstoneModuleToServer extends LocationIntPacket {
-    private final byte side;
+    private final Direction side;
     private final byte op;
     private final byte ourColor;
     private final byte otherColor;
@@ -43,11 +42,11 @@ public class PacketSyncRedstoneModuleToServer extends LocationIntPacket {
     private final boolean input;
     private final boolean comparatorInput;
 
-    public PacketSyncRedstoneModuleToServer(ModuleRedstone module) {
+    public PacketSyncRedstoneModuleToServer(RedstoneModule module) {
         super(module.getTube().getBlockPos());
 
         this.input = module.getRedstoneDirection() == EnumRedstoneDirection.INPUT;
-        this.side = (byte) module.getDirection().ordinal();
+        this.side = module.getDirection();
         this.op = (byte) module.getOperation().ordinal();
         this.ourColor = (byte) module.getColorChannel();
         this.otherColor = (byte) module.getOtherColor();
@@ -56,9 +55,9 @@ public class PacketSyncRedstoneModuleToServer extends LocationIntPacket {
         this.comparatorInput = module.isComparatorInput();
     }
 
-    PacketSyncRedstoneModuleToServer(PacketBuffer buffer) {
+    PacketSyncRedstoneModuleToServer(FriendlyByteBuf buffer) {
         super(buffer);
-        side = buffer.readByte();
+        side = buffer.readEnum(Direction.class);
         input = buffer.readBoolean();
         ourColor = buffer.readByte();
         if (input) {
@@ -77,9 +76,9 @@ public class PacketSyncRedstoneModuleToServer extends LocationIntPacket {
     }
 
     @Override
-    public void toBytes(PacketBuffer buf) {
+    public void toBytes(FriendlyByteBuf buf) {
         super.toBytes(buf);
-        buf.writeByte(side);
+        buf.writeEnum(side);
         buf.writeBoolean(input);
         buf.writeByte(ourColor);
         if (input) {
@@ -94,19 +93,17 @@ public class PacketSyncRedstoneModuleToServer extends LocationIntPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            PlayerEntity player = ctx.get().getSender();
+            Player player = ctx.get().getSender();
             if (PneumaticCraftUtils.canPlayerReach(player, pos)) {
-                PneumaticCraftUtils.getTileEntityAt(player.level, pos, TileEntityPressureTube.class).ifPresent(te -> {
-                    TubeModule tm = te.getModule(Direction.from3DDataValue(side));
-                    if (tm instanceof ModuleRedstone) {
-                        ModuleRedstone mr = (ModuleRedstone) tm;
+                PneumaticCraftUtils.getTileEntityAt(player.level(), pos, PressureTubeBlockEntity.class).ifPresent(tube -> {
+                    if (tube.getModule(side) instanceof RedstoneModule mr) {
                         mr.setRedstoneDirection(input ? EnumRedstoneDirection.INPUT : EnumRedstoneDirection.OUTPUT);
                         mr.setColorChannel(ourColor);
                         if (input) {
                             mr.setComparatorInput(comparatorInput);
                         } else {
                             mr.setInverted(invert);
-                            mr.setOperation(ModuleRedstone.Operation.values()[op], otherColor, constantVal);
+                            mr.setOperation(RedstoneModule.Operation.values()[op], otherColor, constantVal);
                         }
                         mr.updateNeighbors();
                         mr.setInputLevel(-1);  // force recalc

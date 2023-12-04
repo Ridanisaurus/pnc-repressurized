@@ -1,21 +1,23 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "BBB",
-    "IGI"
-  ],
+  "category": "misc",
   "key": {
     "B": {
       "item": "minecraft:iron_bars"
     },
+    "G": {
+      "tag": "forge:ingots/copper"
+    },
     "I": {
       "tag": "forge:ingots/compressed_iron"
-    },
-    "G": {
-      "tag": "forge:ingots/gold"
     }
   },
+  "pattern": [
+    "BBB",
+    "IGI"
+  ],
   "result": {
     "item": "pneumaticcraft:heat_sink"
-  }
+  },
+  "show_notification": true
 }

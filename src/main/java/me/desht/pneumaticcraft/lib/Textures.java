@@ -1,20 +1,19 @@
 package me.desht.pneumaticcraft.lib;
 
 import me.desht.pneumaticcraft.api.lib.Names;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.resources.ResourceLocation;
 
 public class Textures {
     static final String ICON_LOCATION = Names.MOD_ID + ":";
 
-    private static final String MODEL_LOCATION = ICON_LOCATION + "textures/model/";
+    private static final String MODEL_LOCATION = ICON_LOCATION + "textures/pnc_model/";
     private static final String TUBE_MODULE_MODEL_LOCATION = MODEL_LOCATION + "modules/";
     private static final String GUI_LOCATION = ICON_LOCATION + "textures/gui/";
     private static final String ENTITY_LOCATION = ICON_LOCATION + "textures/entity/";
+    private static final String DRONE_LOCATION = ICON_LOCATION + "textures/entity/drone/";
     private static final String ARMOR_LOCATION = ICON_LOCATION + "textures/armor/";
     private static final String RENDER_LOCATION = ICON_LOCATION + "textures/render/";
     private static final String PROG_WIDGET_LOCATION = ICON_LOCATION + "textures/progwidgets/";
-
-    public static final String PRESSURE_GLASS_LOCATION = ICON_LOCATION + "block/pressure_chamber/windows/";
 
     public static final String ARMOR_PNEUMATIC = ARMOR_LOCATION + "pneumatic";
     public static final String ARMOR_COMPRESSED_IRON = ARMOR_LOCATION + "compressed_iron";
@@ -33,17 +32,18 @@ public class Textures {
     public static final ResourceLocation MODEL_ASSEMBLY_CONTROLLER = modelTexture("assembly_controller.png");
     public static final ResourceLocation MODEL_UNIVERSAL_SENSOR = modelTexture("universal_sensor.png");
     public static final ResourceLocation MODEL_DRONE_MINIGUN = modelTexture("drone_minigun.png");
-    public static final ResourceLocation MODEL_HEAT_FRAME = modelTexture("heat_frame.png");
     public static final ResourceLocation MODEL_LOGISTICS_FRAME_ACTIVE_PROVIDER = modelTexture("logistics_frame_active_provider.png");
     public static final ResourceLocation MODEL_LOGISTICS_FRAME_PASSIVE_PROVIDER = modelTexture("logistics_frame_passive_provider.png");
     public static final ResourceLocation MODEL_LOGISTICS_FRAME_DEFAULT_STORAGE = modelTexture("logistics_frame_default_storage.png");
     public static final ResourceLocation MODEL_LOGISTICS_FRAME_STORAGE = modelTexture("logistics_frame_storage.png");
     public static final ResourceLocation MODEL_LOGISTICS_FRAME_REQUESTER = modelTexture("logistics_frame_requester.png");
+    public static final ResourceLocation MODEL_MANUAL_COMPRESSOR = modelTexture("manual_compressor.png");
     public static final ResourceLocation MODEL_CROP_SUPPORT = modelTexture("crop_support.png");
     public static final ResourceLocation MODEL_SPAWNER_EXTRACTOR = modelTexture("spawner_extractor.png");
     public static final ResourceLocation MODEL_SPAWNER_AGITATOR = modelTexture("spawner_agitator.png");
     public static final ResourceLocation MODEL_TRANSFER_GADGET_IN = modelTexture("transfer_gadget_in.png");
     public static final ResourceLocation MODEL_TRANSFER_GADGET_OUT = modelTexture("transfer_gadget_out.png");
+    public static final ResourceLocation MODEL_SOLAR_COMPRESSOR = modelTexture("solar_compressor.png");
 
     // Tube Module textures
     public static final ResourceLocation MODEL_FLOW_DETECTOR = tubeModuleTexture("flow_detector.png");
@@ -60,6 +60,10 @@ public class Textures {
     public static final ResourceLocation MODEL_REGULATOR_MODULE_UPGRADED = tubeModuleTexture("regulator_upgraded.png");
     public static final ResourceLocation MODEL_REDSTONE_MODULE = tubeModuleTexture("redstone.png");
     public static final ResourceLocation MODEL_REDSTONE_MODULE_UPGRADED = tubeModuleTexture("redstone_upgraded.png");
+    public static final ResourceLocation MODEL_VACUUM_MODULE = tubeModuleTexture("vacuum.png");
+    public static final ResourceLocation MODEL_VACUUM_MODULE_UPGRADED = tubeModuleTexture("vacuum_upgraded.png");
+    public static final ResourceLocation MODEL_THERMOSTAT_MODULE = tubeModuleTexture("thermostat_module.png");
+    public static final ResourceLocation MODEL_THERMOSTAT_MODULE_UPGRADED = tubeModuleTexture("thermostat_module_upgraded.png");
 
     // Progwidget textures
     public static final ResourceLocation PROG_WIDGET_COMMENT = progWidgetTexture("comment_piece.png");
@@ -91,6 +95,7 @@ public class Textures {
     public static final ResourceLocation PROG_WIDGET_TEXT = progWidgetTexture("text_piece.png");
     public static final ResourceLocation PROG_WIDGET_LABEL = progWidgetTexture("label_piece.png");
     public static final ResourceLocation PROG_WIDGET_JUMP = progWidgetTexture("jump_piece.png");
+    public static final ResourceLocation PROG_WIDGET_JUMP_SUB = progWidgetTexture("jump_sub_piece.png");
     public static final ResourceLocation PROG_WIDGET_WAIT = progWidgetTexture("wait_piece.png");
     public static final ResourceLocation PROG_WIDGET_DROP_ITEM = progWidgetTexture("item_drop_piece.png");
     public static final ResourceLocation PROG_WIDGET_EMIT_REDSTONE = progWidgetTexture("emit_redstone_piece.png");
@@ -127,6 +132,9 @@ public class Textures {
     // GUI background textures
     public static final ResourceLocation GUI_AIR_COMPRESSOR = guiTexture("gui_air_compressor.png");
     public static final ResourceLocation GUI_ADVANCED_AIR_COMPRESSOR = guiTexture("gui_advanced_air_compressor.png");
+    public static final ResourceLocation GUI_SOLAR_COMPRESSOR_INACTIVE = guiTexture("gui_solar_compressor_inactive.png");
+    public static final ResourceLocation GUI_SOLAR_COMPRESSOR_ACTIVE = guiTexture("gui_solar_compressor_active.png");
+    public static final ResourceLocation GUI_SOLAR_COMPRESSOR_BROKEN = guiTexture("gui_solar_compressor_broken.png");
     public static final ResourceLocation GUI_AIR_CANNON = guiTexture("gui_air_cannon.png");
     public static final ResourceLocation GUI_4UPGRADE_SLOTS = guiTexture("gui_pressure_chamber.png");
     public static final ResourceLocation GUI_CHARGING_STATION = guiTexture("gui_charging_station.png");
@@ -135,7 +143,6 @@ public class Textures {
     public static final ResourceLocation GUI_VACUUM_PUMP = guiTexture("gui_vacuum_pump.png");
     public static final ResourceLocation GUI_ITEM_SEARCHER = guiTexture("gui_item_searcher.png");
     public static final ResourceLocation GUI_ASSEMBLY_CONTROLLER = guiTexture("gui_assembly_controller.png");
-    public static final ResourceLocation GUI_LASER_DANGER = guiTexture("gui_laser_danger.png");
     public static final ResourceLocation GUI_UV_LIGHT_BOX = guiTexture("gui_uv_light_box.png");
     public static final ResourceLocation GUI_UV_LIGHT_BOX_ON = guiTexture("gui_uv_light_box_on.png");
     public static final ResourceLocation GUI_SECURITY_STATION = guiTexture("gui_security_station.png");
@@ -236,13 +243,13 @@ public class Textures {
     public static final ResourceLocation GLOW_RESOURCE = new ResourceLocation(RENDER_LOCATION + "blur.png");
 
     // entities
+    public static final ResourceLocation DRONE_ENTITY = droneTexture("default_drone.png");
+    public static final ResourceLocation GUARD_DRONE_ENTITY = droneTexture("guard_drone.png");
+    public static final ResourceLocation HARVESTING_DRONE_ENTITY = droneTexture("harvesting_drone.png");
+    public static final ResourceLocation LOGISTICS_DRONE_ENTITY = droneTexture("logistics_drone.png");
+    public static final ResourceLocation COLLECTOR_DRONE_ENTITY = droneTexture("collector_drone.png");
+    public static final ResourceLocation AMADRONE_ENTITY = droneTexture("amadrone.png");
     public static final ResourceLocation VORTEX_ENTITY = entityTexture("vortex.png");
-    public static final ResourceLocation DRONE_ENTITY = entityTexture("default_drone.png");
-    public static final ResourceLocation GUARD_DRONE_ENTITY = entityTexture("guard_drone.png");
-    public static final ResourceLocation HARVESTING_DRONE_ENTITY = entityTexture("harvesting_drone.png");
-    public static final ResourceLocation LOGISTICS_DRONE_ENTITY = entityTexture("logistics_drone.png");
-    public static final ResourceLocation COLLECTOR_DRONE_ENTITY = entityTexture("collector_drone.png");
-    public static final ResourceLocation AMADRONE_ENTITY = entityTexture("amadrone.png");
     public static final ResourceLocation MICROMISSILE_ENTITY = entityTexture("micromissile.png");
 
     private static ResourceLocation guiTexture(String img) {
@@ -267,5 +274,9 @@ public class Textures {
 
     public static ResourceLocation entityTexture(String img) {
         return new ResourceLocation(ENTITY_LOCATION + img);
+    }
+
+    public static ResourceLocation droneTexture(String img) {
+        return new ResourceLocation(DRONE_LOCATION + img);
     }
 }

@@ -17,54 +17,76 @@
 
 package me.desht.pneumaticcraft.common.util;
 
+import me.desht.pneumaticcraft.api.item.ILaunchBehaviour;
+import me.desht.pneumaticcraft.common.config.ConfigHelper;
+import me.desht.pneumaticcraft.common.core.ModItems;
 import me.desht.pneumaticcraft.common.core.ModSounds;
-import me.desht.pneumaticcraft.common.entity.projectile.EntityTumblingBlock;
+import me.desht.pneumaticcraft.common.entity.projectile.MicromissileEntity;
+import me.desht.pneumaticcraft.common.entity.projectile.TumblingBlockEntity;
 import me.desht.pneumaticcraft.common.network.NetworkHandler;
 import me.desht.pneumaticcraft.common.network.PacketSetEntityMotion;
 import me.desht.pneumaticcraft.common.network.PacketSpawnParticle;
 import me.desht.pneumaticcraft.common.particle.AirParticleData;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.item.BoatEntity;
-import net.minecraft.entity.item.ExperienceBottleEntity;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.item.TNTEntity;
-import net.minecraft.entity.item.minecart.MinecartEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.*;
-import net.minecraft.item.*;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.World;
-import net.minecraft.world.server.ServerWorld;
+import me.desht.pneumaticcraft.mixin.accessors.BoatItemAccess;
+import me.desht.pneumaticcraft.mixin.accessors.MinecartItemAccess;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.*;
+import net.minecraft.world.entity.vehicle.AbstractMinecart;
+import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.entity.vehicle.Minecart;
+import net.minecraft.world.item.*;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Common code for the Air Cannon and Pneumatic Chestplate item launcher
  */
 public class ItemLaunching {
-    public static void launchEntity(Entity launchedEntity, Vector3d initialPos, Vector3d velocity, boolean doSpawn) {
-        World world = launchedEntity.getCommandSenderWorld();
+    private static final List<ILaunchBehaviour> behaviours = new CopyOnWriteArrayList<>();
+
+    public static void launchEntity(Entity launchedEntity, Vec3 initialPos, Vec3 velocity, boolean doSpawn) {
+        Level world = launchedEntity.getCommandSenderWorld();
 
         if (launchedEntity.getVehicle() != null) {
             launchedEntity.stopRiding();
         }
 
-        BlockPos trackPos = new BlockPos(initialPos);
-        launchedEntity.setPos(initialPos.x, initialPos.y, initialPos.z);
+        BlockPos trackPos = BlockPos.containing(initialPos);
+
+        if (launchedEntity instanceof Boat) {
+            // Boats are spawned slightly above the player to not push them down upon launching
+            launchedEntity.setPos(initialPos.x, initialPos.y + 1, initialPos.z);
+        } else {
+            launchedEntity.setPos(initialPos.x, initialPos.y, initialPos.z);
+        }
+
         NetworkHandler.sendToAllTracking(new PacketSetEntityMotion(launchedEntity, velocity), world, trackPos);
-        if (launchedEntity instanceof AbstractFireballEntity) {
+
+        if (launchedEntity instanceof Fireball fireball) {
             // fireball velocity is handled a little differently...
-            AbstractFireballEntity fireball = (AbstractFireballEntity) launchedEntity;
             fireball.xPower = velocity.x * 0.05;
             fireball.yPower = velocity.y * 0.05;
             fireball.zPower = velocity.z * 0.05;
         } else {
             launchedEntity.setDeltaMovement(velocity);
         }
+
         launchedEntity.setOnGround(false);
         launchedEntity.horizontalCollision = false;
         launchedEntity.verticalCollision = false;
@@ -79,7 +101,7 @@ public class ItemLaunching {
             double velZ = velocity.z * 0.4D + (world.random.nextGaussian() - 0.5D) * 0.05D;
             NetworkHandler.sendToAllTracking(new PacketSpawnParticle(AirParticleData.DENSE, initialPos.x, initialPos.y, initialPos.z, velX, velY, velZ), world, trackPos);
         }
-        world.playSound(null, initialPos.x, initialPos.y, initialPos.z, ModSounds.AIR_CANNON.get(), SoundCategory.BLOCKS, 1f,world.random.nextFloat() / 4f + 0.75f);
+        world.playSound(null, initialPos.x, initialPos.y, initialPos.z, ModSounds.AIR_CANNON.get(), SoundSource.BLOCKS, 1f,world.random.nextFloat() / 4f + 0.75f);
     }
 
     /**
@@ -91,50 +113,116 @@ public class ItemLaunching {
      * @param fallingBlocks true if block items should be spawned as falling block entities rather than item entities
      * @return the entity to launch
      */
-    public static Entity getEntityToLaunch(World world, ItemStack stack, PlayerEntity player, boolean dispenserLike, boolean fallingBlocks) {
+    public static Entity getEntityToLaunch(Level world, ItemStack stack, Player player, boolean dispenserLike, boolean fallingBlocks) {
         Item item = stack.getItem();
+
+        // Checks if item has a special launch behavior, returning the corresponding entity to launch if so
         if (dispenserLike) {
-            if (item == Blocks.TNT.asItem()) {
-                TNTEntity tnt = new TNTEntity(world, 0, 0, 0, player);
-                tnt.setFuse(80);
-                return tnt;
-            } else if (item == Items.EXPERIENCE_BOTTLE) {
-                return new ExperienceBottleEntity(world, player);
-            } else if (item instanceof PotionItem) {
-                PotionEntity potionEntity = new PotionEntity(world, player);
-                potionEntity.setItem(stack);
-                return potionEntity;
-            } else if (item instanceof ArrowItem) {
-                return ((ArrowItem) item).createArrow(world, stack, player);
-            } else if (item == Items.EGG) {
-                return new EggEntity(world, player);
-            } else if (item == Items.FIRE_CHARGE) {
-                SmallFireballEntity e = new SmallFireballEntity(world, player, 0, 0, 0);
-                e.setItem(stack);
-                return e;
-            } else if (item == Items.SNOWBALL) {
-                return new SnowballEntity(world, player);
-            } else if (item instanceof SpawnEggItem && world instanceof ServerWorld) {
-                EntityType<?> type = ((SpawnEggItem) item).getType(stack.getTag());
-                Entity e = type.spawn((ServerWorld) world, stack, player, player.blockPosition(), SpawnReason.SPAWN_EGG, false, false);
-                if (e instanceof LivingEntity && stack.hasCustomHoverName()) {
-                    e.setCustomName(stack.getHoverName());
+            for (ILaunchBehaviour behaviour : behaviours) {
+                Entity e = behaviour.getEntityToLaunch(stack, player);
+                if (e != null) {
+                    return e;
                 }
-                return e;
-            } else if (item instanceof MinecartItem) {
-                return MinecartEntity.createMinecart(world, 0, 0, 0, ((MinecartItem) item).type);
-            }  else if (item instanceof BoatItem) {
-                return new BoatEntity(world, 0, 0, 0);
-            } else if (item == Items.FIREWORK_ROCKET) {
-                return new FireworkRocketEntity(world, 0, 0, 0, stack);
             }
         }
+
+        // Checks if item is a block that should be launched as a tumbling block
         if (fallingBlocks && item instanceof BlockItem) {
-            return new EntityTumblingBlock(world, player, 0, 0, 0, stack);
+            return new TumblingBlockEntity(world, player, 0, 0, 0, stack);
+
+        // Fallback to launch a generic item entity
         } else {
             ItemEntity e = new ItemEntity(world, 0, 0, 0, stack);
             e.setPickUpDelay(20);
             return e;
         }
+    }
+
+    public static void registerBehaviour(ILaunchBehaviour behaviour) {
+        behaviours.add(behaviour);
+    }
+
+    public static void registerDefaultBehaviours() {
+        registerBehaviour((stack, player) -> {
+            Item item = stack.getItem();
+            Level level = player.level();
+            float playerYaw = player.getRotationVector().y;
+            float playerPitch = player.getRotationVector().x;
+
+            if (item == Items.ARMOR_STAND) {
+                ArmorStand armorStand = new ArmorStand(level, 0, 0, 0);
+                armorStand.setYRot(playerYaw);
+                return armorStand;
+
+            } else if (item instanceof ArrowItem arrowItem) {
+                return arrowItem.createArrow(level, stack, player);
+
+            } else if (item instanceof BoatItem boatItem) {
+                HitResult dummyHitResult = new EntityHitResult(player, new Vec3(0, 0, 0));
+                Boat boat = ((BoatItemAccess) boatItem).invokeGetBoat(level, dummyHitResult);
+                boat.setYRot(playerYaw);
+                return boat;
+
+            } else if (item == Items.EXPERIENCE_BOTTLE) {
+                return new ThrownExperienceBottle(level, player);
+
+            } else if (item instanceof PotionItem) {
+                ThrownPotion potionEntity = new ThrownPotion(level, player);
+                potionEntity.setItem(stack);
+                return potionEntity;
+
+            } else if (item == Blocks.TNT.asItem()) {
+                PrimedTnt tnt = new PrimedTnt(level, 0, 0, 0, player);
+                tnt.setFuse(80);
+                return tnt;
+
+            } else if (item == Items.EGG) {
+                return new ThrownEgg(level, player);
+
+            } else if (item == Items.FIRE_CHARGE) {
+                SmallFireball e = new SmallFireball(level, player, 0, 0, 0);
+                e.setItem(stack);
+                return e;
+
+            } else if (item == Items.SNOWBALL) {
+                return new Snowball(level, player);
+
+            } else if (item instanceof SpawnEggItem egg && level instanceof ServerLevel serverLevel) {
+                EntityType<?> type = egg.getType(stack.getTag());
+                Entity e = type.spawn(serverLevel, stack, player, player.blockPosition(), MobSpawnType.SPAWN_EGG, false, false);
+
+                if (e instanceof LivingEntity && stack.hasCustomHoverName()) {
+                    e.setCustomName(stack.getHoverName());
+                }
+
+                return e;
+
+            } else if (item instanceof MinecartItem mi) {
+                AbstractMinecart minecart = Minecart.createMinecart(level, 0, 0, 0, ((MinecartItemAccess) mi).getType());
+                minecart.setYRot(playerYaw);
+                return minecart;
+
+            } else if (item == Items.FIREWORK_ROCKET) {
+                return new FireworkRocketEntity(level, stack, 0, 0, 0, true);
+
+            } else if (item == Items.TRIDENT) {
+                stack.hurtAndBreak(1, player, playerEntity -> { });
+                return new ThrownTrident(level, player, stack);
+
+            } else if (item == ModItems.MICROMISSILES.get()) {
+                stack.hurtAndBreak(1, player, playerEntity -> { });
+                MicromissileEntity micromissile = new MicromissileEntity(level, player, stack);
+
+                // Sets micromissile launch rotation
+                micromissile.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1/3f, 0.0F);
+
+                // Puts micromissile on cooldown which is 1/3 of normal cooldown to reward launching
+                player.getCooldowns().addCooldown(stack.getItem(), ConfigHelper.common().micromissiles.launchCooldown.get() / 3);
+
+                return micromissile;
+            }
+
+            return null;
+        });
     }
 }

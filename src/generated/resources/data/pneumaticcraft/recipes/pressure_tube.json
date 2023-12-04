@@ -1,8 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "IGI"
-  ],
+  "category": "misc",
   "key": {
     "G": {
       "tag": "forge:glass"
@@ -11,8 +9,12 @@
       "tag": "forge:ingots/compressed_iron"
     }
   },
+  "pattern": [
+    "IGI"
+  ],
   "result": {
-    "item": "pneumaticcraft:pressure_tube",
-    "count": 8
-  }
+    "count": 8,
+    "item": "pneumaticcraft:pressure_tube"
+  },
+  "show_notification": true
 }

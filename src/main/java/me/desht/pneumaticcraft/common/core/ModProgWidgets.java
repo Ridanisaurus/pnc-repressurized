@@ -20,19 +20,21 @@ package me.desht.pneumaticcraft.common.core;
 import me.desht.pneumaticcraft.api.drone.IProgWidgetBase;
 import me.desht.pneumaticcraft.api.drone.ProgWidgetType;
 import me.desht.pneumaticcraft.api.lib.Names;
-import me.desht.pneumaticcraft.common.progwidgets.*;
+import me.desht.pneumaticcraft.common.drone.progwidgets.*;
 import me.desht.pneumaticcraft.common.thirdparty.computer_common.ProgWidgetCC;
-import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.IForgeRegistry;
 import net.minecraftforge.registries.RegistryBuilder;
+import net.minecraftforge.registries.RegistryObject;
 
 import java.util.function.Supplier;
 
+import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
+
 public class ModProgWidgets {
-    public static final DeferredRegister<ProgWidgetType<?>> PROG_WIDGETS_DEFERRED = DeferredRegister.create(ProgWidgetType.CLASS_GENERIC, Names.MOD_ID);
+    public static final DeferredRegister<ProgWidgetType<?>> PROG_WIDGETS_DEFERRED = DeferredRegister.create(RL("prog_widgets"), Names.MOD_ID);
     public static final Supplier<IForgeRegistry<ProgWidgetType<?>>> PROG_WIDGETS = PROG_WIDGETS_DEFERRED
-            .makeRegistry("prog_widgets", () -> new RegistryBuilder<ProgWidgetType<?>>().disableSaving().disableSync());
+            .makeRegistry(() -> new RegistryBuilder<ProgWidgetType<?>>().disableSaving().disableSync());
 
     public static final RegistryObject<ProgWidgetType<ProgWidgetComment>> COMMENT
             = register("comment", ProgWidgetComment::new);
@@ -98,6 +100,8 @@ public class ModProgWidgets {
             = register("label", ProgWidgetLabel::new);
     public static final RegistryObject<ProgWidgetType<ProgWidgetJump>> JUMP
             = register("jump", ProgWidgetJump::new);
+    public static final RegistryObject<ProgWidgetType<ProgWidgetJumpSub>> JUMP_SUB
+            = register("jump_sub", ProgWidgetJumpSub::new);
     public static final RegistryObject<ProgWidgetType<ProgWidgetWait>> WAIT
             = register("wait", ProgWidgetWait::new);
     public static final RegistryObject<ProgWidgetType<ProgWidgetRename>> RENAME

@@ -17,60 +17,54 @@
 
 package me.desht.pneumaticcraft.common.hacking.entity;
 
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableEntity;
-import me.desht.pneumaticcraft.common.util.Reflections;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.goal.GoalSelector;
-import net.minecraft.entity.monster.ShulkerEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
-
-import java.util.List;
+import me.desht.pneumaticcraft.api.lib.Names;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.AbstractPersistentEntityHack;
+import me.desht.pneumaticcraft.mixin.accessors.ShulkerAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.monster.Shulker;
+import net.minecraft.world.entity.projectile.ShulkerBullet;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import org.jetbrains.annotations.NotNull;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
-import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
-public class HackableShulker implements IHackableEntity {
-    @Override
-    public ResourceLocation getHackableId() {
-        return RL("shulker");
+public class HackableShulker extends AbstractPersistentEntityHack<Shulker> {
+
+    private static final ResourceLocation ID = RL("shulker");
+
+    public HackableShulker() {
+        super(StockHackTypes.NEUTRALIZE);
     }
 
     @Override
-    public boolean canHack(Entity entity, PlayerEntity player) {
+    public ResourceLocation getHackableId() {
+        return ID;
+    }
+
+    @NotNull
+    @Override
+    public Class<Shulker> getHackableClass() {
+        return Shulker.class;
+    }
+
+    @Override
+    public boolean afterHackTick(Shulker entity) {
+        if (entity.level().random.nextInt(5) < 4) {
+            ((ShulkerAccess)entity).callSetRawPeekAmount(100);
+        }
         return true;
     }
 
-    @Override
-    public void addHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
-        curInfo.add(xlate("pneumaticcraft.armor.hacking.result.neutralize"));
-    }
-
-    @Override
-    public void addPostHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
-        curInfo.add(xlate("pneumaticcraft.armor.hacking.finished.neutralized"));
-    }
-
-    @Override
-    public int getHackTime(Entity entity, PlayerEntity player) {
-        return 60;
-    }
-
-    @Override
-    public void onHackFinished(Entity entity, PlayerEntity player) {
-        GoalSelector tasks = ((ShulkerEntity) entity).goalSelector;
-
-        tasks.getRunningGoals()
-                .filter(goal -> Reflections.shulker_aiAttack.isAssignableFrom(goal.getClass()))
-                .forEach(tasks::removeGoal);
-    }
-
-    @Override
-    public boolean afterHackTick(Entity entity) {
-        if (entity.getCommandSenderWorld().random.nextInt(5) < 4) {
-            ((ShulkerEntity) entity).setRawPeekAmount(100);
+    @Mod.EventBusSubscriber(modid = Names.MOD_ID)
+    public static class Listener {
+        @SubscribeEvent
+        public static void onBullet(EntityJoinLevelEvent event) {
+            if (event.getEntity() instanceof ShulkerBullet b && b.getOwner() instanceof Shulker shulker
+                    && hasPersistentHack(shulker, HackableShulker.class)) {
+                event.setCanceled(true);
+            }
         }
-        return false;
     }
 }

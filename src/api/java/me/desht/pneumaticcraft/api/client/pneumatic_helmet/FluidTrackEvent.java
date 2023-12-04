@@ -17,11 +17,11 @@
 
 package me.desht.pneumaticcraft.api.client.pneumatic_helmet;
 
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.eventbus.api.Cancelable;
 import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 
 /**
@@ -35,9 +35,9 @@ import net.minecraftforge.fluids.capability.IFluidHandler;
  */
 @Cancelable
 public class FluidTrackEvent extends Event {
-    private final TileEntity te;
+    private final BlockEntity te;
 
-    public FluidTrackEvent(TileEntity te) {
+    public FluidTrackEvent(BlockEntity te) {
         this.te = te;
     }
 
@@ -46,6 +46,6 @@ public class FluidTrackEvent extends Event {
     }
 
     public IFluidHandler getFluidHandler(Direction face) {
-        return te.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, face).map(iFluidHandler -> iFluidHandler).orElse(null);
+        return te.getCapability(ForgeCapabilities.FLUID_HANDLER, face).map(iFluidHandler -> iFluidHandler).orElse(null);
     }
 }

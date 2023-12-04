@@ -21,31 +21,29 @@ import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.common.config.ConfigHelper;
 import me.desht.pneumaticcraft.common.core.ModSounds;
 import me.desht.pneumaticcraft.common.particle.AirParticleData;
-import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorHandler;
 import me.desht.pneumaticcraft.common.pneumatic_armor.JetBootsStateTracker;
-import net.minecraft.client.audio.TickableSound;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
-public class MovingSoundJetBoots extends TickableSound {
+public class MovingSoundJetBoots extends AbstractTickableSoundInstance {
     private static final int END_TICKS = 20;
-    private static final Vector3d IDLE_VEC = new Vector3d(0, -0.5, 0);
+    private static final Vec3 IDLE_VEC = new Vec3(0, -0.5, 0);
 
-    private final PlayerEntity player;
-    private final CommonArmorHandler handler;
+    private final Player player;
     private float targetPitch;
     private int endTimer = Integer.MAX_VALUE;
 
-    public MovingSoundJetBoots(PlayerEntity player) {
-        super(ModSounds.LEAKING_GAS_LOW.get(), SoundCategory.NEUTRAL);
+    public MovingSoundJetBoots(Player player) {
+        super(ModSounds.LEAKING_GAS_LOW.get(), SoundSource.NEUTRAL, SoundInstance.createUnseededRandom());
 
         this.player = player;
         this.looping = true;
         this.delay = 0;
         this.targetPitch = 0.7F;
         this.pitch = 0.5F;
-        this.handler = CommonArmorHandler.getHandlerForPlayer(player);
         this.volume = volumeFromConfig(JetBootsStateTracker.getClientTracker().getJetBootsState(player).isBuilderMode());
 
         // kludge: tiny bit of upward displacement allows player to walk off an edge and back on again
@@ -56,19 +54,18 @@ public class MovingSoundJetBoots extends TickableSound {
 
     @Override
     public void tick() {
-        if (!handler.isValid() || !handler.isArmorEnabled()) {
-            // handler gets invalidated if the tracked player disconnects
+        if (!player.isAlive()) {
             return;
         }
 
         JetBootsStateTracker.JetBootsState jbState = JetBootsStateTracker.getClientTracker().getJetBootsState(player);
 
         if (endTimer == Integer.MAX_VALUE &&
-                (!jbState.isEnabled() || (!jbState.isActive() && (player.isOnGround() || player.isFallFlying())))) {
+                (!jbState.isEnabled() || (!jbState.isActive() && (player.onGround() || player.isFallFlying())))) {
             endTimer = END_TICKS;
         }
         if (endTimer <= END_TICKS) {
-            if (player.isOnGround() || !jbState.isActive()) {
+            if (player.onGround() || !jbState.isActive()) {
                 endTimer--;
             } else {
                 endTimer = Integer.MAX_VALUE;
@@ -102,19 +99,19 @@ public class MovingSoundJetBoots extends TickableSound {
 
     @Override
     public boolean isStopped() {
-        return !handler.isValid() || !handler.isArmorEnabled() || endTimer <= 0;
+        return !player.isAlive() || endTimer <= 0;
     }
 
     private void handleParticles(boolean jetBootsActive, boolean builderMode) {
         int distThresholdSq = ClientUtils.getRenderDistanceThresholdSq();
-        if ((jetBootsActive || (player.level.getGameTime() & 0x3) == 0 || !ClientUtils.isFirstPersonCamera()) && player.distanceToSqr(ClientUtils.getClientPlayer()) < distThresholdSq) {
+        if ((jetBootsActive || (player.level().getGameTime() & 0x3) == 0 || !ClientUtils.isFirstPersonCamera()) && player.distanceToSqr(ClientUtils.getClientPlayer()) < distThresholdSq) {
             int nParticles = jetBootsActive ? 3 : 1;
-            Vector3d jetVec = jetBootsActive && !builderMode ? player.getLookAngle().scale(-0.5) : IDLE_VEC;
-            Vector3d feet = jetBootsActive && !builderMode ?
+            Vec3 jetVec = jetBootsActive && !builderMode ? player.getLookAngle().scale(-0.5) : IDLE_VEC;
+            Vec3 feet = jetBootsActive && !builderMode ?
                     player.position().add(player.getLookAngle().scale(player == ClientUtils.getClientPlayer() ? -4 : -2)) :
                     player.position().add(0, -0.25, 0);
             for (int i = 0; i < nParticles; i++) {
-                player.level.addParticle(AirParticleData.DENSE, feet.x, feet.y, feet.z, jetVec.x, jetVec.y, jetVec.z);
+                player.level().addParticle(AirParticleData.DENSE, feet.x, feet.y, feet.z, jetVec.x, jetVec.y, jetVec.z);
             }
         }
     }

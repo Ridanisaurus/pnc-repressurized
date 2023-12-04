@@ -30,11 +30,12 @@ public class NBTKeys {
     public static final String NBT_SIDE_CONFIG = "SideConfiguration";
     public static final String NBT_EXTRA = "ExtraData";
     public static final String NBT_REDSTONE_MODE = "redstoneMode";
+    public static final String NBT_BROKEN = "IsBroken";
 
     // Standard tag for saving an item inventory
     public static final String NBT_ITEM_INV = "Items";
 
-    // this is the tag vanilla uses to serialize TE data onto dropped items
+    // this is the tag vanilla uses to serialize BE data onto dropped items
     public static final String BLOCK_ENTITY_TAG = "BlockEntityTag";
     // this is the tag vanilla uses to serialize entity data onto items
     public static final String ENTITY_TAG = "EntityTag";

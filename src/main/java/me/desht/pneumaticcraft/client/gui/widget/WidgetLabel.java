@@ -17,17 +17,14 @@
 
 package me.desht.pneumaticcraft.client.gui.widget;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
+import me.desht.pneumaticcraft.client.util.GuiUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.widget.Widget;
-import net.minecraft.util.text.ITextComponent;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.network.chat.Component;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-public class WidgetLabel extends Widget implements ITooltipProvider {
+public class WidgetLabel extends PNCWidget<WidgetLabel> {
 
     public enum Alignment {
         LEFT, CENTRE, RIGHT
@@ -36,14 +33,13 @@ public class WidgetLabel extends Widget implements ITooltipProvider {
     private float scale = 1.0f;
     private int color;
     private Alignment alignment = Alignment.LEFT;
-    private List<ITextComponent> tooltip = new ArrayList<>();
     private boolean dropShadow = false;
 
-    public WidgetLabel(int x, int y, ITextComponent text) {
+    public WidgetLabel(int x, int y, Component text) {
         this(x, y, text, 0xFF404040);
     }
 
-    public WidgetLabel(int x, int y, ITextComponent text, int color) {
+    public WidgetLabel(int x, int y, Component text, int color) {
         super(x, y, 0, 0, text);
         this.color = color;
         this.width = Minecraft.getInstance().font.width(getMessage());
@@ -62,30 +58,11 @@ public class WidgetLabel extends Widget implements ITooltipProvider {
 
     @Override
     protected boolean clicked(double mouseX, double mouseY) {
-        switch (alignment) {
-            case LEFT: return super.clicked(mouseX, mouseY);
-            case CENTRE: return super.clicked(mouseX + width / 2d, mouseY);
-            case RIGHT: return super.clicked(mouseX + width, mouseY);
-            default: return false;
-        }
-    }
-
-    @Override
-    public void addTooltip(double mouseX, double mouseY, List<ITextComponent> curTip, boolean shift) {
-        curTip.addAll(tooltip);
-    }
-
-    public WidgetLabel setTooltip(ITextComponent tooltip) {
-        return setTooltip(Collections.singletonList(tooltip));
-    }
-
-    public WidgetLabel setTooltip(List<ITextComponent> tooltip) {
-        this.tooltip = tooltip;
-        return this;
-    }
-
-    public List<ITextComponent> getTooltip() {
-        return tooltip;
+        return switch (alignment) {
+            case LEFT -> super.clicked(mouseX, mouseY);
+            case CENTRE -> super.clicked(mouseX + width / 2d, mouseY);
+            case RIGHT -> super.clicked(mouseX + width, mouseY);
+        };
     }
 
     public WidgetLabel setColor(int color) {
@@ -99,42 +76,27 @@ public class WidgetLabel extends Widget implements ITooltipProvider {
     }
 
     @Override
-    public void setMessage(ITextComponent p_setMessage_1_) {
-        super.setMessage(p_setMessage_1_);
+    public void setMessage(Component pMessage) {
+        super.setMessage(pMessage);
 
         width = Minecraft.getInstance().font.width(getMessage());
     }
 
     @Override
-    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTick) {
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (visible) {
             int drawX;
-            FontRenderer fr = Minecraft.getInstance().font;
-            switch (alignment) {
-                case LEFT:
-                default:
-                    drawX = x;
-                    break;
-                case CENTRE:
-                    drawX = x - (int)(width / 2 * scale);
-                    break;
-                case RIGHT:
-                    drawX = x - (int)(width * scale);
-                    break;
-            }
-            if (scale != 1.0f) {
-                matrixStack.pushPose();
-                matrixStack.scale(scale, scale, scale);
-                matrixStack.translate(drawX, y, 0);
-            }
-            if (dropShadow) {
-                fr.drawShadow(matrixStack, getMessage().getVisualOrderText(), drawX, y, color);
-            } else {
-                fr.draw(matrixStack, getMessage().getVisualOrderText(), drawX, y, color);
-            }
-            if (scale != 1.0f) {
-                matrixStack.popPose();
-            }
+            Font fr = Minecraft.getInstance().font;
+            drawX = switch (alignment) {
+                case LEFT -> getX();
+                case CENTRE -> getX() - (int) (width / 2 * scale);
+                case RIGHT -> getX() - (int) (width * scale);
+            };
+            GuiUtils.drawScaledText(graphics, fr, getMessage(), drawX, getY(), color, scale,  dropShadow);
         }
+    }
+
+    @Override
+    public void updateWidgetNarration(NarrationElementOutput pNarrationElementOutput) {
     }
 }

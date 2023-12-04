@@ -17,73 +17,72 @@
 
 package me.desht.pneumaticcraft.common.hacking.entity;
 
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.merchant.villager.VillagerEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.MerchantOffer;
-import net.minecraft.item.MerchantOffers;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableEntity;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
-public class HackableVillager implements IHackableEntity {
+public class HackableVillager implements IHackableEntity<Villager> {
+    private static final ResourceLocation ID = RL("villager");
+
     @Override
     public ResourceLocation getHackableId() {
-        return RL("villager");
+        return ID;
+    }
+
+    @NotNull
+    @Override
+    public Class<Villager> getHackableClass() {
+        return Villager.class;
     }
 
     @Override
-    public boolean canHack(Entity entity, PlayerEntity player) {
-        return true;
-    }
-
-    @Override
-    public void addHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addHackInfo(Villager entity, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.result.resetTrades"));
     }
 
     @Override
-    public void addPostHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addPostHackInfo(Villager entity, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.finished.resetTrades"));
     }
 
     @Override
-    public int getHackTime(Entity entity, PlayerEntity player) {
+    public int getHackTime(Villager entity, Player player) {
         return 120;
     }
 
     @Override
-    public void onHackFinished(Entity entity, PlayerEntity player) {
-        if (entity instanceof VillagerEntity && !player.level.isClientSide) {
-            VillagerEntity villager = (VillagerEntity) entity;
-            if (villager.shouldRestock()) {
-                villager.restock();
+    public void onHackFinished(Villager entity, Player player) {
+        Level level = player.level();
+        if (!level.isClientSide) {
+            if (entity.shouldRestock()) {
+                entity.restock();
             }
-            int n = villager.level.random.nextInt(25);
+            int n = level.random.nextInt(25);
             if (n == 0) {
-                ItemStack emeralds = new ItemStack(Items.EMERALD, villager.level.random.nextInt(3) + 1);
-                villager.level.addFreshEntity(new ItemEntity(villager.level, villager.getX(), villager.getY(), villager.getZ(), emeralds));
+                ItemStack emeralds = new ItemStack(Items.EMERALD, level.random.nextInt(3) + 1);
+                level.addFreshEntity(new ItemEntity(level, entity.getX(), entity.getY(), entity.getZ(), emeralds));
             } else if (n == 1 ) {
-                MerchantOffers offers = villager.getOffers();
-                MerchantOffer offer = offers.get(villager.level.random.nextInt(offers.size()));
+                MerchantOffers offers = entity.getOffers();
+                MerchantOffer offer = offers.get(level.random.nextInt(offers.size()));
                 if (!offer.getResult().isEmpty() && !offer.isOutOfStock()) {
-                    villager.level.addFreshEntity(new ItemEntity(villager.level, villager.getX(), villager.getY(), villager.getZ(), offer.getResult()));
+                    level.addFreshEntity(new ItemEntity(level, entity.getX(), entity.getY(), entity.getZ(), offer.getResult()));
                     offer.increaseUses();
                 }
             }
         }
-    }
-
-    @Override
-    public boolean afterHackTick(Entity entity) {
-        return false;
     }
 }

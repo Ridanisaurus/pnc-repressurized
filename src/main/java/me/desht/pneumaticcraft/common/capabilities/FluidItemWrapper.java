@@ -18,20 +18,21 @@
 package me.desht.pneumaticcraft.common.capabilities;
 
 import me.desht.pneumaticcraft.api.lib.NBTKeys;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.Direction;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.fluids.capability.templates.FluidTank;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 public class FluidItemWrapper implements ICapabilityProvider {
@@ -57,7 +58,7 @@ public class FluidItemWrapper implements ICapabilityProvider {
      * tank is empty, it will be removed from the stack's NBT to keep it clean (helps with stackability)
      * <p>
      * Data is serialized under the "BlockEntityTag" sub-tag, so will
-     * be automatically deserialized back into the tile entity when this item (assuming it's from a block,
+     * be automatically deserialized back into the block entity when this item (assuming it's from a block,
      * of course) is placed back down.
      *
      * @param tank the fluid tank
@@ -65,10 +66,10 @@ public class FluidItemWrapper implements ICapabilityProvider {
      */
      private void serializeTank(FluidTank tank, String tagName) {
          ItemStack newStack = stack.copy();
-         CompoundNBT tag = newStack.getOrCreateTagElement(NBTKeys.BLOCK_ENTITY_TAG);
-         CompoundNBT subTag = tag.getCompound(NBTKeys.NBT_SAVED_TANKS);
+         CompoundTag tag = newStack.getOrCreateTagElement(NBTKeys.BLOCK_ENTITY_TAG);
+         CompoundTag subTag = tag.getCompound(NBTKeys.NBT_SAVED_TANKS);
          if (!tank.getFluid().isEmpty()) {
-             subTag.put(tagName, tank.writeToNBT(new CompoundNBT()));
+             subTag.put(tagName, tank.writeToNBT(new CompoundTag()));
          } else {
              subTag.remove(tagName);
          }
@@ -77,7 +78,7 @@ public class FluidItemWrapper implements ICapabilityProvider {
          } else {
              tag.remove(NBTKeys.NBT_SAVED_TANKS);
              if (tag.isEmpty()) {
-                 newStack.getTag().remove(NBTKeys.BLOCK_ENTITY_TAG);
+                 Objects.requireNonNull(newStack.getTag()).remove(NBTKeys.BLOCK_ENTITY_TAG);
                  if (newStack.getTag().isEmpty()) {
                      newStack.setTag(null);
                  }
@@ -96,10 +97,10 @@ public class FluidItemWrapper implements ICapabilityProvider {
      * @return the deserialized tank, or null
      */
     private FluidTank deserializeTank(ItemStack stack, String tagName, int capacity) {
-        CompoundNBT tag = stack.getTagElement(NBTKeys.BLOCK_ENTITY_TAG);
+        CompoundTag tag = stack.getTagElement(NBTKeys.BLOCK_ENTITY_TAG);
         if (tag != null && tag.contains(NBTKeys.NBT_SAVED_TANKS)) {
             FluidTank tank = new FluidTank(capacity);
-            CompoundNBT subTag = tag.getCompound(NBTKeys.NBT_SAVED_TANKS);
+            CompoundTag subTag = tag.getCompound(NBTKeys.NBT_SAVED_TANKS);
             return tank.readFromNBT(subTag.getCompound(tagName));
         }
         return null;
@@ -109,7 +110,7 @@ public class FluidItemWrapper implements ICapabilityProvider {
     @Nonnull
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction facing)
     {
-        return CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY.orEmpty(capability, holder);
+        return ForgeCapabilities.FLUID_HANDLER_ITEM.orEmpty(capability, holder);
     }
 
     class Handler implements IFluidHandlerItem {

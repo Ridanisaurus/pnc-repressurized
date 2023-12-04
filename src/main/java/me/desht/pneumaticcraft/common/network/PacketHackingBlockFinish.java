@@ -17,17 +17,17 @@
 
 package me.desht.pneumaticcraft.common.network;
 
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableBlock;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableBlock;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.common.core.ModSounds;
-import me.desht.pneumaticcraft.common.event.HackTickHandler;
 import me.desht.pneumaticcraft.common.hacking.HackManager;
+import me.desht.pneumaticcraft.common.hacking.HackTickTracker;
 import me.desht.pneumaticcraft.common.hacking.WorldAndCoord;
-import me.desht.pneumaticcraft.common.pneumatic_armor.ArmorUpgradeRegistry;
 import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorHandler;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketBuffer;
-import net.minecraftforge.fml.network.NetworkEvent;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonUpgradeHandlers;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
@@ -40,18 +40,18 @@ public class PacketHackingBlockFinish extends LocationIntPacket {
         super(gPos.pos);
     }
 
-    public PacketHackingBlockFinish(PacketBuffer buffer) {
+    public PacketHackingBlockFinish(FriendlyByteBuf buffer) {
         super(buffer);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            PlayerEntity player = ClientUtils.getClientPlayer();
-            IHackableBlock hackableBlock = HackManager.getHackableForBlock(player.level, pos, player);
+            Player player = ClientUtils.getClientPlayer();
+            IHackableBlock hackableBlock = HackManager.getHackableForBlock(player.level(), pos, player);
             if (hackableBlock != null) {
-                hackableBlock.onHackComplete(player.level, pos, player);
-                HackTickHandler.instance().trackBlock(player.level, pos, hackableBlock);
-                CommonArmorHandler.getHandlerForPlayer(player).getExtensionData(ArmorUpgradeRegistry.getInstance().hackHandler).setHackedBlockPos(null);
+                hackableBlock.onHackComplete(player.level(), pos, player);
+                HackTickTracker.getInstance(player.level()).trackBlock(pos, hackableBlock);
+                CommonArmorHandler.getHandlerForPlayer(player).getExtensionData(CommonUpgradeHandlers.hackHandler).setHackedBlockPos(null);
                 player.playSound(ModSounds.HELMET_HACK_FINISH.get(), 1.0F, 1.0F);
             }
         });

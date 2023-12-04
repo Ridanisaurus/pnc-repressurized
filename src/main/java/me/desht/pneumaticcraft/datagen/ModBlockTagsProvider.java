@@ -17,30 +17,33 @@
 
 package me.desht.pneumaticcraft.datagen;
 
+import me.desht.pneumaticcraft.api.data.PneumaticCraftTags;
 import me.desht.pneumaticcraft.api.lib.Names;
-import me.desht.pneumaticcraft.common.PneumaticCraftTags;
 import me.desht.pneumaticcraft.common.core.ModBlocks;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.data.BlockTagsProvider;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ITag;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.AirBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.common.data.BlockTagsProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 
 public class ModBlockTagsProvider extends BlockTagsProvider {
-    public ModBlockTagsProvider(DataGenerator generator, ExistingFileHelper existingFileHelper) {
-        super(generator, Names.MOD_ID, existingFileHelper);
+    public ModBlockTagsProvider(DataGenerator generator, CompletableFuture<HolderLookup.Provider> lookupProvider, ExistingFileHelper existingFileHelper) {
+        super(generator.getPackOutput(), lookupProvider, Names.MOD_ID, existingFileHelper);
     }
 
     @Override
-    public void addTags() {
-
+    protected void addTags(HolderLookup.Provider pProvider) {
         createAndAppend(PneumaticCraftTags.Blocks.REINFORCED_STONE, Tags.Blocks.STONE,
                 ModBlocks.REINFORCED_STONE);
         createAndAppend(PneumaticCraftTags.Blocks.REINFORCED_STONE_BRICKS, BlockTags.STONE_BRICKS,
@@ -71,9 +74,10 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
                 ModBlocks.COMPRESSED_IRON_BLOCK);
 
         createTag(PneumaticCraftTags.Blocks.PLASTIC_BRICKS, ModBlocks.PLASTIC_BRICKS.toArray(new Supplier[0]));
+        createTag(PneumaticCraftTags.Blocks.SMOOTH_PLASTIC_BRICKS, ModBlocks.SMOOTH_PLASTIC_BRICKS.toArray(new Supplier[0]));
         createTag(PneumaticCraftTags.Blocks.WALL_LAMPS, ModBlocks.WALL_LAMPS.toArray(new Supplier[0]));
         createTag(PneumaticCraftTags.Blocks.WALL_LAMPS_INVERTED, ModBlocks.WALL_LAMPS_INVERTED.toArray(new Supplier[0]));
-        createTag(PneumaticCraftTags.Blocks.FLUID_TANKS, ModBlocks.TANK_SMALL, ModBlocks.TANK_MEDIUM, ModBlocks.TANK_LARGE);
+        createTag(PneumaticCraftTags.Blocks.FLUID_TANKS, ModBlocks.TANK_SMALL, ModBlocks.TANK_MEDIUM, ModBlocks.TANK_LARGE, ModBlocks.TANK_HUGE);
 
         createTag(PneumaticCraftTags.Blocks.BLOCK_TRACKER_MISC,
                 () -> Blocks.TNT,
@@ -89,27 +93,36 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
         tag(Tags.Blocks.ORES);
         tag(BlockTags.LOGS);
         tag(PneumaticCraftTags.Blocks.JACKHAMMER_ORES).addTag(Tags.Blocks.ORES).addTag(BlockTags.LOGS);
+        tag(PneumaticCraftTags.Blocks.ELECTROSTATIC_GRID).add(Blocks.IRON_BARS);
+
+        ModBlocks.BLOCKS.getEntries().forEach(ro -> {
+            Block block = ro.get();
+            if (!(block instanceof LiquidBlock) && !(block instanceof AirBlock)) {
+                tag(BlockTags.MINEABLE_WITH_PICKAXE).add(block);
+                tag(BlockTags.NEEDS_IRON_TOOL).add(block);
+            }
+        });
     }
 
 // with thanks to Tropicraft for these helper methods
 
     @SafeVarargs
-    private final <T> T[] resolveAll(IntFunction<T[]> creator, Supplier<? extends T>... suppliers) {
+    private <T> T[] resolveAll(IntFunction<T[]> creator, Supplier<? extends T>... suppliers) {
         return Arrays.stream(suppliers).map(Supplier::get).toArray(creator);
     }
 
     @SafeVarargs
-    private final void createTag(ITag.INamedTag<Block> tag, Supplier<? extends Block>... blocks) {
+    private void createTag(TagKey<Block> tag, Supplier<? extends Block>... blocks) {
         tag(tag).add(resolveAll(Block[]::new, blocks));
     }
 
     @SafeVarargs
-    private final void appendToTag(ITag.INamedTag<Block> tag, ITag.INamedTag<Block>... toAppend) {
+    private void appendToTag(TagKey<Block> tag, TagKey<Block>... toAppend) {
         tag(tag).addTags(toAppend);
     }
 
     @SafeVarargs
-    private final void createAndAppend(ITag.INamedTag<Block> tag, ITag.INamedTag<Block> to, Supplier<? extends Block>... blocks) {
+    private void createAndAppend(TagKey<Block> tag, TagKey<Block> to, Supplier<? extends Block>... blocks) {
         createTag(tag, blocks);
         appendToTag(to, tag);
     }
@@ -118,4 +131,5 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
     public String getName() {
         return "PneumaticCraft Block Tags";
     }
+
 }

@@ -20,6 +20,7 @@ package me.desht.pneumaticcraft.lib;
 public class ModIds {
     // the mods we integrate with
     public static final String AE2 = "appliedenergistics2";
+    public static final String APOTHEOSIS = "apotheosis";
     public static final String COMPUTERCRAFT = "computercraft";
     public static final String TOP = "theoneprobe";
     public static final String JEI = "jei";
@@ -29,22 +30,28 @@ public class ModIds {
     public static final String MEKANISM = "mekanism";
     public static final String CURIOS = "curios";
     public static final String COFH_CORE = "cofh_core";
+    public static final String THERMAL = "thermal";
+    public static final String THERMAL_CULTIVATION = "thermal_cultivation";
+    public static final String THERMAL_EXPANSION = "thermal_expansion";
+    public static final String THERMAL_FOUNDATION = "thermal_foundation";
+    public static final String THERMAL_INNOVATION = "thermal_innovation";
+    public static final String THERMAL_LOCOMOTION = "thermal_locomotion";
     public static final String WAILA = "waila";
     public static final String CRAFTTWEAKER = "crafttweaker";
     public static final String GAMESTAGES = "gamestages";
     public static final String CREATE = "create";
+    public static final String THAUMCRAFT = "thaumcraft";
+    public static final String TOUGH_AS_NAILS = "toughasnails";
 
     // the mods we have integrated with in the past but not in 1.16
-//    public static final String BUILDCRAFT = "buildcraftcore";
-//    public static final String INDUSTRIALCRAFT = "ic2";
-//    public static final String INDUSTRIALFOREGOING = "industrialforegoing";
-//    public static final String IGWMOD = "igwmod";
-//    public static final String THAUMCRAFT = "thaumcraft";
+    //    public static final String BUILDCRAFT = "buildcraftcore";
+    //    public static final String INDUSTRIALCRAFT = "ic2";
+    //    public static final String INDUSTRIALFOREGOING = "industrialforegoing";
+    //    public static final String IGWMOD = "igwmod";
 //    public static final String FORESTRY = "forestry";
 //    public static final String OPEN_BLOCKS = "openblocks";
 //    public static final String OPEN_COMPUTERS = "opencomputers";
 //    public static final String EIO = "enderio";
 //    public static final String IMMERSIVE_PETROLEUM = "immersivepetroleum";
 //    public static final String BAUBLES = "baubles";
-//    public static final String TOUGH_AS_NAILS = "toughasnails";
 }

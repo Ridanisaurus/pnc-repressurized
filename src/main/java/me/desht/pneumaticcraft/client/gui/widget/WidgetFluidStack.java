@@ -17,22 +17,25 @@
 
 package me.desht.pneumaticcraft.client.gui.widget;
 
-import com.mojang.blaze3d.matrix.MatrixStack;
+import me.desht.pneumaticcraft.client.util.GuiUtils;
 import me.desht.pneumaticcraft.common.thirdparty.ModNameCache;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraftforge.fluids.FluidStack;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
 public class WidgetFluidStack extends WidgetFluidFilter {
+    private static final float TEXT_SCALE = 0.5f;
+
     private boolean adjustable = false;
 
     public WidgetFluidStack(int x, int y, FluidStack stack, Consumer<WidgetFluidFilter> pressable) {
@@ -54,19 +57,30 @@ public class WidgetFluidStack extends WidgetFluidFilter {
     }
 
     @Override
-    public void renderButton(MatrixStack matrixStack, int mouseX, int mouseY, float partialTick) {
-        super.renderButton(matrixStack, mouseX, mouseY, partialTick);
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderWidget(graphics, mouseX, mouseY, partialTick);
 
         if (!fluidStack.isEmpty()) {
             int fluidAmount = fluidStack.getAmount() / 1000;
-            if (fluidAmount > 1) {
-                FontRenderer fr = Minecraft.getInstance().font;
-                matrixStack.pushPose();
-                matrixStack.translate(0, 0, 200);  // ensure amount is drawn in front of the fluid texture
-                String s = fluidAmount + "B";
-                fr.drawShadow(matrixStack, s, x - fr.width(s) + 17, y + 9, 0xFFFFFFFF);
-                matrixStack.popPose();
+            if (fluidAmount > 1 || adjustable) {
+                Font font = Minecraft.getInstance().font;
+                Component str = Component.literal(fluidAmount + "B");
+                GuiUtils.drawScaledText(graphics, font, str, (int) (getX() - font.width(str) * TEXT_SCALE + 16), (int) (getY() + 16 - font.lineHeight * TEXT_SCALE), 0xFFFFFF, TEXT_SCALE, true);
+//                graphics.pose().pushPose();
+//                graphics.translate(getX() - font.width(str) * TEXT_SCALE + 16, getY() + 16 - font.lineHeight * TEXT_SCALE, 200);
+//                graphics.scale(TEXT_SCALE, TEXT_SCALE, TEXT_SCALE);
+//                font.drawShadow(graphics, str, 0, 0, 0xFFFFFFFF);
+//                graphics.popPose();
             }
+            MutableComponent c = new FluidStack(fluidStack, 1).getDisplayName().copy();
+            if (adjustable) {
+                c.append("\n").append(xlate("pneumaticcraft.message.misc.fluidmB", fluidStack.getAmount()).withStyle(ChatFormatting.GRAY));
+            }
+            c.append("\n").append(Component.literal(ModNameCache.getModName(fluidStack.getFluid()))
+                    .withStyle(ChatFormatting.BLUE,  ChatFormatting.ITALIC));
+            setTooltip(Tooltip.create(c));
+        } else {
+            setTooltip(null);
         }
     }
 
@@ -76,33 +90,20 @@ public class WidgetFluidStack extends WidgetFluidFilter {
             if (!fluidStack.isEmpty() && adjustable) {
                 boolean shift = Screen.hasShiftDown();
                 switch (button) {
-                    case 0:  // left-click: drain 1000mB (or halve with Shift held)
+                    case 0 -> {  // left-click: drain 1000mB (or halve with Shift held)
                         fluidStack.setAmount(shift ? fluidStack.getAmount() / 2 : Math.max(0, fluidStack.getAmount() - 1000));
                         if (fluidStack.getAmount() < 1000) fluidStack.setAmount(0);
-                        break;
-                    case 1:  // right-click: add 1000mB (or double with Shift held)
-                        fluidStack.setAmount(shift ? fluidStack.getAmount() * 2 : fluidStack.getAmount() + 1000);
-                        break;
-                    case 2:  // middle-click: clear slot
-                        fluidStack.setAmount(0);
-                        break;
-
+                    }
+                    case 1 ->  // right-click: add 1000mB (or double with Shift held)
+                            fluidStack.setAmount(shift ? fluidStack.getAmount() * 2 : fluidStack.getAmount() + 1000);
+                    case 2 ->  // middle-click: clear slot
+                            fluidStack.setAmount(0);
                 }
             }
             if (pressable != null) pressable.accept(this);
             return true;
         } else {
             return false;
-        }
-    }
-
-    @Override
-    public void addTooltip(double mouseX, double mouseY, List<ITextComponent> curTip, boolean shiftPressed) {
-        if (!fluidStack.isEmpty()) {
-            curTip.add(new FluidStack(fluidStack, 1).getDisplayName());
-            curTip.add(xlate("pneumaticcraft.message.misc.fluidmB", fluidStack.getAmount()).withStyle(TextFormatting.GRAY));
-            curTip.add(new StringTextComponent(ModNameCache.getModName(fluidStack.getFluid()))
-                    .withStyle(TextFormatting.BLUE,  TextFormatting.ITALIC));
         }
     }
 }

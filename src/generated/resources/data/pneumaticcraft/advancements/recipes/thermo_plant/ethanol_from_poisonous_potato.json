@@ -1,26 +1,23 @@
 {
   "parent": "minecraft:recipes/root",
-  "rewards": {
-    "recipes": [
-      "pneumaticcraft:thermo_plant/ethanol_from_poisonous_potato"
-    ]
-  },
   "criteria": {
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "pneumaticcraft:thermo_plant/ethanol_from_poisonous_potato"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    },
     "thermopneumatic_processing_plant": {
-      "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
           {
-            "item": "pneumaticcraft:thermopneumatic_processing_plant"
+            "items": [
+              "pneumaticcraft:thermopneumatic_processing_plant"
+            ]
           }
         ]
-      }
-    },
-    "has_the_recipe": {
-      "trigger": "minecraft:recipe_unlocked",
-      "conditions": {
-        "recipe": "pneumaticcraft:thermo_plant/ethanol_from_poisonous_potato"
-      }
+      },
+      "trigger": "minecraft:inventory_changed"
     }
   },
   "requirements": [
@@ -28,5 +25,11 @@
       "thermopneumatic_processing_plant",
       "has_the_recipe"
     ]
-  ]
+  ],
+  "rewards": {
+    "recipes": [
+      "pneumaticcraft:thermo_plant/ethanol_from_poisonous_potato"
+    ]
+  },
+  "sends_telemetry_event": true
 }

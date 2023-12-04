@@ -1,10 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "III",
-    "ITI",
-    "III"
-  ],
+  "category": "misc",
   "key": {
     "I": {
       "tag": "forge:ingots/compressed_iron"
@@ -13,8 +9,14 @@
       "item": "pneumaticcraft:pressure_tube"
     }
   },
+  "pattern": [
+    "III",
+    "ITI",
+    "III"
+  ],
   "result": {
-    "item": "pneumaticcraft:pressure_chamber_valve",
-    "count": 16
-  }
+    "count": 16,
+    "item": "pneumaticcraft:pressure_chamber_valve"
+  },
+  "show_notification": true
 }

@@ -20,12 +20,13 @@ package me.desht.pneumaticcraft.common.config.subconfig;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import me.desht.pneumaticcraft.client.util.PointXY;
-import me.desht.pneumaticcraft.common.item.ItemMicromissiles;
-import me.desht.pneumaticcraft.common.item.ItemMicromissiles.FireMode;
+import me.desht.pneumaticcraft.common.item.MicromissilesItem;
+import me.desht.pneumaticcraft.common.item.MicromissilesItem.FireMode;
 import me.desht.pneumaticcraft.lib.Log;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
 
+import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -33,7 +34,9 @@ import java.util.UUID;
 public class MicromissileDefaults extends AuxConfigJson {
     public static final MicromissileDefaults INSTANCE = new MicromissileDefaults();
 
-    private static final Map<UUID, Entry> defaults = new HashMap<>();
+    public static final Entry FALLBACK = new Entry(1/3f, 1/3f, 1/3f, new PointXY(46, 54), "", FireMode.SMART);
+
+    private final Map<UUID, Entry> defaults = new HashMap<>();
 
     private MicromissileDefaults() {
         super(true);
@@ -67,13 +70,19 @@ public class MicromissileDefaults extends AuxConfigJson {
         return "MicromissileDefaults";
     }
 
-    public void setDefaults(PlayerEntity player, Entry record) {
-        record.playerName = player.getName().getString();
-        defaults.put(player.getUUID(), record);
+    @Override
+    public Sidedness getSidedness() {
+        return Sidedness.SERVER;
     }
 
-    public Entry getDefaults(PlayerEntity player) {
-        return defaults.get(player.getUUID());
+    public void setDefaults(Player player, Entry entry) {
+        entry.playerName = player.getName().getString();
+        defaults.put(player.getUUID(), entry);
+    }
+
+    @Nonnull
+    public Entry getDefaults(Player player) {
+        return defaults.getOrDefault(player.getUUID(), FALLBACK);
     }
 
     public static class Entry {
@@ -113,23 +122,23 @@ public class MicromissileDefaults extends AuxConfigJson {
             obj.addProperty("topSpeed", topSpeed);
             obj.addProperty("turnSpeed", turnSpeed);
             obj.addProperty("damage", damage);
-            obj.addProperty("px", p.x);
-            obj.addProperty("py", p.y);
+            obj.addProperty("px", p.x());
+            obj.addProperty("py", p.y());
             obj.addProperty("entityFilter", entityFilter);
             obj.addProperty("playerName", playerName);
             obj.addProperty("fireMode", fireMode.toString());
             return obj;
         }
 
-        public CompoundNBT toNBT() {
-            CompoundNBT tag = new CompoundNBT();
-            tag.putFloat(ItemMicromissiles.NBT_TOP_SPEED, topSpeed);
-            tag.putFloat(ItemMicromissiles.NBT_TURN_SPEED, turnSpeed);
-            tag.putFloat(ItemMicromissiles.NBT_DAMAGE, damage);
-            tag.putString(ItemMicromissiles.NBT_FILTER, entityFilter);
-            tag.putInt(ItemMicromissiles.NBT_PX, p.x);
-            tag.putInt(ItemMicromissiles.NBT_PY, p.y);
-            tag.putString(ItemMicromissiles.NBT_FIRE_MODE, fireMode.toString());
+        public CompoundTag toNBT() {
+            CompoundTag tag = new CompoundTag();
+            tag.putFloat(MicromissilesItem.NBT_TOP_SPEED, topSpeed);
+            tag.putFloat(MicromissilesItem.NBT_TURN_SPEED, turnSpeed);
+            tag.putFloat(MicromissilesItem.NBT_DAMAGE, damage);
+            tag.putString(MicromissilesItem.NBT_FILTER, entityFilter);
+            tag.putInt(MicromissilesItem.NBT_PX, p.x());
+            tag.putInt(MicromissilesItem.NBT_PY, p.y());
+            tag.putString(MicromissilesItem.NBT_FIRE_MODE, fireMode.toString());
             return tag;
         }
     }

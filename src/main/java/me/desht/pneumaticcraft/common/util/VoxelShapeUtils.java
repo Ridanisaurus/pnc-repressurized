@@ -17,73 +17,71 @@
 
 package me.desht.pneumaticcraft.common.util;
 
-import net.minecraft.block.Block;
-import net.minecraft.util.math.shapes.IBooleanFunction;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.util.math.shapes.VoxelShapes;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * With thanks to JTK222 | Lukas for this
  */
 public class VoxelShapeUtils {
     public static VoxelShape rotateY(VoxelShape shape, int rotation) {
-        Set<VoxelShape> rotatedShapes = new HashSet<>();
+        List<VoxelShape> rotatedShapes = new ArrayList<>();
 
         shape.forAllBoxes((x1, y1, z1, x2, y2, z2) -> {
             x1 = (x1 * 16) - 8; x2 = (x2 * 16) - 8;
             z1 = (z1 * 16) - 8; z2 = (z2 * 16) - 8;
 
             switch (rotation) {
-                case 90:
-                    rotatedShapes.add(Block.box(8 - z1, y1 * 16, 8 + x1, 8 - z2, y2 * 16, 8 + x2));
-                    break;
-                case 180:
-                    rotatedShapes.add(Block.box(8 - x1, y1 * 16, 8 - z1, 8 - x2, y2 * 16, 8 - z2));
-                    break;
-                case 270:
-                    rotatedShapes.add(Block.box(8 + z1, y1 * 16, 8 - x1, 8 + z2, y2 * 16, 8 - x2));
-                    break;
-                default:
-                    throw new IllegalArgumentException("invalid rotation " + rotation + " (must be 90,180 or 270)");
+                case 90 -> rotatedShapes.add(boxSafe(8 - z1, y1 * 16, 8 + x1, 8 - z2, y2 * 16, 8 + x2));
+                case 180 -> rotatedShapes.add(boxSafe(8 - x1, y1 * 16, 8 - z1, 8 - x2, y2 * 16, 8 - z2));
+                case 270 -> rotatedShapes.add(boxSafe(8 + z1, y1 * 16, 8 - x1, 8 + z2, y2 * 16, 8 - x2));
+                default -> throw new IllegalArgumentException("invalid rotation " + rotation + " (must be 90,180 or 270)");
             }
         });
 
-        return rotatedShapes.stream().reduce((v1, v2) -> VoxelShapes.join(v1, v2, IBooleanFunction.OR)).orElse(shape);
+        return rotatedShapes.stream().reduce((v1, v2) -> Shapes.joinUnoptimized(v1, v2, BooleanOp.OR)).orElse(shape).optimize();
     }
 
     public static VoxelShape rotateX(VoxelShape shape, int rotation) {
-        Set<VoxelShape> rotatedShapes = new HashSet<>();
+        List<VoxelShape> rotatedShapes = new ArrayList<>();
 
         shape.forAllBoxes((x1, y1, z1, x2, y2, z2) -> {
             y1 = (y1 * 16) - 8; y2 = (y2 * 16) - 8;
             z1 = (z1 * 16) - 8; z2 = (z2 * 16) - 8;
 
             switch (rotation) {
-                case 90:
-                    rotatedShapes.add(Block.box(x1 * 16, 8 - z1, 8 + y1, x2 * 16, 8 - z2, 8 + y2));
-                    break;
-                case 180:
-                    rotatedShapes.add(Block.box(x1 * 16, 8 - z1, 8 - y1, x2 * 16, 8 - z2, 8 - y2));
-                    break;
-                case 270:
-                    rotatedShapes.add(Block.box(x1 * 16, 8 + z1, 8 - y1, x2 * 16, 8 + z2, 8 - y2));
-                    break;
-                default:
-                    throw new IllegalArgumentException("invalid rotation " + rotation + " (must be 90,180 or 270)");
+                case 90 -> rotatedShapes.add(boxSafe(x1 * 16, 8 - z1, 8 + y1, x2 * 16, 8 - z2, 8 + y2));
+                case 180 -> rotatedShapes.add(boxSafe(x1 * 16, 8 - z1, 8 - y1, x2 * 16, 8 - z2, 8 - y2));
+                case 270 -> rotatedShapes.add(boxSafe(x1 * 16, 8 + z1, 8 - y1, x2 * 16, 8 + z2, 8 - y2));
+                default -> throw new IllegalArgumentException("invalid rotation " + rotation + " (must be 90,180 or 270)");
             }
         });
 
-        return rotatedShapes.stream().reduce((v1, v2) -> VoxelShapes.join(v1, v2, IBooleanFunction.OR)).orElse(shape);
+        return rotatedShapes.stream().reduce((v1, v2) -> Shapes.joinUnoptimized(v1, v2, BooleanOp.OR)).orElse(shape).optimize();
     }
 
-    public static VoxelShape combine(IBooleanFunction func, VoxelShape... shapes) {
-        VoxelShape result = VoxelShapes.empty();
-        for (VoxelShape shape : shapes) {
-            result = VoxelShapes.joinUnoptimized(result, shape, func);
-        }
-        return result.optimize();
+    public static VoxelShape combine(BooleanOp func, VoxelShape... shapes) {
+        return Arrays.stream(shapes).reduce((v1, v2) -> Shapes.joinUnoptimized(v1, v2, func)).orElseThrow().optimize();
+    }
+
+    public static VoxelShape or(VoxelShape... shapes) {
+        return combine(BooleanOp.OR, shapes);
+    }
+
+    private static VoxelShape boxSafe(double pMinX, double pMinY, double pMinZ, double pMaxX, double pMaxY, double pMaxZ) {
+        // MC 1.17+ is picky about min/max order, unlike 1.16 and earlier...
+        double x1 = Math.min(pMinX, pMaxX);
+        double x2 = Math.max(pMinX, pMaxX);
+        double y1 = Math.min(pMinY, pMaxY);
+        double y2 = Math.max(pMinY, pMaxY);
+        double z1 = Math.min(pMinZ, pMaxZ);
+        double z2 = Math.max(pMinZ, pMaxZ);
+        return Block.box(x1, y1, z1, x2, y2, z2);
     }
 }

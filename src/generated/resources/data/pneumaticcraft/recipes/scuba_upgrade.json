@@ -1,10 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "LTL",
-    "PRP",
-    "LPL"
-  ],
+  "category": "misc",
   "key": {
     "L": {
       "tag": "pneumaticcraft:upgrade_components"
@@ -19,7 +15,13 @@
       "item": "pneumaticcraft:advanced_pressure_tube"
     }
   },
+  "pattern": [
+    "LTL",
+    "PRP",
+    "LPL"
+  ],
   "result": {
     "item": "pneumaticcraft:scuba_upgrade"
-  }
+  },
+  "show_notification": true
 }

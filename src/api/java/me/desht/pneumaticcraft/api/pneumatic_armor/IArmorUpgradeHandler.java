@@ -19,10 +19,11 @@ package me.desht.pneumaticcraft.api.pneumatic_armor;
 
 import me.desht.pneumaticcraft.api.PneumaticRegistry;
 import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IArmorUpgradeClientHandler;
-import me.desht.pneumaticcraft.api.item.EnumUpgrade;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.nbt.INBT;
-import net.minecraft.util.ResourceLocation;
+import me.desht.pneumaticcraft.api.upgrade.PNCUpgrade;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlot;
+import org.jetbrains.annotations.ApiStatus;
 
 import javax.annotation.Nonnull;
 import java.util.function.Supplier;
@@ -40,7 +41,8 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
     String UPGRADE_PREFIX = "pneumaticcraft.armor.upgrade.";
 
     /**
-     * Get a unique ID for this upgrade handler.
+     * Get a unique ID for this upgrade handler. You can use this ID to retrieve the handler object with
+     * {@link ICommonArmorRegistry#getArmorUpgradeHandler(ResourceLocation)}.
      *
      * @return a unique resource location
      */
@@ -51,6 +53,7 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
      *
      * @return the internal numeric index for this upgrade
      */
+    @ApiStatus.Internal
     int getIndex();
 
     /**
@@ -58,6 +61,7 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
      *
      * @param index the internal numeric index for this upgrade
      */
+    @ApiStatus.Internal
     void setIndex(int index);
 
     /**
@@ -65,7 +69,7 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
      *
      * @return an array of required upgrades
      */
-    EnumUpgrade[] getRequiredUpgrades();
+    PNCUpgrade[] getRequiredUpgrades();
 
     /**
      * Get the maximum number of the given upgrade which may be installed.
@@ -73,14 +77,14 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
      * @param upgrade an upgrade
      * @return the maximum installable amount of this upgrade
      */
-    default int getMaxInstallableUpgrades(EnumUpgrade upgrade) {
+    default int getMaxInstallableUpgrades(PNCUpgrade upgrade) {
         return 1;
     }
 
     /**
      * Returns the usage in mL/tick when this upgrade handler is enabled.  Note this is constant usage just from the
      * upgrade being switched on, and does not take into account air used when some action is taken, e.g. flying with
-     * the jet boots upgrade is not included here.
+     * the Jet Boots upgrade is not included here, but air used by the Entity Tracker upgrade is included.
      *
      * @param armorHandler the armor handler object (can be used to get upgrades, etc.)
      * @return usage in mL/tick
@@ -103,7 +107,7 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
      *
      * @return the armor slot
      */
-    EquipmentSlotType getEquipmentSlot();
+    EquipmentSlot getEquipmentSlot();
 
     /**
      * Get a translation key for this upgrade, for text display purposes.
@@ -130,7 +134,7 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
     }
 
     /**
-     * Called when an upgrade is toggle on/off by the player
+     * Called when an upgrade is toggled on/off by the player
      * @param commonArmorHandler the armor handler object
      * @param newState the new state of the upgrade
      */
@@ -152,17 +156,17 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
      * @param tagName the NBT tag name
      * @param inbt the NBT data
      */
-    default void onDataFieldUpdated(ICommonArmorHandler commonArmorHandler, String tagName, INBT inbt) {
+    default void onDataFieldUpdated(ICommonArmorHandler commonArmorHandler, String tagName, Tag inbt) {
     }
 
     /**
      * Set up player-specific extension data for this armor upgrade; since armor upgrade handlers are singleton objects,
      * any player-specific data needs to be stored separately. If your handler needs this (most don't), override this
-     * method to return a new instance of a class that implements {@link IArmorExtensionData}. This data will be stored
-     * in the common armor handler for the player, and can be retrieved with
+     * method to return a supplier of a new instance of some class that implements {@link IArmorExtensionData}. This
+     * data will be stored in the common armor handler for the player, and can be retrieved with
      * {@link ICommonArmorHandler#getExtensionData(IArmorUpgradeHandler)}.
      *
-     * @return a supplier for the extension data for this upgrade & player; supply null if there is none
+     * @return a supplier for the extension data for this upgrade &amp; player; supply null if there is none
      */
     @Nonnull
     default Supplier<T> extensionData() {
@@ -179,7 +183,7 @@ public interface IArmorUpgradeHandler<T extends IArmorExtensionData> {
      * <li>"mod2:other_upgrade" -> "pneumaticcraft.armor.upgrade.mod2.other_upgrade"</li>
      * </ul>
      * @param id the upgrade ID, as returned by {@link #getID()}
-     * @return a converted string
+     * @return a dot-separated string key, suitable for a translation key or keybind name
      */
     static String getStringKey(ResourceLocation id) {
         return UPGRADE_PREFIX +

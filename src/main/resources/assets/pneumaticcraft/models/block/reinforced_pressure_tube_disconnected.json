@@ -1,0 +1,7 @@
+{
+  "parent": "pneumaticcraft:block/pressure_tube_disconnected",
+  "textures": {
+    "pipe": "pneumaticcraft:pnc_model/reinforced_pressure_tube",
+    "particle": "pneumaticcraft:pnc_model/reinforced_pressure_tube"
+  }
+}

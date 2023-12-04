@@ -17,13 +17,14 @@
 
 package me.desht.pneumaticcraft.client.gui.widget;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IArmorUpgradeClientHandler;
 import me.desht.pneumaticcraft.api.client.pneumatic_helmet.ICheckboxWidget;
 import me.desht.pneumaticcraft.api.lib.Names;
 import me.desht.pneumaticcraft.api.pneumatic_armor.IArmorUpgradeHandler;
-import me.desht.pneumaticcraft.client.pneumatic_armor.ArmorUpgradeClientRegistry;
+import me.desht.pneumaticcraft.client.pneumatic_armor.ClientArmorRegistry;
+import me.desht.pneumaticcraft.client.pneumatic_armor.upgrade_handler.CoreComponentsClientHandler;
 import me.desht.pneumaticcraft.client.render.pneumatic_armor.HUDHandler;
-import me.desht.pneumaticcraft.client.render.pneumatic_armor.upgrade_handler.CoreComponentsClientHandler;
 import me.desht.pneumaticcraft.client.util.ClientUtils;
 import me.desht.pneumaticcraft.client.util.GuiUtils;
 import me.desht.pneumaticcraft.common.config.subconfig.ArmorFeatureStatus;
@@ -34,19 +35,20 @@ import me.desht.pneumaticcraft.common.network.PacketToggleArmorFeatureBulk;
 import me.desht.pneumaticcraft.common.network.PacketToggleArmorFeatureBulk.FeatureSetting;
 import me.desht.pneumaticcraft.common.pneumatic_armor.ArmorUpgradeRegistry;
 import me.desht.pneumaticcraft.common.pneumatic_armor.CommonArmorHandler;
+import me.desht.pneumaticcraft.common.pneumatic_armor.CommonUpgradeHandlers;
+import me.desht.pneumaticcraft.common.util.PneumaticCraftUtils;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.client.settings.KeyBinding;
-import net.minecraft.client.util.InputMappings;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundEvents;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.settings.KeyBindingMap;
 import net.minecraftforge.client.settings.KeyModifier;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -57,7 +59,7 @@ import java.util.function.Consumer;
 
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
-public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipProvider {
+public class WidgetKeybindCheckBox extends WidgetCheckBox {
     // maps upgrade ID to keybind widget
     private static final Map<ResourceLocation, WidgetKeybindCheckBox> id2checkBox = new HashMap<>();
 
@@ -66,11 +68,11 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
     private final ResourceLocation upgradeID;
     private ResourceLocation ownerUpgradeID = null;
     private boolean isListeningForBinding;
-    private ITextComponent oldCheckboxText;
+    private Component oldCheckboxText;
 
     private WidgetKeybindCheckBox(ResourceLocation upgradeID, int x, int y, int color, Consumer<ICheckboxWidget> pressable) {
         super(x, y, color,
-                xlate("pneumaticcraft.gui.enableModule", xlate(ArmorUpgradeRegistry.getStringKey(upgradeID))),
+                xlate("pneumaticcraft.gui.enableModule", xlate(IArmorUpgradeHandler.getStringKey(upgradeID))),
                 pressable);
 
         this.oldCheckboxText = getMessage();
@@ -81,11 +83,11 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
         return id2checkBox.computeIfAbsent(upgradeID, id -> {
             WidgetKeybindCheckBox newCheckBox = new WidgetKeybindCheckBox(id, x, y, color, pressable);
             newCheckBox.checked = ArmorFeatureStatus.INSTANCE.isUpgradeEnabled(id);
-            KeyBinding keyBinding = ArmorUpgradeClientRegistry.getInstance().getKeybindingForUpgrade(id);
-            if (keyBinding != null) {
-                KeyDispatcher.desc2checkbox.put(keyBinding.getName(), newCheckBox);
+            KeyMapping keyMapping = ClientArmorRegistry.getInstance().getKeybindingForUpgrade(id);
+            if (keyMapping != null && !keyMapping.isUnbound()) {
+                KeyDispatcher.in2checkbox.put(InputRecord.forKeyMapping(keyMapping), newCheckBox);
             }
-            if (id.equals(ArmorUpgradeRegistry.getInstance().coreComponentsHandler.getID())) {
+            if (id.equals(CommonUpgradeHandlers.coreComponentsHandler.getID())) {
                 // stash this one since it's referenced a lot
                 coreComponents = newCheckBox;
             }
@@ -102,7 +104,7 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
     }
 
     public static WidgetKeybindCheckBox forUpgrade(IArmorUpgradeClientHandler<?> handler) {
-        return get(handler.getCommonHandler().getID());
+        return get(handler.getID());
     }
 
     public static WidgetKeybindCheckBox getCoreComponents() {
@@ -127,7 +129,7 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
                 return true;
             } else if (isListeningForBinding) {
                 // add a mouse binding
-                InputMappings.Input input = InputMappings.Type.MOUSE.getOrCreate(button);
+                InputConstants.Key input = InputConstants.Type.MOUSE.getOrCreate(button);
                 updateBinding(input);
                 return true;
             }
@@ -135,10 +137,15 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
         return false;
     }
 
+    public boolean handleClick() {
+        return handleClick(0, 0, 0);
+    }
+
     private boolean handleClick(double mouseX, double mouseY, int button) {
         if (button == 0) {
+            // left click - toggle the active status of the upgrade
+
             if (!coreComponents.checked && this != coreComponents) {
-                Minecraft.getInstance().player.playSound(ModSounds.MINIGUN_STOP.get(), 1f, 2f);
                 return true;
             }
 
@@ -161,10 +168,10 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
             super.onClick(mouseX, mouseY);
 
             ArmorFeatureStatus.INSTANCE.setUpgradeEnabled(upgradeID, checked);
-            ArmorFeatureStatus.INSTANCE.tryWriteToFile();
+            ArmorFeatureStatus.INSTANCE.saveIfChanged();
 
             if (entry != null) {
-                EquipmentSlotType slot = entry.getEquipmentSlot();
+                EquipmentSlot slot = entry.getEquipmentSlot();
                 byte idx = (byte) entry.getIndex();
                 if (commonArmorHandler.isUpgradeInserted(slot, idx)) {
                     toggleUpgrade(commonArmorHandler, slot, idx);
@@ -177,12 +184,12 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
         } else if (button == 1) {
             // right click - update or clear key binding
             if (Screen.hasShiftDown()) {
-                updateBinding(InputMappings.UNKNOWN);
+                updateBinding(InputConstants.UNKNOWN);
             } else {
                 isListeningForBinding = !isListeningForBinding;
                 if (isListeningForBinding) {
                     oldCheckboxText = getMessage();
-                    setMessage(xlate("pneumaticcraft.gui.setKeybind").withStyle(TextFormatting.YELLOW));
+                    setMessage(xlate("pneumaticcraft.gui.setKeybind").withStyle(ChatFormatting.YELLOW));
                 } else {
                     setMessage(oldCheckboxText);
                 }
@@ -192,11 +199,11 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
         return false;
     }
 
-    private void toggleUpgrade(CommonArmorHandler commonArmorHandler, EquipmentSlotType slot, byte idx) {
+    private void toggleUpgrade(CommonArmorHandler commonArmorHandler, EquipmentSlot slot, byte idx) {
         // set the on/off state for this upgrade on both client and server
         NetworkHandler.sendToServer(new PacketToggleArmorFeature(slot, idx, coreComponents.checked && checked));
         commonArmorHandler.setUpgradeEnabled(slot, idx, coreComponents.checked && checked);
-        HUDHandler.getInstance().addFeatureToggleMessage(ArmorUpgradeRegistry.getStringKey(upgradeID), checked);
+        HUDHandler.getInstance().addFeatureToggleMessage(IArmorUpgradeHandler.getStringKey(upgradeID), checked);
     }
 
     private void toggleAllUpgrades(CommonArmorHandler commonArmorHandler) {
@@ -211,8 +218,8 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
         NetworkHandler.sendToServer(new PacketToggleArmorFeatureBulk(features));
         if (checked) {
             // force pressure stat to recalc its layout (just using .reset() isn't enough)
-            ArmorUpgradeClientRegistry.getInstance()
-                    .getClientHandler(ArmorUpgradeRegistry.getInstance().coreComponentsHandler, CoreComponentsClientHandler.class)
+            ClientArmorRegistry.getInstance()
+                    .getClientHandler(CommonUpgradeHandlers.coreComponentsHandler, CoreComponentsClientHandler.class)
                     .onResolutionChanged();
         } else {
             Minecraft.getInstance().player.playSound(ModSounds.MINIGUN_STOP.get(), 1f, 0.5f);
@@ -222,7 +229,7 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (isListeningForBinding) {
-            InputMappings.Input input = InputMappings.Type.KEYSYM.getOrCreate(keyCode);
+            InputConstants.Key input = InputConstants.Type.KEYSYM.getOrCreate(keyCode);
             if (!KeyModifier.isKeyCodeModifier(input)) {
                 updateBinding(input);
             }
@@ -232,21 +239,35 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
     }
 
     @Override
-    public void addTooltip(double mouseX, double mouseY, List<ITextComponent> curTooltip, boolean shiftPressed) {
-        KeyBinding keyBinding = ArmorUpgradeClientRegistry.getInstance().getKeybindingForUpgrade(upgradeID);
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderWidget(graphics, mouseX, mouseY, partialTick);
+
+        buildTooltip();
+    }
+
+    private void buildTooltip() {
+        KeyMapping keyBinding = ClientArmorRegistry.getInstance().getKeybindingForUpgrade(upgradeID);
         String k = IArmorUpgradeHandler.getStringKey(upgradeID) + ".desc";
+        if (keyBinding == null && !I18n.exists(k)) {
+            setTooltip(null);
+            return;
+        }
+
+        List<Component> l = new ArrayList<>();
         if (I18n.exists(k)) {
-            curTooltip.addAll(GuiUtils.xlateAndSplit(k));
+            l.addAll(GuiUtils.xlateAndSplit(k));
         }
         if (keyBinding != null) {
-            curTooltip.add(xlate("pneumaticcraft.gui.keybindBoundKey", ClientUtils.translateKeyBind(keyBinding)).withStyle(TextFormatting.GOLD));
+            l.add(xlate("pneumaticcraft.gui.keybindBoundKey", ClientUtils.translateKeyBind(keyBinding)).withStyle(ChatFormatting.GOLD));
             if (!isListeningForBinding) {
-                curTooltip.add(xlate("pneumaticcraft.gui.keybindRightClickToSet").withStyle(TextFormatting.GRAY));
+                l.add(xlate("pneumaticcraft.gui.keybindRightClickToSet").withStyle(ChatFormatting.GRAY));
                 if (keyBinding.getKey().getValue() != GLFW.GLFW_KEY_UNKNOWN) {
-                    curTooltip.add(xlate("pneumaticcraft.gui.keybindShiftRightClickToClear").withStyle(TextFormatting.GRAY));
+                    l.add(xlate("pneumaticcraft.gui.keybindShiftRightClickToClear").withStyle(ChatFormatting.GRAY));
                 }
             }
         }
+
+        setTooltip(Tooltip.create(PneumaticCraftUtils.combineComponents(l)));
     }
 
     /**
@@ -254,15 +275,15 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
      *
      * @param input the new input binding, or InputMappings.INPUT_INVALID to clear the binding
      */
-    private void updateBinding(InputMappings.Input input) {
+    private void updateBinding(InputConstants.Key input) {
         isListeningForBinding = false;
-        KeyBinding keyBinding = ArmorUpgradeClientRegistry.getInstance().getKeybindingForUpgrade(upgradeID);
+        KeyMapping keyBinding = ClientArmorRegistry.getInstance().getKeybindingForUpgrade(upgradeID);
         if (keyBinding != null) {
-            KeyModifier mod = input == InputMappings.UNKNOWN ? KeyModifier.NONE : KeyModifier.getActiveModifier();
+            KeyModifier mod = input == InputConstants.UNKNOWN ? KeyModifier.NONE : KeyModifier.getActiveModifier();
             keyBinding.setKeyModifierAndCode(mod, input);
             Minecraft.getInstance().options.setKey(keyBinding, input);
-            KeyBinding.resetMapping();
-            Minecraft.getInstance().player.playSound(SoundEvents.NOTE_BLOCK_CHIME, 1.0f, input == InputMappings.UNKNOWN ? 0.5f :1.0f);
+            KeyMapping.resetMapping();
+            Minecraft.getInstance().player.playSound(SoundEvents.NOTE_BLOCK_CHIME.get(), 1.0f, input == InputConstants.UNKNOWN ? 0.5f :1.0f);
         }
         setMessage(oldCheckboxText);
     }
@@ -274,33 +295,35 @@ public class WidgetKeybindCheckBox extends WidgetCheckBox implements ITooltipPro
 
     @Mod.EventBusSubscriber(modid = Names.MOD_ID, value = Dist.CLIENT)
     public static class KeyDispatcher {
-        // maps keybind ID (description) to keybind widget
-        private static final Map<String, WidgetKeybindCheckBox> desc2checkbox = new HashMap<>();
-        // thanks forge for caching these
-        private static final KeyBindingMap KEY_BINDING_MAP = new KeyBindingMap();
+        // maps key value + modifier to keybind widget
+        private static final Map<InputRecord, WidgetKeybindCheckBox> in2checkbox = new HashMap<>();
 
         @SubscribeEvent
-        public static void onKeyPress(InputEvent.KeyInputEvent event) {
+        public static void onKeyPress(net.minecraftforge.client.event.InputEvent.Key event) {
             if (Minecraft.getInstance().screen == null && event.getAction() == GLFW.GLFW_PRESS) {
-                KeyBinding binding = KEY_BINDING_MAP.lookupActive(InputMappings.Type.KEYSYM.getOrCreate(event.getKey()));
-                if (binding != null) {
-                    getBoundWidget(binding.getName()).ifPresent(w -> w.handleClick(0, 0, 0));
-                }
+                handleInput(InputConstants.Type.KEYSYM.getOrCreate(event.getKey()));
             }
         }
 
         @SubscribeEvent
-        public static void onMouseClick(InputEvent.MouseInputEvent event) {
+        public static void onMouseClick(net.minecraftforge.client.event.InputEvent.MouseButton event) {
             if (Minecraft.getInstance().screen == null && event.getAction() == GLFW.GLFW_PRESS) {
-                KeyBinding binding = KEY_BINDING_MAP.lookupActive(InputMappings.Type.MOUSE.getOrCreate(event.getButton()));
-                if (binding != null) {
-                    getBoundWidget(binding.getName()).ifPresent(w -> w.handleClick(0, 0, 0));
-                }
+                handleInput(InputConstants.Type.MOUSE.getOrCreate(event.getButton()));
             }
         }
 
-        private static Optional<WidgetKeybindCheckBox> getBoundWidget(String key) {
-            return Optional.ofNullable(desc2checkbox.get(key));
+        private static void handleInput(InputConstants.Key key) {
+            Optional.ofNullable(in2checkbox.get(InputRecord.forKey(key))).ifPresent(WidgetKeybindCheckBox::handleClick);
+        }
+    }
+
+    private record InputRecord(int key, KeyModifier modifier, InputConstants.Type type) {
+        private static InputRecord forKeyMapping(KeyMapping keyMapping) {
+            return new InputRecord(keyMapping.getKey().getValue(), keyMapping.getKeyModifier(), keyMapping.getKey().getType());
+        }
+
+        private static InputRecord forKey(InputConstants.Key key) {
+            return new InputRecord(key.getValue(), KeyModifier.getActiveModifier(), key.getType());
         }
     }
 }

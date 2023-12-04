@@ -22,8 +22,8 @@ import me.desht.pneumaticcraft.api.heat.IHeatExchangerLogic;
 import me.desht.pneumaticcraft.common.config.ConfigHelper;
 import mekanism.api.heat.IHeatHandler;
 import mekanism.api.heat.ISidedHeatHandler;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.LazyOptional;
@@ -35,30 +35,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This capability object can be attached to PneumaticCraft heat-handling tile entities to make them look like
+ * This capability object can be attached to PneumaticCraft heat-handling block entities to make them look like
  * Mekanism heat handlers.
  */
 public class PNC2MekHeatProvider implements ICapabilityProvider {
     private final List<LazyOptional<IHeatHandler>> handlers = new ArrayList<>();
 
-    private final WeakReference<TileEntity> teRef;
+    private final WeakReference<BlockEntity> teRef;
 
-    public PNC2MekHeatProvider(TileEntity te) {
+    public PNC2MekHeatProvider(BlockEntity te) {
         teRef = new WeakReference<>(te);
     }
 
     @Nonnull
     @Override
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
+        BlockEntity blockEntity = teRef.get();
+
         if (cap != MekanismIntegration.CAPABILITY_HEAT_HANDLER
-                || teRef.get() == null
-                || !teRef.get().getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY, side).isPresent())
+                || blockEntity == null
+                || !blockEntity.getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY, side).isPresent())
         {
             return LazyOptional.empty();
         }
 
         if (handlers.isEmpty()) {
-            // lazy init of the handlers list; this cap could be attached to any TE
+            // lazy init of the handlers list; this cap could be attached to any BE
             for (int i = 0; i < 7; i++) {  // 6 faces plus null face
                 handlers.add(LazyOptional.empty());
             }
@@ -66,7 +68,7 @@ public class PNC2MekHeatProvider implements ICapabilityProvider {
 
         int idx = side == null ? 6 : side.get3DDataValue();
         if (!handlers.get(idx).isPresent()) {
-            LazyOptional<IHeatExchangerLogic> heatExchanger = teRef.get().getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY, side);
+            LazyOptional<IHeatExchangerLogic> heatExchanger = blockEntity.getCapability(PNCCapabilities.HEAT_EXCHANGER_CAPABILITY, side);
             if (heatExchanger.isPresent()) {
                 heatExchanger.addListener(l -> handlers.set(idx, LazyOptional.empty()));
                 PNC2MekHeatAdapter adapter = new PNC2MekHeatAdapter(side, heatExchanger);
@@ -78,15 +80,9 @@ public class PNC2MekHeatProvider implements ICapabilityProvider {
         return (LazyOptional<T>) handlers.get(idx);
     }
 
-    public static class PNC2MekHeatAdapter implements ISidedHeatHandler {
-        private final Direction side;
-        private final LazyOptional<IHeatExchangerLogic> heatExchanger;
-
-        public PNC2MekHeatAdapter(Direction side, LazyOptional<IHeatExchangerLogic> heatExchanger) {
-            this.side = side;
-            this.heatExchanger = heatExchanger;
-        }
-
+    public record PNC2MekHeatAdapter(Direction side, LazyOptional<IHeatExchangerLogic> heatExchanger)
+            implements ISidedHeatHandler
+    {
         @Nullable
         @Override
         public Direction getHeatSideFor() {
@@ -115,7 +111,7 @@ public class PNC2MekHeatProvider implements ICapabilityProvider {
 
         @Override
         public void handleHeat(int i, double amount, @Nullable Direction direction) {
-                heatExchanger.ifPresent(h -> h.addHeat(amount * ConfigHelper.common().integration.mekThermalEfficiencyFactor.get()));
+            heatExchanger.ifPresent(h -> h.addHeat(amount * ConfigHelper.common().integration.mekThermalEfficiencyFactor.get()));
         }
     }
 }

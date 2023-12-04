@@ -17,60 +17,56 @@
 
 package me.desht.pneumaticcraft.common.hacking.entity;
 
-import me.desht.pneumaticcraft.api.client.pneumatic_helmet.IHackableEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.monster.SpiderEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.ITextComponent;
+import me.desht.pneumaticcraft.api.pneumatic_armor.hacking.IHackableEntity;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.CaveSpider;
+import net.minecraft.world.entity.monster.Spider;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
 
 import static me.desht.pneumaticcraft.api.PneumaticRegistry.RL;
 import static me.desht.pneumaticcraft.common.util.PneumaticCraftUtils.xlate;
 
-public class HackableCaveSpider implements IHackableEntity {
+public class HackableCaveSpider implements IHackableEntity<CaveSpider> {
+    private static final ResourceLocation ID = RL("cave_spider");
+
     @Override
     public ResourceLocation getHackableId() {
-        return RL("cave_spider");
+        return ID;
     }
 
     @Override
-    public boolean canHack(Entity entity, PlayerEntity player) {
-        return true;
+    public Class<CaveSpider> getHackableClass() {
+        return CaveSpider.class;
     }
 
     @Override
-    public void addHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addHackInfo(CaveSpider entity, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.result.neutralize"));
     }
 
     @Override
-    public void addPostHackInfo(Entity entity, List<ITextComponent> curInfo, PlayerEntity player) {
+    public void addPostHackInfo(CaveSpider entity, List<Component> curInfo, Player player) {
         curInfo.add(xlate("pneumaticcraft.armor.hacking.finished.neutralized"));
     }
 
     @Override
-    public int getHackTime(Entity entity, PlayerEntity player) {
+    public int getHackTime(CaveSpider entity, Player player) {
         return 50;
     }
 
     @Override
-    public void onHackFinished(Entity entity, PlayerEntity player) {
-        if (!entity.level.isClientSide) {
-            entity.remove();
-            SpiderEntity spider = new SpiderEntity(EntityType.SPIDER, entity.level);
-            spider.absMoveTo(entity.getX(), entity.getY(), entity.getZ(), entity.yRot, entity.xRot);
-            spider.setHealth(((SpiderEntity) entity).getHealth());
-            spider.yBodyRot = ((SpiderEntity) entity).yBodyRot;
-            entity.level.addFreshEntity(spider);
+    public void onHackFinished(CaveSpider entity, Player player) {
+        if (!entity.level().isClientSide) {
+            entity.discard();
+            Spider spider = new Spider(EntityType.SPIDER, entity.level());
+            spider.absMoveTo(entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), entity.getXRot());
+            spider.setHealth(entity.getHealth());
+            spider.yBodyRot = entity.yBodyRot;
+            entity.level().addFreshEntity(spider);
         }
     }
-
-    @Override
-    public boolean afterHackTick(Entity entity) {
-        return false;
-    }
-
 }
